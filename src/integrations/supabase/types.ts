@@ -118,6 +118,47 @@ export type Database = {
         }
         Relationships: []
       }
+      packages: {
+        Row: {
+          active: boolean
+          created_at: string
+          credits: number
+          expiration_days: number
+          id: string
+          name: string
+          price: number
+          studio_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          credits: number
+          expiration_days?: number
+          id?: string
+          name: string
+          price: number
+          studio_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          credits?: number
+          expiration_days?: number
+          id?: string
+          name?: string
+          price?: number
+          studio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packages_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -147,6 +188,58 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      student_passes: {
+        Row: {
+          created_at: string
+          credits_remaining: number
+          expires_at: string
+          id: string
+          package_id: string
+          studio_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_remaining: number
+          expires_at: string
+          id?: string
+          package_id: string
+          studio_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_remaining?: number
+          expires_at?: string
+          id?: string
+          package_id?: string
+          studio_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_passes_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_passes_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_passes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       studio_members: {
         Row: {
