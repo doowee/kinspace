@@ -7,8 +7,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuTrigger } from
+"@/components/ui/dropdown-menu";
 import { LogOut } from "lucide-react";
 import { Outlet, Navigate } from "react-router-dom";
 
@@ -21,8 +21,8 @@ export default function AppLayout() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (memberships.length === 0) {
@@ -36,8 +36,8 @@ export default function AppLayout() {
       <header className="border-b bg-card">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="font-display text-xl font-bold tracking-tight text-foreground">
-              CoreFlow
+            <h1 className="font-display text-xl font-bold tracking-tight text-foreground">Kore Pilates
+
             </h1>
             <div className="h-5 w-px bg-border" />
             <StudioSwitcher />
@@ -67,6 +67,6 @@ export default function AppLayout() {
       <main className="container py-8">
         <Outlet />
       </main>
-    </div>
-  );
+    </div>);
+
 }
