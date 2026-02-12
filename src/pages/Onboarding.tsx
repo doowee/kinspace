@@ -18,10 +18,10 @@ export default function Onboarding() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const slug = name.
+  toLowerCase().
+  replace(/[^a-z0-9]+/g, "-").
+  replace(/^-|-$/g, "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +36,7 @@ export default function Onboarding() {
       toast({
         title: "Error",
         description: err.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -47,8 +47,8 @@ export default function Onboarding() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
-          <h1 className="font-display text-3xl font-bold text-foreground">
-            Welcome to Kinspace
+          <h1 className="font-display text-3xl font-bold text-foreground">Welcome to Kinspace.Studio
+
           </h1>
           <p className="mt-2 text-muted-foreground">
             Let's create your first studio.
@@ -66,8 +66,8 @@ export default function Onboarding() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Downtown Pilates"
-                  required
-                />
+                  required />
+
               </div>
               <div className="space-y-2">
                 <Label htmlFor="slug">Studio Slug</Label>
@@ -76,8 +76,8 @@ export default function Onboarding() {
                   value={slug}
                   readOnly
                   className="bg-muted font-mono text-sm"
-                  placeholder="auto-generated-from-name"
-                />
+                  placeholder="auto-generated-from-name" />
+
               </div>
               <Button type="submit" className="w-full" disabled={loading || !slug}>
                 {loading ? "Creating..." : "Create Studio & Enter"}
@@ -86,6 +86,6 @@ export default function Onboarding() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>);
+
 }
