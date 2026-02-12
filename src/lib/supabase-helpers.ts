@@ -1,12 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export async function createStudioWithMembership(name: string, slug: string) {
+export async function createStudioWithMembership(name: string, slug: string, location?: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
   const { data: studio, error: studioError } = await supabase
     .from("studios")
-    .insert({ name, slug, owner_id: user.id })
+    .insert({ name, slug, owner_id: user.id, location })
     .select()
     .single();
 

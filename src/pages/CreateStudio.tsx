@@ -15,6 +15,7 @@ export default function CreateStudio() {
   const { user } = useAuth();
   const { refetch } = useStudio();
   const [name, setName] = useState("");
+  const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function CreateStudio() {
     setLoading(true);
 
     try {
-      await createStudioWithMembership(name, slug);
+      await createStudioWithMembership(name, slug, location || undefined);
       await refetch();
       toast({ title: "Studio created!", description: `${name} is ready to go.` });
       navigate("/");
@@ -79,6 +80,15 @@ export default function CreateStudio() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Zen Pilates Studio"
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. 123 Main St, New York"
                 />
               </div>
               {slug && (
