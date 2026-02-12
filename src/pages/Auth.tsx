@@ -59,7 +59,7 @@ export default function Auth() {
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
           <img src="/logo.svg" alt="Kinspace logo" className="h-16 w-16 mx-auto mb-3" />
-          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Kinspace</h1>
+          <h1 className="font-display text-4xl font-bold tracking-tight">Kinspace.Studio</h1>
           <p className="mt-2 text-muted-foreground">
             Studio management, simplified
           </p>
