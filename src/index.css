@@ -4,6 +4,8 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
+@import url("https://fonts.googleapis.com/css2?family=Nunito&display=swap");
+
 @layer base {
   :root {
     --background: 40 33% 97%;
@@ -15,10 +17,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 15%;
 
-    --primary: 152 32% 40%;
+    --primary: 138 13% 55%;
     --primary-foreground: 40 33% 97%;
 
-    --secondary: 40 25% 92%;
+    --secondary: 12 62% 68%;
     --secondary-foreground: 220 20% 15%;
 
     --muted: 40 20% 94%;
@@ -50,6 +52,7 @@
     --sage-light: 152 25% 90%;
     --cream: 40 33% 97%;
     --warm-gray: 30 10% 60%;
+    --font-sans: Nunito, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 
   .dark {
@@ -89,6 +92,7 @@
     --sidebar-accent-foreground: 152 32% 70%;
     --sidebar-border: 220 15% 20%;
     --sidebar-ring: 152 32% 50%;
+    --font-sans: Nunito, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 }
 
