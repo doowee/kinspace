@@ -9,8 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays } from "lucide-react";
 import { Outlet, Navigate } from "react-router-dom";
+import { NavLink } from "./NavLink";
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
@@ -37,6 +38,25 @@ export default function AppLayout() {
             </div>
             <div className="h-5 w-px bg-border" />
             <StudioSwitcher />
+            <div className="h-5 w-px bg-border" />
+            <nav className="flex items-center gap-1">
+              <NavLink
+                to="/dashboard"
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                activeClassName="bg-accent text-accent-foreground font-medium"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </NavLink>
+              <NavLink
+                to="/schedule"
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                activeClassName="bg-accent text-accent-foreground font-medium"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Schedule
+              </NavLink>
+            </nav>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
