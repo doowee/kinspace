@@ -13,22 +13,19 @@ export default {
   		}
   	},
   	extend: {
-  		fontFamily: {
-  			sans: [
-  				'Nunito',
-  				'ui-sans-serif',
-  				'system-ui',
-  				'sans-serif',
-  				'Apple Color Emoji',
-  				'Segoe UI Emoji',
-  				'Segoe UI Symbol',
-  				'Noto Color Emoji'
-  			],
-  			display: [
-  				'Playfair Display',
-  				'Georgia',
-  				'serif'
-  			],
+		fontFamily: {
+			sans: [
+				'DM Sans',
+				'ui-sans-serif',
+				'system-ui',
+				'sans-serif'
+			],
+			display: [
+				'Nunito',
+				'ui-sans-serif',
+				'system-ui',
+				'sans-serif'
+			],
   			serif: [
   				'ui-serif',
   				'Georgia',
