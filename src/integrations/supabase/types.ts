@@ -174,6 +174,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_studio_with_membership: {
+        Args: { _location?: string; _name: string; _slug: string }
+        Returns: string
+      }
       get_studio_role: {
         Args: { _studio_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["studio_role"]
