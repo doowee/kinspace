@@ -26,13 +26,13 @@ export default function Auth() {
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { first_name: firstName, last_name: lastName },
-          },
+            data: { first_name: firstName, last_name: lastName }
+          }
         });
         if (error) throw error;
         toast({
           title: "Check your email",
-          description: "We sent you a confirmation link to verify your account.",
+          description: "We sent you a confirmation link to verify your account."
         });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -42,7 +42,7 @@ export default function Auth() {
       toast({
         title: "Error",
         description: err.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -50,11 +50,11 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4 bg-[#f8f6e8]">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
-          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">
-            CoreFlow
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Kinspace
+
           </h1>
           <p className="mt-2 text-muted-foreground">
             Studio management, simplified
@@ -67,35 +67,35 @@ export default function Auth() {
               {isSignUp ? "Create Account" : "Welcome Back"}
             </CardTitle>
             <CardDescription>
-              {isSignUp
-                ? "Start managing your Pilates studio"
-                : "Sign in to your account"}
+              {isSignUp ?
+              "Start managing your Pilates studio" :
+              "Sign in to your account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
-                <div className="grid grid-cols-2 gap-3">
+              {isSignUp &&
+              <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                    />
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required />
+
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
                     <Input
-                      id="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                    />
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required />
+
                   </div>
                 </div>
-              )}
+              }
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -104,8 +104,8 @@ export default function Auth() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  required
-                />
+                  required />
+
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -116,8 +116,8 @@ export default function Auth() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={6}
-                />
+                  minLength={6} />
+
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
@@ -127,16 +127,16 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {isSignUp
-                  ? "Already have an account? Sign in"
-                  : "Don't have an account? Sign up"}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors">
+
+                {isSignUp ?
+                "Already have an account? Sign in" :
+                "Don't have an account? Sign up"}
               </button>
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>);
+
 }
