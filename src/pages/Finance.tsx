@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Users, Plus } from "lucide-react";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import {
   BarChart,
   Bar,
@@ -24,6 +26,7 @@ interface Transaction {
   payment_method: string;
   status: string;
   user_id: string;
+  profiles: { first_name: string | null; last_name: string | null; email: string } | null;
 }
 
 export default function Finance() {
@@ -44,17 +47,17 @@ export default function Finance() {
     const [txRes, memberRes] = await Promise.all([
       supabase
         .from("transactions")
-        .select("id, amount, created_at, description, payment_method, status, user_id")
+        .select("id, amount, created_at, description, payment_method, status, user_id, profiles ( first_name, last_name, email )")
         .eq("studio_id", studioId)
         .gte("created_at", thirtyDaysAgo)
-        .order("created_at", { ascending: true }),
+        .order("created_at", { ascending: false }),
       supabase
         .from("studio_members")
         .select("id", { count: "exact", head: true })
         .eq("studio_id", studioId),
     ]);
 
-    if (txRes.data) setTransactions(txRes.data);
+    if (txRes.data) setTransactions(txRes.data as unknown as Transaction[]);
     setMemberCount(memberRes.count ?? 0);
     setLoading(false);
   }, [studioId]);
@@ -162,6 +165,62 @@ export default function Finance() {
               </BarChart>
             </ResponsiveContainer>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+          <CardDescription>Last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.map((t) => {
+                const studentName = t.profiles
+                  ? [t.profiles.first_name, t.profiles.last_name].filter(Boolean).join(" ") || t.profiles.email
+                  : "—";
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell className="text-muted-foreground">
+                      {format(new Date(t.created_at), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell className="font-medium">{studentName}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.description ?? "—"}</TableCell>
+                    <TableCell className="capitalize">{t.payment_method}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={t.status === "completed" ? "default" : t.status === "refunded" ? "secondary" : "destructive"}
+                      >
+                        {t.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ${Number(t.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {transactions.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No transactions yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
