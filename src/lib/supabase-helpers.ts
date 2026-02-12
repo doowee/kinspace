@@ -1,24 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function createStudioWithMembership(name: string, slug: string, location?: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const { data, error } = await supabase.rpc("create_studio_with_membership", {
+    _name: name,
+    _slug: slug,
+    _location: location ?? null,
+  });
 
-  const { data: studio, error: studioError } = await supabase
-    .from("studios")
-    .insert({ name, slug, owner_id: user.id, location })
-    .select()
-    .single();
-
-  if (studioError) throw studioError;
-
-  const { error: memberError } = await supabase
-    .from("studio_members")
-    .insert({ user_id: user.id, studio_id: studio.id, role: "owner" as const });
-
-  if (memberError) throw memberError;
-
-  return studio;
+  if (error) throw error;
+  return data; // returns the new studio UUID
 }
 
 export async function getUserStudios() {
