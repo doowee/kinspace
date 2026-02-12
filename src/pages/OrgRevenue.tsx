@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUserOrganizations, getOrgStudiosWithMockRevenue } from "@/lib/org-helpers";
+import { getUserOrganizations, getOrgStudiosWithRevenue } from "@/lib/org-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DollarSign, Building2, TrendingUp } from "lucide-react";
@@ -21,7 +21,7 @@ interface StudioRevenue {
   slug: string;
   location: string | null;
   revenue: number;
-  bookings: number;
+  transactions: number;
 }
 
 export default function OrgRevenue() {
@@ -43,7 +43,7 @@ export default function OrgRevenue() {
 
   useEffect(() => {
     if (!selectedOrg) return;
-    getOrgStudiosWithMockRevenue(selectedOrg).then(setStudios);
+    getOrgStudiosWithRevenue(selectedOrg).then(setStudios);
   }, [selectedOrg]);
 
   if (loading) {
@@ -63,7 +63,7 @@ export default function OrgRevenue() {
   }
 
   const totalRevenue = studios.reduce((sum, s) => sum + s.revenue, 0);
-  const totalBookings = studios.reduce((sum, s) => sum + s.bookings, 0);
+  const totalTransactions = studios.reduce((sum, s) => sum + s.transactions, 0);
   const currentOrg = orgs.find((o) => o.organization_id === selectedOrg);
 
   return (
@@ -73,7 +73,7 @@ export default function OrgRevenue() {
           {currentOrg?.organizations.name ?? "Organization"} — Revenue
         </h2>
         <p className="text-sm text-muted-foreground">
-          Aggregated mock revenue across all connected studios
+          Aggregated revenue across all connected studios
         </p>
       </div>
 
@@ -102,7 +102,7 @@ export default function OrgRevenue() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           </CardContent>
         </Card>
         <Card>
@@ -116,11 +116,11 @@ export default function OrgRevenue() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBookings.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{totalTransactions.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -128,7 +128,7 @@ export default function OrgRevenue() {
       <Card>
         <CardHeader>
           <CardTitle>Revenue by Studio</CardTitle>
-          <CardDescription>Mock data — connect a payments system for real figures</CardDescription>
+          <CardDescription>Real transaction data from all studios</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -136,7 +136,7 @@ export default function OrgRevenue() {
               <TableRow>
                 <TableHead>Studio</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead className="text-right">Bookings</TableHead>
+                <TableHead className="text-right">Transactions</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
               </TableRow>
             </TableHeader>
@@ -145,8 +145,8 @@ export default function OrgRevenue() {
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell className="text-muted-foreground">{s.location ?? "—"}</TableCell>
-                  <TableCell className="text-right">{s.bookings}</TableCell>
-                  <TableCell className="text-right font-medium">${s.revenue.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">{s.transactions}</TableCell>
+                  <TableCell className="text-right font-medium">${s.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                 </TableRow>
               ))}
               {studios.length === 0 && (
