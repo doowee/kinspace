@@ -22,11 +22,6 @@ export default function AppLayout() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>);
-
-  }
-
-  if (memberships.length === 0) {
-    return <Navigate to="/create-studio" replace />;
   }
 
   const initials = user.email?.slice(0, 2).toUpperCase() ?? "U";
