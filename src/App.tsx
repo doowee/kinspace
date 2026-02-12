@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import AppLayout from "./components/AppLayout";
 import BookingPage from "./pages/BookingPage";
+import OrgRevenue from "./pages/OrgRevenue";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/schedule" element={<Schedule />} />
+              <Route path="/org-revenue" element={<OrgRevenue />} />
             </Route>
             <Route path="/book/:studio_slug" element={<BookingPage />} />
             <Route path="*" element={<NotFound />} />
