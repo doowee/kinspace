@@ -58,7 +58,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center px-4 bg-[#f8f6e8]">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
-          <img alt="Kinspace logo" className="h-20 w-20 mx-auto mb-3 rounded-none" src="/lovable-uploads/b8a7eed3-287c-4772-a26d-8e87d39cfb08.png" />
+          <img src="/logo-light.png" alt="Kinspace logo" className="h-20 w-20 mx-auto mb-3 rounded-xl" />
           <h1 className="font-display text-4xl font-bold tracking-tight">Kinspace.Studio</h1>
           <p className="mt-2 text-muted-foreground">
             Studio management, simplified
