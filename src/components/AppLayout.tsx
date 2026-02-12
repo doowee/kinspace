@@ -31,9 +31,10 @@ export default function AppLayout() {
       <header className="border-b bg-card">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="font-display text-xl font-bold tracking-tight text-foreground">Kore Pilates
-
-            </h1>
+            <div className="flex items-center gap-2">
+              <img src="/logo.svg" alt="Kinspace logo" className="h-7 w-7" />
+              <h1 className="font-display text-xl font-bold tracking-tight text-foreground">Kinspace</h1>
+            </div>
             <div className="h-5 w-px bg-border" />
             <StudioSwitcher />
           </div>
