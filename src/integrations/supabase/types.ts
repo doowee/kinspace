@@ -178,6 +178,24 @@ export type Database = {
         Args: { _location?: string; _name: string; _slug: string }
         Returns: string
       }
+      get_public_classes_by_studio_slug: {
+        Args: { _slug: string }
+        Returns: {
+          capacity: number
+          id: string
+          name: string
+          start_time: string
+        }[]
+      }
+      get_public_studio_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          id: string
+          location: string
+          name: string
+          slug: string
+        }[]
+      }
       get_studio_role: {
         Args: { _studio_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["studio_role"]
