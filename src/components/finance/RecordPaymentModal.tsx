@@ -8,7 +8,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -18,10 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { addDays } from "date-fns";
 
 interface Member {
   user_id: string;
   profiles: { id: string; first_name: string | null; last_name: string | null; email: string } | null;
+}
+
+interface Package {
+  id: string;
+  name: string;
+  price: number;
+  credits: number;
+  expiration_days: number;
 }
 
 const PAYMENT_METHODS = [
@@ -41,57 +49,80 @@ interface Props {
 export default function RecordPaymentModal({ open, onOpenChange, studioId, onSuccess }: Props) {
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [userId, setUserId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const [packageId, setPackageId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    supabase
-      .from("studio_members")
-      .select("user_id, profiles ( id, first_name, last_name, email )")
-      .eq("studio_id", studioId)
-      .then(({ data }) => {
-        if (data) setMembers(data as unknown as Member[]);
-      });
+    Promise.all([
+      supabase
+        .from("studio_members")
+        .select("user_id, profiles ( id, first_name, last_name, email )")
+        .eq("studio_id", studioId),
+      supabase
+        .from("packages")
+        .select("id, name, price, credits, expiration_days")
+        .eq("studio_id", studioId)
+        .eq("active", true),
+    ]).then(([memberRes, pkgRes]) => {
+      if (memberRes.data) setMembers(memberRes.data as unknown as Member[]);
+      if (pkgRes.data) setPackages(pkgRes.data);
+    });
   }, [open, studioId]);
+
+  const selectedPkg = packages.find((p) => p.id === packageId);
 
   const reset = () => {
     setUserId("");
-    setAmount("");
-    setDescription("");
+    setPackageId("");
     setPaymentMethod("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = parseFloat(amount);
-    if (!userId || isNaN(numAmount) || numAmount <= 0 || !paymentMethod) return;
-    if (description.length > 500) {
-      toast({ title: "Description too long", description: "Max 500 characters.", variant: "destructive" });
-      return;
-    }
+    if (!userId || !packageId || !paymentMethod || !selectedPkg) return;
 
     setSaving(true);
-    const { error } = await supabase.from("transactions").insert({
+
+    // A: Insert transaction
+    const { error: txError } = await supabase.from("transactions").insert({
       studio_id: studioId,
       user_id: userId,
-      amount: numAmount,
+      amount: selectedPkg.price,
       payment_method: paymentMethod as "cash" | "card" | "transfer" | "check",
-      description: description.trim() || null,
+      description: selectedPkg.name,
       status: "completed" as const,
     });
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Payment recorded" });
-      reset();
-      onOpenChange(false);
-      onSuccess();
+    if (txError) {
+      toast({ title: "Error", description: txError.message, variant: "destructive" });
+      setSaving(false);
+      return;
     }
+
+    // B + C: Insert student pass with calculated expiration
+    const expiresAt = addDays(new Date(), selectedPkg.expiration_days).toISOString();
+
+    const { error: passError } = await supabase.from("student_passes").insert({
+      user_id: userId,
+      studio_id: studioId,
+      package_id: selectedPkg.id,
+      credits_remaining: selectedPkg.credits,
+      expires_at: expiresAt,
+    });
+
+    if (passError) {
+      toast({ title: "Payment recorded but pass failed", description: passError.message, variant: "destructive" });
+    } else {
+      toast({ title: "Payment recorded & credits granted", description: `${selectedPkg.credits} credits added` });
+    }
+
+    reset();
+    onOpenChange(false);
+    onSuccess();
     setSaving(false);
   };
 
@@ -126,28 +157,33 @@ export default function RecordPaymentModal({ open, onOpenChange, studioId, onSuc
           </div>
 
           <div className="space-y-2">
-            <Label>Amount ($)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0.01"
-              max="999999"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              required
-            />
+            <Label>Package</Label>
+            <Select value={packageId} onValueChange={setPackageId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select package" />
+              </SelectTrigger>
+              <SelectContent>
+                {packages.map((pkg) => (
+                  <SelectItem key={pkg.id} value={pkg.id}>
+                    {pkg.name} — ${pkg.price} ({pkg.credits} credits)
+                  </SelectItem>
+                ))}
+                {packages.length === 0 && (
+                  <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                    No active packages. Create one in Settings.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Drop-in Class"
-              maxLength={500}
-            />
-          </div>
+          {selectedPkg && (
+            <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+              <p><span className="font-medium">Amount:</span> ${selectedPkg.price}</p>
+              <p><span className="font-medium">Credits:</span> {selectedPkg.credits}</p>
+              <p><span className="font-medium">Expires:</span> {selectedPkg.expiration_days} days from today</p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Payment Method</Label>
@@ -171,9 +207,9 @@ export default function RecordPaymentModal({ open, onOpenChange, studioId, onSuc
             </Button>
             <Button
               type="submit"
-              disabled={saving || !userId || !amount || !paymentMethod}
+              disabled={saving || !userId || !packageId || !paymentMethod}
             >
-              {saving ? "Saving…" : "Record Payment"}
+              {saving ? "Processing…" : "Confirm Payment"}
             </Button>
           </DialogFooter>
         </form>

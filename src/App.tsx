@@ -14,6 +14,7 @@ import AppLayout from "./components/AppLayout";
 import BookingPage from "./pages/BookingPage";
 import OrgRevenue from "./pages/OrgRevenue";
 import Finance from "./pages/Finance";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/org-revenue" element={<OrgRevenue />} />
               <Route path="/finance" element={<Finance />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="/book/:studio_slug" element={<BookingPage />} />
             <Route path="*" element={<NotFound />} />
