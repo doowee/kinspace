@@ -62,6 +62,62 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -137,6 +193,7 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          organization_id: string | null
           owner_id: string
           slug: string
           updated_at: string
@@ -146,6 +203,7 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
+          organization_id?: string | null
           owner_id: string
           slug: string
           updated_at?: string
@@ -155,11 +213,19 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+          organization_id?: string | null
           owner_id?: string
           slug?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "studios_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "studios_owner_id_fkey"
             columns: ["owner_id"]
@@ -174,9 +240,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_org_with_membership: {
+        Args: { _name: string; _slug: string }
+        Returns: string
+      }
       create_studio_with_membership: {
         Args: { _location?: string; _name: string; _slug: string }
         Returns: string
+      }
+      get_org_role: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["org_role"]
       }
       get_public_classes_by_studio_slug: {
         Args: { _slug: string }
@@ -200,12 +274,17 @@ export type Database = {
         Args: { _studio_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["studio_role"]
       }
+      is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_studio_member: {
         Args: { _studio_id: string; _user_id: string }
         Returns: boolean
       }
     }
     Enums: {
+      org_role: "owner" | "admin" | "viewer"
       studio_role: "owner" | "instructor" | "student"
     }
     CompositeTypes: {
@@ -334,6 +413,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      org_role: ["owner", "admin", "viewer"],
       studio_role: ["owner", "instructor", "student"],
     },
   },
