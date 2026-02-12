@@ -2,9 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
 
-@import url("https://fonts.googleapis.com/css2?family=Nunito&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap");
 
 @layer base {
   :root {
@@ -53,7 +53,7 @@
     --cream: 50 52% 93%;
     --terracotta: 12 62% 68%;
     --warm-gray: 230 8% 46%;
-    --font-sans: Nunito, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   }
 
   .dark {
@@ -93,7 +93,7 @@
     --sidebar-accent-foreground: 150 14% 70%;
     --sidebar-border: 230 12% 22%;
     --sidebar-ring: 150 12% 50%;
-    --font-sans: Nunito, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   }
 }
 
@@ -107,6 +107,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
   }
 }
