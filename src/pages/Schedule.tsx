@@ -18,6 +18,7 @@ import { Plus, Clock, Users } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import TimePicker from "@/components/schedule/TimePicker";
 
 interface ClassRow {
   id: string;
@@ -38,7 +39,7 @@ export default function Schedule() {
 
   // Form state
   const [className, setClassName] = useState("");
-  const [startTime, setStartTime] = useState("");
+  const [classTime, setClassTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,17 +74,17 @@ export default function Schedule() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStudio || !className || !startTime) return;
+    if (!activeStudio || !className) return;
 
     setSubmitting(true);
 
-    // Combine selected date with time input
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    const fullDateTime = `${dateStr}T${startTime}:00`;
+    // Build a proper local Date, then convert to ISO for storage
+    const dt = new Date(selectedDate);
+    dt.setHours(classTime.hour, classTime.minute, 0, 0);
 
     const { error } = await supabase.from("classes").insert({
       name: className,
-      start_time: fullDateTime,
+      start_time: dt.toISOString(),
       capacity: parseInt(capacity) || 10,
       studio_id: activeStudio.id,
     });
@@ -93,7 +94,7 @@ export default function Schedule() {
     } else {
       toast({ title: "Class created" });
       setClassName("");
-      setStartTime("");
+      setClassTime({ hour: 9, minute: 0 });
       setCapacity("10");
       setDialogOpen(false);
       fetchClasses();
@@ -136,13 +137,10 @@ export default function Schedule() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="class-time">Time</Label>
-                  <Input
-                    id="class-time"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    required
+                  <TimePicker
+                    label="Time"
+                    value={classTime}
+                    onChange={setClassTime}
                   />
                 </div>
                 <div>
