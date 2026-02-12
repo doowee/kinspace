@@ -9,6 +9,7 @@ import StudioGate from "./components/StudioGate";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import Schedule from "./pages/Schedule";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +58,7 @@ const App = () => (
             >
               <Route index element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/schedule" element={<Schedule />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
