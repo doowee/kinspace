@@ -235,6 +235,54 @@ export type Database = {
           },
         ]
       }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          status: Database["public"]["Enums"]["transaction_status"]
+          studio_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["transaction_status"]
+          studio_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["transaction_status"]
+          studio_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -285,7 +333,9 @@ export type Database = {
     }
     Enums: {
       org_role: "owner" | "admin" | "viewer"
+      payment_method: "card" | "cash" | "transfer" | "check"
       studio_role: "owner" | "instructor" | "student"
+      transaction_status: "completed" | "refunded" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -414,7 +464,9 @@ export const Constants = {
   public: {
     Enums: {
       org_role: ["owner", "admin", "viewer"],
+      payment_method: ["card", "cash", "transfer", "check"],
       studio_role: ["owner", "instructor", "student"],
+      transaction_status: ["completed", "refunded", "failed"],
     },
   },
 } as const
