@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2 } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet } from "lucide-react";
 import { Outlet, Navigate } from "react-router-dom";
 import { NavLink } from "./NavLink";
 
@@ -55,6 +55,14 @@ export default function AppLayout() {
               >
                 <CalendarDays className="h-4 w-4" />
                 Schedule
+              </NavLink>
+              <NavLink
+                to="/finance"
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                activeClassName="bg-accent text-accent-foreground font-medium"
+              >
+                <Wallet className="h-4 w-4" />
+                Finance
               </NavLink>
               <NavLink
                 to="/org-revenue"
