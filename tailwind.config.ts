@@ -92,11 +92,12 @@ export default {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			},
-  			sage: {
-  				DEFAULT: 'hsl(var(--sage))',
-  				light: 'hsl(var(--sage-light))'
-  			},
-  			cream: 'hsl(var(--cream))'
+		sage: {
+				DEFAULT: 'hsl(var(--sage))',
+				light: 'hsl(var(--sage-light))'
+			},
+			cream: 'hsl(var(--cream))',
+			terracotta: 'hsl(var(--terracotta))'
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
