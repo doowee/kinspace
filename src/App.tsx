@@ -5,8 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StudioProvider } from "@/contexts/StudioContext";
+import StudioGate from "./components/StudioGate";
 import Auth from "./pages/Auth";
-import CreateStudio from "./pages/CreateStudio";
+import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
@@ -36,25 +37,26 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route
-              path="/create-studio"
+              path="/onboarding"
               element={
                 <AuthGate>
-                  <StudioProvider>
-                    <CreateStudio />
-                  </StudioProvider>
+                  <Onboarding />
                 </AuthGate>
               }
             />
             <Route
               element={
                 <AuthGate>
-                  <StudioProvider>
-                    <AppLayout />
-                  </StudioProvider>
+                  <StudioGate>
+                    <StudioProvider>
+                      <AppLayout />
+                    </StudioProvider>
+                  </StudioGate>
                 </AuthGate>
               }
             >
-              <Route path="/" element={<Dashboard />} />
+              <Route index element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
