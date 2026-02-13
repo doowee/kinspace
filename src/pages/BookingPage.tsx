@@ -9,8 +9,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag } from "lucide-react";
+import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   format,
@@ -63,7 +64,7 @@ export default function BookingPage() {
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
   const [userBookedClassIds, setUserBookedClassIds] = useState<Set<string>>(new Set());
   const [pendingBookClass, setPendingBookClass] = useState<PublicClass | null>(null);
-
+  const [successClass, setSuccessClass] = useState<PublicClass | null>(null);
   // Listen to auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -194,6 +195,7 @@ export default function BookingPage() {
       });
 
       setUserBookedClassIds((prev) => new Set([...prev, cls.id]));
+      setSuccessClass(cls);
     } catch (err: any) {
       toast({
         title: "Booking failed",
@@ -234,23 +236,31 @@ export default function BookingPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-30">
-        <div className="container flex h-16 items-center gap-3">
-          <img
-            src="/kinspace-logo-sage.png"
-            alt="Kinspace"
-            className="h-9 w-9 rounded-lg"
-          />
-          <div>
-            <h1 className="font-display text-lg font-bold text-foreground leading-tight">
-              {studio.name}
-            </h1>
-            {studio.location && (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                {studio.location}
-              </p>
-            )}
+        <div className="container flex h-16 items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img
+              src="/kinspace-logo-sage.png"
+              alt="Kinspace"
+              className="h-9 w-9 rounded-lg"
+            />
+            <div>
+              <h1 className="font-display text-lg font-bold text-foreground leading-tight">
+                {studio.name}
+              </h1>
+              {studio.location && (
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  {studio.location}
+                </p>
+              )}
+            </div>
           </div>
+          {user && (
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+              <LayoutDashboard className="mr-1.5 h-4 w-4" />
+              My Dashboard
+            </Button>
+          )}
         </div>
       </header>
 
@@ -456,6 +466,35 @@ export default function BookingPage() {
           >
             View Packages
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={!!successClass} onOpenChange={(open) => !open && setSuccessClass(null)}>
+        <DialogContent className="sm:max-w-md text-center">
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <PartyPopper className="h-8 w-8 text-green-600" />
+            </div>
+            <DialogHeader className="items-center">
+              <DialogTitle className="font-display text-2xl">You're Booked!</DialogTitle>
+              <DialogDescription className="text-center">
+                You are confirmed for <span className="font-semibold text-foreground">{successClass?.name}</span> on{" "}
+                <span className="font-semibold text-foreground">
+                  {successClass ? format(new Date(successClass.start_time), "EEEE, MMMM d 'at' h:mm a") : ""}
+                </span>
+                . A confirmation email has been sent.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex w-full flex-col gap-2 pt-2">
+              <Button className="w-full" onClick={() => { setSuccessClass(null); navigate("/dashboard"); }}>
+                Go to My Dashboard
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setSuccessClass(null)}>
+                Book Another Class
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
