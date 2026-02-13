@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PackagesTab from "@/components/settings/PackagesTab";
 import BrandingTab from "@/components/settings/BrandingTab";
+import PoliciesTab from "@/components/settings/PoliciesTab";
 
 export default function Settings() {
   return (
@@ -14,12 +15,16 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="branding">Branding & Appearance</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
+          <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
         <TabsContent value="branding" className="mt-4">
           <BrandingTab />
         </TabsContent>
         <TabsContent value="packages" className="mt-4">
           <PackagesTab />
+        </TabsContent>
+        <TabsContent value="policies" className="mt-4">
+          <PoliciesTab />
         </TabsContent>
       </Tabs>
     </div>
