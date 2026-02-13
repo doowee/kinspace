@@ -1,58 +1,41 @@
 
 
-## Student Portal
+## Instructor Data + UI Updates
 
-This plan adds a role-aware experience so students see their own dashboard and a simplified navbar, while owners/instructors keep the current admin view.
+### 1. Insert Dummy Instructors
 
-### What Changes
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-**1. New Component: `src/components/dashboard/StudentDashboard.tsx`**
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-A dedicated student view with:
-- **Greeting**: "Welcome back, [First Name]" -- fetched from the `profiles` table
-- **Top Cards** (2-column grid):
-  - **Next Class**: Queries `bookings` joined with `classes` where `user_id = me`, `status = 'confirmed'`, and `start_time > now()`, ordered ascending, limit 1. Shows the class name, date, and time, or "No upcoming classes" if empty.
-  - **Wallet**: Sums `credits_remaining` from `student_passes` where `user_id = me`, `studio_id = active studio`, credits > 0, and not expired. Shows the total with a color indicator.
-- **My Schedule List**: All confirmed bookings for the user, ordered by `start_time` ascending (upcoming first). Each row shows class name, date/time, and a "Cancel" button.
-- **Cancel Logic**: Updates the booking status to `'cancelled'`, then finds the earliest-expiring active `student_pass` for the user/studio and increments `credits_remaining` by 1. Shows a success toast and refreshes the list.
+No photo URLs for now (left null).
 
-**2. Update: `src/pages/Dashboard.tsx`**
+### 2. Public Booking Page -- Show Instructor Info
 
-- Read `activeRole` from `useStudio()`
-- If `activeRole === 'student'`, render `<StudentDashboard />`
-- Otherwise, render the existing owner/admin stats view
+**File: `src/pages/BookingPage.tsx`**
 
-**3. Update: `src/components/AppLayout.tsx`**
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-- Read `activeRole` from `useStudio()` (already imported)
-- Conditionally render nav links based on role:
-  - **Students** see: Dashboard, Schedule, and a "Book a Class" link (points to `/book/{activeStudio.slug}`)
-  - **Owners/Instructors** see: the full nav (Dashboard, Schedule, Finance, Organization, Settings)
-- The CreditsBadge and user avatar dropdown remain for all roles
+No changes needed here -- it already works once instructors are linked to classes.
+
+### 3. Create Class Form -- Instructor Dropdown
+
+**File: `src/pages/Schedule.tsx`**
+
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
 
 ### Technical Details
 
-```text
-Role Check Flow
-===============
-activeRole (from StudioContext)
-  |
-  +-- "owner" or "instructor" --> Full navbar + Owner Dashboard
-  |
-  +-- "student" --> Simplified navbar + StudentDashboard component
-```
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
 
-**Database queries used (no schema changes needed):**
-- `profiles` table: `SELECT first_name FROM profiles WHERE id = user.id`
-- `bookings` + `classes` join: Fetch upcoming confirmed bookings
-- `student_passes`: Sum credits for wallet card
-- Booking cancellation: `UPDATE bookings SET status = 'cancelled'` + `UPDATE student_passes SET credits_remaining = credits_remaining + 1`
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
 
-**Files to create:**
-- `src/components/dashboard/StudentDashboard.tsx`
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 
-**Files to modify:**
-- `src/pages/Dashboard.tsx` -- add role conditional
-- `src/components/AppLayout.tsx` -- conditional nav links + "Book a Class" button
-
-No database migrations required. All tables and RLS policies already support these queries.
