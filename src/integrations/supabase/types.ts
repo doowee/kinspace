@@ -99,11 +99,49 @@ export type Database = {
             foreignKeyName: "classes_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "instructors"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "classes_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructors: {
+        Row: {
+          bio: string | null
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          photo_url: string | null
+          studio_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          photo_url?: string | null
+          studio_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          photo_url?: string | null
+          studio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructors_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
