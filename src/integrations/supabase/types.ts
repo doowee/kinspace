@@ -121,8 +121,9 @@ export type Database = {
           display_order: number
           id: string
           name: string
+          organization_id: string | null
           photo_url: string | null
-          studio_id: string
+          studio_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -131,8 +132,9 @@ export type Database = {
           display_order?: number
           id?: string
           name: string
+          organization_id?: string | null
           photo_url?: string | null
-          studio_id: string
+          studio_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -141,11 +143,19 @@ export type Database = {
           display_order?: number
           id?: string
           name?: string
+          organization_id?: string | null
           photo_url?: string | null
-          studio_id?: string
+          studio_id?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "instructors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "instructors_studio_id_fkey"
             columns: ["studio_id"]
@@ -546,6 +556,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["studio_role"]
       }
       is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_owner: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }

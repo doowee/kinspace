@@ -24,7 +24,8 @@ interface Instructor {
   photo_url: string | null;
   user_id: string | null;
   display_order: number;
-  studio_id: string;
+  studio_id: string | null;
+  organization_id: string | null;
   linked_email?: string | null;
 }
 
@@ -50,12 +51,18 @@ export default function InstructorsTab() {
     if (!activeStudio) return;
     setLoading(true);
 
-    const { data } = await supabase
+    let query = supabase
       .from("instructors")
-      .select("id, name, bio, photo_url, user_id, display_order, studio_id")
-      .eq("studio_id", activeStudio.id)
+      .select("id, name, bio, photo_url, user_id, display_order, studio_id, organization_id")
       .order("display_order");
 
+    if (activeStudio.organization_id) {
+      query = query.eq("organization_id", activeStudio.organization_id);
+    } else {
+      query = query.eq("studio_id", activeStudio.id);
+    }
+
+    const { data } = await query;
     const items: Instructor[] = (data ?? []) as any[];
 
     // Fetch linked emails for those with user_id
@@ -89,8 +96,9 @@ export default function InstructorsTab() {
       name: newName.trim(),
       bio: newBio.trim() || null,
       studio_id: activeStudio.id,
+      organization_id: activeStudio.organization_id,
       display_order: instructors.length,
-    });
+    } as any);
 
     if (error) {
       toast.error("Failed to add instructor");
