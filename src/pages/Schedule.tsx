@@ -16,11 +16,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Clock, Users, CheckCircle2 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import TimePicker from "@/components/schedule/TimePicker";
+
+interface InstructorRow {
+  id: string;
+  name: string;
+}
 
 interface ClassRow {
   id: string;
@@ -29,6 +41,7 @@ interface ClassRow {
   capacity: number;
   instructor_id: string | null;
   studio_id: string;
+  instructors: { name: string } | null;
 }
 
 interface BookingCount {
@@ -56,23 +69,37 @@ export default function Schedule() {
   const [className, setClassName] = useState("");
   const [classTime, setClassTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
+  const [selectedInstructorId, setSelectedInstructorId] = useState<string>("none");
   const [submitting, setSubmitting] = useState(false);
 
+  // Instructors
+  const [instructors, setInstructors] = useState<InstructorRow[]>([]);
+
   const canManage = activeRole === "owner" || activeRole === "instructor";
+
+  const fetchInstructors = async () => {
+    if (!activeStudio) return;
+    const { data } = await supabase
+      .from("instructors")
+      .select("id, name")
+      .eq("studio_id", activeStudio.id)
+      .order("display_order");
+    setInstructors(data ?? []);
+  };
 
   const fetchClasses = async () => {
     if (!activeStudio) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("classes")
-      .select("*")
+      .select("*, instructors(name)")
       .eq("studio_id", activeStudio.id)
       .order("start_time", { ascending: true });
 
     if (error) {
       console.error("Failed to fetch classes:", error);
     } else {
-      setClasses(data ?? []);
+      setClasses((data as unknown as ClassRow[]) ?? []);
     }
     setLoading(false);
   };
@@ -109,6 +136,7 @@ export default function Schedule() {
 
   useEffect(() => {
     fetchClasses();
+    fetchInstructors();
   }, [activeStudio?.id]);
 
   useEffect(() => {
@@ -201,6 +229,7 @@ export default function Schedule() {
       start_time: dt.toISOString(),
       capacity: parseInt(capacity) || 10,
       studio_id: activeStudio.id,
+      instructor_id: selectedInstructorId === "none" ? null : selectedInstructorId,
     });
 
     if (error) {
@@ -210,6 +239,7 @@ export default function Schedule() {
       setClassName("");
       setClassTime({ hour: 9, minute: 0 });
       setCapacity("10");
+      setSelectedInstructorId("none");
       setDialogOpen(false);
       fetchClasses();
     }
@@ -249,6 +279,22 @@ export default function Schedule() {
                     placeholder="e.g. Morning Flow"
                     required
                   />
+                </div>
+                <div>
+                  <Label>Instructor</Label>
+                  <Select value={selectedInstructorId} onValueChange={setSelectedInstructorId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select instructor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {instructors.map((inst) => (
+                        <SelectItem key={inst.id} value={inst.id}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <TimePicker
@@ -324,6 +370,9 @@ export default function Schedule() {
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="space-y-1">
                       <p className="font-semibold">{cls.name}</p>
+                      {cls.instructors?.name && (
+                        <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
+                      )}
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
