@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,7 @@ type DashboardView = "loading" | "owner" | "student" | "new-user";
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [view, setView] = useState<DashboardView>("loading");
   const [isDemoMode, setIsDemoMode] = useState(false);
 
@@ -55,6 +56,13 @@ export default function Dashboard() {
     determine();
   }, [user?.id]);
 
+  // Owner at /dashboard → redirect into AppLayout at /
+  useEffect(() => {
+    if (view === "owner" && !isDemoMode && location.pathname === "/dashboard") {
+      navigate("/", { replace: true });
+    }
+  }, [view, isDemoMode, location.pathname, navigate]);
+
   if (view === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -77,7 +85,12 @@ export default function Dashboard() {
               size="sm"
               variant="outline"
               className="border-yellow-600 bg-yellow-300 text-yellow-900 hover:bg-yellow-200"
-              onClick={() => setIsDemoMode(false)}
+              onClick={() => {
+                setIsDemoMode(false);
+                if (location.pathname === "/dashboard") {
+                  navigate("/", { replace: true });
+                }
+              }}
             >
               <ArrowLeft className="mr-1 h-3.5 w-3.5" />
               Return to Owner View
@@ -89,7 +102,12 @@ export default function Dashboard() {
     );
   }
 
-  // Owner view — show a simple owner home with the demo toggle
+  // Owner waiting to redirect from /dashboard
+  if (location.pathname === "/dashboard") {
+    return null;
+  }
+
+  // Owner view inside AppLayout — show dashboard content with demo toggle
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
