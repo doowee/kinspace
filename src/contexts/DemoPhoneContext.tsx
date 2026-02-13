@@ -58,7 +58,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
       setIsOpen(true);
       setTimeout(() => {
         addMessage(
-          `GOOD NEWS: A spot opened in ${meta.className}! Reply YES to claim it.`,
+          `GOOD NEWS: A spot just opened up due to a cancellation! Reply YES to claim it.`,
           "system"
         );
         setAwaitingReply("waitlist");

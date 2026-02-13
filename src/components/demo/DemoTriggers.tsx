@@ -15,22 +15,23 @@ import { Button } from "@/components/ui/button";
 
 export default function DemoTriggers() {
   const { activeRole, activeStudio } = useStudio();
-  const { triggerScenario, triggerWaitlistPromotion } = useDemoPhone();
+  const { triggerScenario, triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
+
+  const studioName = activeStudio?.name || "Your Studio";
 
   // Only visible to owners
   if (activeRole !== "owner") return null;
 
-  const studioName = activeStudio?.name || "Your Studio";
-
   const handleWaitlistTrigger = async () => {
-    const { data, error } = await supabase
+    // Step 1: Find a waitlisted booking first
+    const { data: waitlistBooking, error: wErr } = await supabase
       .from("bookings")
       .select("id, user_id, studio_id, class_id, classes(name, start_time)")
       .eq("status", "waitlist")
       .limit(1)
       .maybeSingle();
 
-    if (error || !data) {
+    if (wErr || !waitlistBooking) {
       toast({
         title: "Demo Failed",
         description: "No waitlisted students found. Please waitlist a student first.",
@@ -39,17 +40,53 @@ export default function DemoTriggers() {
       return;
     }
 
-    triggerWaitlistPromotion({
-      bookingId: data.id,
-      userId: data.user_id,
-      studioId: data.studio_id,
-      className: (data.classes as any)?.name ?? "Class",
-      classTime: (data.classes as any)?.start_time ?? "",
+    const classId = waitlistBooking.class_id;
+
+    // Step 2: Find the LAST confirmed booking for this class to cancel
+    const { data: lastConfirmed, error: cErr } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("class_id", classId)
+      .eq("status", "confirmed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (cErr || !lastConfirmed) {
+      toast({
+        title: "Demo Failed",
+        description: "No confirmed students found to simulate a cancellation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Step 3: Cancel that booking to free a spot
+    await supabase
+      .from("bookings")
+      .update({ status: "cancelled" as any })
+      .eq("id", lastConfirmed.id);
+
+    // Refresh roster UI
+    onWaitlistPromoted.current?.();
+
+    toast({
+      title: "Student cancelled. 1 spot opened.",
+      description: "Triggering Waitlist...",
     });
+
+    // Step 4: After 1.5s delay, trigger the SMS
+    setTimeout(() => {
+      triggerWaitlistPromotion({
+        bookingId: waitlistBooking.id,
+        userId: waitlistBooking.user_id,
+        studioId: waitlistBooking.studio_id,
+        className: (waitlistBooking.classes as any)?.name ?? "Class",
+        classTime: (waitlistBooking.classes as any)?.start_time ?? "",
+      });
+    }, 1500);
   };
 
-  // Only visible to owners
-  if (activeRole !== "owner") return null;
 
   return (
     <DropdownMenu>
