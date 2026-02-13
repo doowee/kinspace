@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StudioProvider } from "@/contexts/StudioContext";
 import StudioGate from "./components/StudioGate";
@@ -49,6 +49,15 @@ const App = () => (
                 </AuthGate>
               }
             />
+            {/* Dashboard is outside StudioGate so students without studios can access it */}
+            <Route
+              path="/dashboard"
+              element={
+                <AuthGate>
+                  <Dashboard />
+                </AuthGate>
+              }
+            />
             <Route
               element={
                 <AuthGate>
@@ -61,7 +70,6 @@ const App = () => (
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/org-revenue" element={<OrgRevenue />} />
               <Route path="/finance" element={<Finance />} />
