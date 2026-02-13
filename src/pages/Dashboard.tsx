@@ -3,12 +3,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, Calendar, Shield } from "lucide-react";
+import StudentDashboard from "@/components/dashboard/StudentDashboard";
 
 export default function Dashboard() {
   const { activeStudio, activeRole, memberships } = useStudio();
   const { user } = useAuth();
 
   if (!activeStudio) return null;
+
+  if (activeRole === "student") {
+    return <StudentDashboard />;
+  }
 
   return (
     <div className="animate-fade-in space-y-8">

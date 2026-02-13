@@ -10,13 +10,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink } from "lucide-react";
 import { Outlet, Navigate } from "react-router-dom";
 import { NavLink } from "./NavLink";
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
-  const { memberships, loading } = useStudio();
+  const { memberships, loading, activeStudio, activeRole } = useStudio();
 
   if (!user) return <Navigate to="/auth" replace />;
   if (loading) {
@@ -56,30 +56,43 @@ export default function AppLayout() {
                 <CalendarDays className="h-4 w-4" />
                 Schedule
               </NavLink>
-              <NavLink
-                to="/finance"
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                activeClassName="bg-accent text-accent-foreground font-medium"
-              >
-                <Wallet className="h-4 w-4" />
-                Finance
-              </NavLink>
-              <NavLink
-                to="/org-revenue"
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                activeClassName="bg-accent text-accent-foreground font-medium"
-              >
-                <Building2 className="h-4 w-4" />
-                Organization
-              </NavLink>
-              <NavLink
-                to="/settings"
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                activeClassName="bg-accent text-accent-foreground font-medium"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </NavLink>
+              {activeRole === "student" && activeStudio && (
+                <a
+                  href={`/book/${activeStudio.slug}`}
+                  className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Book a Class
+                </a>
+              )}
+              {activeRole !== "student" && (
+                <>
+                  <NavLink
+                    to="/finance"
+                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    activeClassName="bg-accent text-accent-foreground font-medium"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Finance
+                  </NavLink>
+                  <NavLink
+                    to="/org-revenue"
+                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    activeClassName="bg-accent text-accent-foreground font-medium"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Organization
+                  </NavLink>
+                  <NavLink
+                    to="/settings"
+                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    activeClassName="bg-accent text-accent-foreground font-medium"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </NavLink>
+                </>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
