@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
+import Students from "./pages/Students";
 import AppLayout from "./components/AppLayout";
 import BookingPage from "./pages/BookingPage";
 import PublicPackagesPage from "./pages/PublicPackagesPage";
@@ -111,6 +112,7 @@ const App = () => (
             >
               <Route index element={<Dashboard />} />
               <Route path="/schedule" element={<Schedule />} />
+              <Route path="/students" element={<Students />} />
               <Route path="/org-revenue" element={<OrgRevenue />} />
               <Route path="/finance" element={<Finance />} />
               <Route path="/settings" element={<Settings />} />

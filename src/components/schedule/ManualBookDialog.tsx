@@ -12,6 +12,7 @@ interface ManualBookDialogProps {
   classId: string | null;
   className: string;
   studioId: string;
+  organizationId: string | null;
   onBooked: () => void;
 }
 
@@ -22,7 +23,7 @@ interface StudentResult {
   email: string;
 }
 
-export default function ManualBookDialog({ open, onOpenChange, classId, className, studioId, onBooked }: ManualBookDialogProps) {
+export default function ManualBookDialog({ open, onOpenChange, classId, className, studioId, organizationId, onBooked }: ManualBookDialogProps) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<StudentResult[]>([]);
@@ -43,11 +44,24 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
     }
     const timer = setTimeout(async () => {
       setSearching(true);
-      // Search studio members' profiles
+
+      // Get all studios in the org, or fall back to current studio
+      let studioIds: string[] = [studioId];
+      if (organizationId) {
+        const { data: orgStudios } = await supabase
+          .from("studios")
+          .select("id")
+          .eq("organization_id", organizationId);
+        if (orgStudios && orgStudios.length > 0) {
+          studioIds = orgStudios.map((s) => s.id);
+        }
+      }
+
+      // Search members across all org studios
       const { data: members } = await supabase
         .from("studio_members")
         .select("user_id")
-        .eq("studio_id", studioId)
+        .in("studio_id", studioIds)
         .eq("role", "student");
 
       if (!members || members.length === 0) {
@@ -56,7 +70,7 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
         return;
       }
 
-      const userIds = members.map((m) => m.user_id);
+      const userIds = [...new Set(members.map((m) => m.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, email")
@@ -67,7 +81,7 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
       setSearching(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, studioId]);
+  }, [search, studioId, organizationId]);
 
   const handleBook = async (student: StudentResult) => {
     if (!classId) return;

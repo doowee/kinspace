@@ -495,6 +495,7 @@ export default function Schedule() {
           classId={manualBookClass?.id ?? null}
           className={manualBookClass?.name ?? ""}
           studioId={activeStudio.id}
+          organizationId={activeStudio.organization_id}
           onBooked={() => { fetchBookingData(); }}
         />
       )}
