@@ -22,6 +22,7 @@ import Wallet from "./pages/Wallet";
 import Profile from "./pages/Profile";
 import BookClass from "./pages/BookClass";
 import NotFound from "./pages/NotFound";
+import CreateStudio from "./pages/CreateStudio";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,16 @@ const App = () => (
               }
             />
             {/* Student layout with bottom/top nav */}
+            <Route
+              path="/create-studio"
+              element={
+                <AuthGate>
+                  <StudioProvider>
+                    <CreateStudio />
+                  </StudioProvider>
+                </AuthGate>
+              }
+            />
             <Route
               element={
                 <AuthGate>
