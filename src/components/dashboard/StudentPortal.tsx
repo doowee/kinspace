@@ -4,7 +4,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -38,6 +46,12 @@ export default function StudentPortal() {
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [studioPasses, setStudioPasses] = useState<{ studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number }[]>([]);
+
+  // Cancel dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [isLateCancel, setIsLateCancel] = useState(false);
+  const [lateCancelWindowHours, setLateCancelWindowHours] = useState(12);
 
   const fetchAll = useCallback(async () => {
     if (!user) return;
@@ -114,39 +128,49 @@ export default function StudentPortal() {
     return map;
   }, [bookings]);
 
-  const handleCancel = async (booking: Booking) => {
-    if (!user) return;
-    setCancellingId(booking.id);
+  // Pre-check cancellation type and open dialog
+  const handleCancelClick = async (booking: Booking) => {
+    // Fetch studio's late cancel window
+    const { data: studioData } = await supabase
+      .from("studios")
+      .select("late_cancel_window_hours")
+      .eq("id", booking.studio_id)
+      .single();
 
-    const { error: cancelError } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" as any })
-      .eq("id", booking.id);
+    const windowHours = (studioData as any)?.late_cancel_window_hours ?? 12;
+    setLateCancelWindowHours(windowHours);
 
-    if (cancelError) {
-      toast({ title: "Error", description: "Could not cancel booking.", variant: "destructive" });
-      setCancellingId(null);
-      return;
+    const hoursUntilClass = (new Date(booking.start_time).getTime() - Date.now()) / (1000 * 60 * 60);
+    setIsLateCancel(hoursUntilClass <= windowHours);
+    setCancelTarget(booking);
+    setCancelDialogOpen(true);
+  };
+
+  // Execute cancellation via RPC
+  const executeCancel = async () => {
+    if (!user || !cancelTarget) return;
+    setCancellingId(cancelTarget.id);
+    setCancelDialogOpen(false);
+
+    const { data, error } = await supabase.rpc("cancel_booking_logic", {
+      _booking_id: cancelTarget.id,
+      _user_id: user.id,
+    });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      const message = data as string;
+      const isLate = message.includes("Late");
+      toast({
+        title: isLate ? "Late Cancellation" : "Cancelled",
+        description: message,
+        variant: isLate ? "destructive" : "default",
+      });
     }
 
-    const { data: passes } = await supabase
-      .from("student_passes")
-      .select("id, credits_remaining")
-      .eq("user_id", user.id)
-      .eq("studio_id", booking.studio_id)
-      .gt("expires_at", new Date().toISOString())
-      .order("expires_at", { ascending: true })
-      .limit(1);
-
-    if (passes && passes.length > 0) {
-      await supabase
-        .from("student_passes")
-        .update({ credits_remaining: passes[0].credits_remaining + 1 })
-        .eq("id", passes[0].id);
-    }
-
-    toast({ title: "Cancelled", description: "Booking cancelled and credit refunded." });
     setCancellingId(null);
+    setCancelTarget(null);
     fetchAll();
   };
 
@@ -271,7 +295,7 @@ export default function StudentPortal() {
                     size="sm"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-4"
                     disabled={cancellingId === b.id}
-                    onClick={() => handleCancel(b)}
+                    onClick={() => handleCancelClick(b)}
                   >
                     <X className="h-3.5 w-3.5 mr-1" />
                     Cancel
@@ -282,6 +306,67 @@ export default function StudentPortal() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          {isLateCancel ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Late Cancellation Warning
+                </DialogTitle>
+                <DialogDescription className="pt-2">
+                  You are cancelling within the <strong>{lateCancelWindowHours}-hour</strong> window.
+                  You will <strong>lose</strong> your credit if you proceed.
+                </DialogDescription>
+              </DialogHeader>
+              {cancelTarget && (
+                <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm">
+                  <p className="font-medium">{cancelTarget.class_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}
+                  </p>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                  Keep Class
+                </Button>
+                <Button variant="destructive" onClick={executeCancel}>
+                  I Understand, Cancel Anyway
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display">Cancel Class?</DialogTitle>
+                <DialogDescription className="pt-2">
+                  You are outside the late cancel window. Your credit will be refunded.
+                </DialogDescription>
+              </DialogHeader>
+              {cancelTarget && (
+                <div className="rounded-md border bg-muted/50 p-3 text-sm">
+                  <p className="font-medium">{cancelTarget.class_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}
+                  </p>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                  Nevermind
+                </Button>
+                <Button onClick={executeCancel}>
+                  Confirm Cancel
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

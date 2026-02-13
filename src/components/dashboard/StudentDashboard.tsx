@@ -5,7 +5,15 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Ticket, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { CalendarDays, Ticket, X, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -26,17 +34,18 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  // Cancel dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [isLateCancel, setIsLateCancel] = useState(false);
+  const [lateCancelWindowHours, setLateCancelWindowHours] = useState(12);
+
   const fetchAll = useCallback(async () => {
     if (!user || !activeStudio) return;
     setLoading(true);
 
-    // Parallel fetches
     const [profileRes, bookingsRes, creditsRes] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("first_name")
-        .eq("id", user.id)
-        .single(),
+      supabase.from("profiles").select("first_name").eq("id", user.id).single(),
       supabase
         .from("bookings")
         .select("id, class_id, status, classes(name, start_time)")
@@ -62,14 +71,10 @@ export default function StudentDashboard() {
       class_name: b.classes?.name ?? "Unknown Class",
       start_time: b.classes?.start_time ?? "",
     }));
-    // Sort by start_time ascending
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     setBookings(mapped);
 
-    const sum = (creditsRes.data ?? []).reduce(
-      (acc: number, p: any) => acc + p.credits_remaining,
-      0
-    );
+    const sum = (creditsRes.data ?? []).reduce((acc: number, p: any) => acc + p.credits_remaining, 0);
     setTotalCredits(sum);
     setLoading(false);
   }, [user?.id, activeStudio?.id]);
@@ -78,41 +83,48 @@ export default function StudentDashboard() {
     fetchAll();
   }, [fetchAll]);
 
-  const handleCancel = async (booking: Booking) => {
-    if (!user || !activeStudio) return;
-    setCancellingId(booking.id);
+  const handleCancelClick = async (booking: Booking) => {
+    if (!activeStudio) return;
 
-    // 1. Cancel the booking
-    const { error: cancelError } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" as any })
-      .eq("id", booking.id);
+    const { data: studioData } = await supabase
+      .from("studios")
+      .select("late_cancel_window_hours")
+      .eq("id", activeStudio.id)
+      .single();
 
-    if (cancelError) {
-      toast({ title: "Error", description: "Could not cancel booking.", variant: "destructive" });
-      setCancellingId(null);
-      return;
+    const windowHours = (studioData as any)?.late_cancel_window_hours ?? 12;
+    setLateCancelWindowHours(windowHours);
+
+    const hoursUntilClass = (new Date(booking.start_time).getTime() - Date.now()) / (1000 * 60 * 60);
+    setIsLateCancel(hoursUntilClass <= windowHours);
+    setCancelTarget(booking);
+    setCancelDialogOpen(true);
+  };
+
+  const executeCancel = async () => {
+    if (!user || !cancelTarget) return;
+    setCancellingId(cancelTarget.id);
+    setCancelDialogOpen(false);
+
+    const { data, error } = await supabase.rpc("cancel_booking_logic", {
+      _booking_id: cancelTarget.id,
+      _user_id: user.id,
+    });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      const message = data as string;
+      const isLate = message.includes("Late");
+      toast({
+        title: isLate ? "Late Cancellation" : "Cancelled",
+        description: message,
+        variant: isLate ? "destructive" : "default",
+      });
     }
 
-    // 2. Refund credit to earliest-expiring active pass
-    const { data: passes } = await supabase
-      .from("student_passes")
-      .select("id, credits_remaining")
-      .eq("user_id", user.id)
-      .eq("studio_id", activeStudio.id)
-      .gt("expires_at", new Date().toISOString())
-      .order("expires_at", { ascending: true })
-      .limit(1);
-
-    if (passes && passes.length > 0) {
-      await supabase
-        .from("student_passes")
-        .update({ credits_remaining: passes[0].credits_remaining + 1 })
-        .eq("id", passes[0].id);
-    }
-
-    toast({ title: "Cancelled", description: "Booking cancelled and credit refunded." });
     setCancellingId(null);
+    setCancelTarget(null);
     fetchAll();
   };
 
@@ -204,7 +216,7 @@ export default function StudentDashboard() {
                         size="sm"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-4"
                         disabled={cancellingId === b.id}
-                        onClick={() => handleCancel(b)}
+                        onClick={() => handleCancelClick(b)}
                       >
                         <X className="h-3.5 w-3.5 mr-1" />
                         Cancel
@@ -222,6 +234,67 @@ export default function StudentDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          {isLateCancel ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Late Cancellation Warning
+                </DialogTitle>
+                <DialogDescription className="pt-2">
+                  You are cancelling within the <strong>{lateCancelWindowHours}-hour</strong> window.
+                  You will <strong>lose</strong> your credit if you proceed.
+                </DialogDescription>
+              </DialogHeader>
+              {cancelTarget && (
+                <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm">
+                  <p className="font-medium">{cancelTarget.class_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}
+                  </p>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                  Keep Class
+                </Button>
+                <Button variant="destructive" onClick={executeCancel}>
+                  I Understand, Cancel Anyway
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display">Cancel Class?</DialogTitle>
+                <DialogDescription className="pt-2">
+                  You are outside the late cancel window. Your credit will be refunded.
+                </DialogDescription>
+              </DialogHeader>
+              {cancelTarget && (
+                <div className="rounded-md border bg-muted/50 p-3 text-sm">
+                  <p className="font-medium">{cancelTarget.class_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}
+                  </p>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                  Nevermind
+                </Button>
+                <Button onClick={executeCancel}>
+                  Confirm Cancel
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
