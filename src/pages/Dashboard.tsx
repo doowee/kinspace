@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, Calendar, Shield, Search, PlusCircle } from "lucide-react";
+import { Search, PlusCircle, Eye, ArrowLeft } from "lucide-react";
 import StudentPortal from "@/components/dashboard/StudentPortal";
 
 type DashboardView = "loading" | "owner" | "student" | "new-user";
@@ -14,6 +13,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState<DashboardView>("loading");
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -67,21 +67,46 @@ export default function Dashboard() {
     return <NewUserWelcome />;
   }
 
-  if (view === "student") {
-    return <StudentPortal />;
+  if (view === "student" || (view === "owner" && isDemoMode)) {
+    return (
+      <>
+        {isDemoMode && (
+          <div className="sticky top-0 z-50 flex items-center justify-between bg-yellow-400 px-4 py-2 text-yellow-900">
+            <span className="text-sm font-semibold">👁️ Viewing as Student (Demo Mode)</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-yellow-600 bg-yellow-300 text-yellow-900 hover:bg-yellow-200"
+              onClick={() => setIsDemoMode(false)}
+            >
+              <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+              Return to Owner View
+            </Button>
+          </div>
+        )}
+        <StudentPortal />
+      </>
+    );
   }
 
-  // Owner - redirect to index route which is inside StudioProvider
-  return <OwnerRedirect />;
+  // Owner view — show a simple owner home with the demo toggle
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Welcome back, Owner.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setIsDemoMode(true)}>
+          <Eye className="mr-1.5 h-4 w-4" />
+          View as Student
+        </Button>
+      </div>
+    </div>
+  );
 }
 
-function OwnerRedirect() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    navigate("/", { replace: true });
-  }, [navigate]);
-  return null;
-}
+
 
 function NewUserWelcome() {
   const navigate = useNavigate();
