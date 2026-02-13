@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StudioProvider } from "@/contexts/StudioContext";
 import StudioGate from "./components/StudioGate";
 import StudioThemeProvider from "./components/StudioThemeProvider";
+import StudentLayout from "./components/StudentLayout";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -17,6 +18,9 @@ import PublicPackagesPage from "./pages/PublicPackagesPage";
 import OrgRevenue from "./pages/OrgRevenue";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
+import Wallet from "./pages/Wallet";
+import Profile from "./pages/Profile";
+import BookClass from "./pages/BookClass";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,15 +73,19 @@ const App = () => (
                 </AuthGate>
               }
             />
-            {/* Dashboard is outside StudioGate so students without studios can access it */}
+            {/* Student layout with bottom/top nav */}
             <Route
-              path="/dashboard"
               element={
                 <AuthGate>
-                  <Dashboard />
+                  <StudentLayout />
                 </AuthGate>
               }
-            />
+            >
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/book-class" element={<BookClass />} />
+              <Route path="/wallet" element={<Wallet />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
             <Route
               element={
                 <AuthGate>

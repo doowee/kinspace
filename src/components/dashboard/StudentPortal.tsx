@@ -4,8 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarDays, Ticket, X, ExternalLink, ShoppingBag, LogOut } from "lucide-react";
+import { CalendarDays, X, Ticket } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -22,21 +21,6 @@ interface Booking {
   instructor_name: string | null;
 }
 
-interface StudioPass {
-  studio_id: string;
-  studio_name: string;
-  studio_slug: string;
-  studio_logo_url: string | null;
-  credits_remaining: number;
-}
-
-interface MyStudio {
-  slug: string;
-  name: string;
-  logo_url: string | null;
-}
-
-// Consistent color palette for studio badges
 const STUDIO_COLORS = [
   "bg-primary/15 text-primary border-primary/30",
   "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
@@ -47,11 +31,10 @@ const STUDIO_COLORS = [
 ];
 
 export default function StudentPortal() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [studioPasses, setStudioPasses] = useState<StudioPass[]>([]);
-  const [myStudios, setMyStudios] = useState<MyStudio[]>([]);
+  const [creditsSummary, setCreditsSummary] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -59,7 +42,7 @@ export default function StudentPortal() {
     if (!user) return;
     setLoading(true);
 
-    const [profileRes, bookingsRes, creditsRes, studiosRes] = await Promise.all([
+    const [profileRes, bookingsRes, creditsRes] = await Promise.all([
       supabase.from("profiles").select("first_name").eq("id", user.id).single(),
       supabase
         .from("bookings")
@@ -69,15 +52,10 @@ export default function StudentPortal() {
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
-        .select("credits_remaining, studio_id, studios:studio_id(name, slug, logo_url)")
+        .select("credits_remaining")
         .eq("user_id", user.id)
         .gt("credits_remaining", 0)
         .gt("expires_at", new Date().toISOString()),
-      supabase
-        .from("studio_members")
-        .select("studios:studio_id(name, slug, logo_url)")
-        .eq("user_id", user.id)
-        .eq("role", "student" as any),
     ]);
 
     setFirstName(profileRes.data?.first_name || "");
@@ -97,29 +75,8 @@ export default function StudentPortal() {
     const now = new Date();
     setBookings(mapped.filter((b) => new Date(b.start_time) > now));
 
-    // Group passes by studio
-    const passMap: Record<string, StudioPass> = {};
-    (creditsRes.data ?? []).forEach((p: any) => {
-      const sid = p.studio_id;
-      if (!passMap[sid]) {
-        passMap[sid] = {
-          studio_id: sid,
-          studio_name: (p.studios as any)?.name ?? "Unknown",
-          studio_slug: (p.studios as any)?.slug ?? "",
-          studio_logo_url: (p.studios as any)?.logo_url ?? null,
-          credits_remaining: 0,
-        };
-      }
-      passMap[sid].credits_remaining += p.credits_remaining;
-    });
-    setStudioPasses(Object.values(passMap));
-
-    const studios: MyStudio[] = (studiosRes.data ?? []).map((s: any) => ({
-      name: (s.studios as any)?.name ?? "",
-      slug: (s.studios as any)?.slug ?? "",
-      logo_url: (s.studios as any)?.logo_url ?? null,
-    })).filter((s: MyStudio) => s.slug);
-    setMyStudios(studios);
+    const total = (creditsRes.data ?? []).reduce((sum: number, p: any) => sum + (p.credits_remaining ?? 0), 0);
+    setCreditsSummary(total);
 
     setLoading(false);
   }, [user?.id]);
@@ -128,11 +85,9 @@ export default function StudentPortal() {
     fetchAll();
   }, [fetchAll]);
 
-  // Build a stable color map for studios
   const studioColorMap = useMemo(() => {
     const ids = new Set<string>();
     bookings.forEach((b) => ids.add(b.studio_id));
-    studioPasses.forEach((p) => ids.add(p.studio_id));
     const map: Record<string, string> = {};
     let i = 0;
     ids.forEach((id) => {
@@ -140,23 +95,7 @@ export default function StudentPortal() {
       i++;
     });
     return map;
-  }, [bookings, studioPasses]);
-
-  // White-label brand: single studio → show their brand, multi → neutral
-  const brandInfo = useMemo(() => {
-    const uniqueStudios = new Map<string, MyStudio>();
-    myStudios.forEach((s) => uniqueStudios.set(s.slug, s));
-    studioPasses.forEach((sp) => {
-      if (sp.studio_slug && !uniqueStudios.has(sp.studio_slug)) {
-        uniqueStudios.set(sp.studio_slug, { slug: sp.studio_slug, name: sp.studio_name, logo_url: sp.studio_logo_url });
-      }
-    });
-    const all = Array.from(uniqueStudios.values());
-    if (all.length === 1) {
-      return { name: all[0].name, logo_url: all[0].logo_url, multi: false };
-    }
-    return { name: "My Studios", logo_url: null, multi: true };
-  }, [myStudios, studioPasses]);
+  }, [bookings]);
 
   const handleCancel = async (booking: Booking) => {
     if (!user) return;
@@ -173,7 +112,6 @@ export default function StudentPortal() {
       return;
     }
 
-    // Refund to earliest-expiring pass for same studio
     const { data: passes } = await supabase
       .from("student_passes")
       .select("id, credits_remaining")
@@ -203,96 +141,37 @@ export default function StudentPortal() {
     );
   }
 
-  const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
-
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* White-label Header */}
-      <header className="border-b bg-card">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-3">
-            {brandInfo.logo_url ? (
-              <img
-                src={brandInfo.logo_url}
-                alt={brandInfo.name}
-                className="h-8 w-auto max-w-[140px] object-contain"
-              />
-            ) : (
-              <span className="font-display text-lg font-bold text-foreground">
-                {brandInfo.name}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={signOut} className="gap-1.5 text-muted-foreground">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="animate-fade-in space-y-8 max-w-3xl mx-auto px-4 py-8 flex-1">
-        {/* Greeting */}
-        <div>
-          <h2 className="font-display text-3xl font-bold text-foreground">
-            Welcome back, {firstName || "Student"}.
-          </h2>
-          <p className="mt-1 text-muted-foreground">
-            Here's what's coming up for you.
-          </p>
-        </div>
-
-      {/* My Memberships — Studio-Specific Credits */}
+    <div className="animate-fade-in space-y-8 max-w-3xl mx-auto px-4 py-8">
+      {/* Greeting */}
       <div>
-        <h3 className="font-display text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-          <Ticket className="h-5 w-5" />
-          My Memberships
-        </h3>
-        {studioPasses.length === 0 ? (
-          <Card>
-            <CardContent className="py-6 text-center">
-              <p className="text-sm text-muted-foreground">No active passes across any studio.</p>
+        <h2 className="font-display text-3xl font-bold text-foreground">
+          Welcome back, {firstName || "Student"}.
+        </h2>
+        <p className="mt-1 text-muted-foreground">
+          Here's what's coming up for you.
+        </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="py-4 text-center">
+            <div className="text-2xl font-bold font-display text-primary">{bookings.length}</div>
+            <p className="text-xs text-muted-foreground">Upcoming Classes</p>
+          </CardContent>
+        </Card>
+        <Link to="/wallet">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardContent className="py-4 text-center">
+              <div className="text-2xl font-bold font-display text-primary flex items-center justify-center gap-1">
+                <Ticket className="h-5 w-5" />
+                {creditsSummary}
+              </div>
+              <p className="text-xs text-muted-foreground">Credits Available</p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {studioPasses.map((sp) => (
-              <Card key={sp.studio_id} className="relative overflow-hidden">
-                <div className={`absolute inset-y-0 left-0 w-1 ${studioColorMap[sp.studio_id]?.split(" ")[0] ?? "bg-primary/15"}`} />
-                <CardHeader className="pb-2 pl-5">
-                  <CardTitle className="text-sm font-medium font-sans truncate">
-                    {sp.studio_name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pl-5 flex items-end justify-between">
-                  <div>
-                    <div className={`text-2xl font-bold font-display ${sp.credits_remaining > 0 ? "text-primary" : "text-destructive"}`}>
-                      {sp.credits_remaining}
-                    </div>
-                    <p className="text-xs text-muted-foreground">credits remaining</p>
-                  </div>
-                   {sp.studio_slug && (
-                    <div className="flex flex-col gap-1.5">
-                      <Button variant="outline" size="sm" asChild className="text-xs gap-1">
-                        <Link to={`/book/${sp.studio_slug}`}>
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Book a Class
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="sm" asChild className="text-xs gap-1">
-                        <Link to={`/packages/${sp.studio_slug}`}>
-                          <ShoppingBag className="h-3.5 w-3.5" />
-                          Buy More
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        </Link>
       </div>
 
       {/* My Schedule */}
@@ -348,22 +227,6 @@ export default function StudentPortal() {
           )}
         </CardContent>
       </Card>
-      </div>
-
-      {/* Powered by Footer */}
-      <footer className="border-t bg-card/50 py-6 mt-auto">
-        <div className="container flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
-          <span>Powered by</span>
-          <a
-            href="https://kinspace.studio"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium hover:text-muted-foreground transition-colors"
-          >
-            Kinspace.studio
-          </a>
-        </div>
-      </footer>
     </div>
   );
 }
