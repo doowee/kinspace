@@ -26,9 +26,7 @@ export default function StudioSwitcher() {
           <span className="font-medium truncate max-w-[160px]">
             {activeStudio.name}
           </span>
-          <Badge variant="secondary" className="text-xs font-normal capitalize">
-            {activeRole}
-          </Badge>
+          <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
           <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
