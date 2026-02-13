@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
+const PHONE_REGEX = /^\+?[\d\s\-().]{7,20}$/;
+
 export default function Auth() {
   const { user, loading: authLoading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -15,6 +17,8 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -22,6 +26,14 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPhoneError("");
+
+    // Validate phone if provided during signup
+    if (isSignUp && phone.trim() && !PHONE_REGEX.test(phone.trim())) {
+      setPhoneError("Please enter a valid phone number");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -31,13 +43,17 @@ export default function Auth() {
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { first_name: firstName, last_name: lastName }
-          }
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              phone: phone.trim() || undefined,
+            },
+          },
         });
         if (error) throw error;
         toast({
           title: "Check your email",
-          description: "We sent you a confirmation link to verify your account."
+          description: "We sent you a confirmation link to verify your account.",
         });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -47,7 +63,7 @@ export default function Auth() {
       toast({
         title: "Error",
         description: err.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -60,9 +76,7 @@ export default function Auth() {
         <div className="mb-8 text-center">
           <img alt="Kinspace logo" className="h-20 w-20 mx-auto mb-3 rounded-xl" src="/kinspace-logo-sage.png" />
           <h1 className="font-display text-4xl font-bold tracking-tight">Kinspace.Studio</h1>
-          <p className="mt-2 text-muted-foreground">
-            Studio management, simplified
-          </p>
+          <p className="mt-2 text-muted-foreground">Studio management, simplified</p>
         </div>
 
         <Card>
@@ -71,35 +85,51 @@ export default function Auth() {
               {isSignUp ? "Create Account" : "Welcome Back"}
             </CardTitle>
             <CardDescription>
-              {isSignUp ?
-              "Start managing your Pilates studio" :
-              "Sign in to your account"}
+              {isSignUp ? "Start managing your Pilates studio" : "Sign in to your account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp &&
-              <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required />
-
+              {isSignUp && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="phone">
+                      Phone Number <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
                     <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required />
-
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        if (phoneError) setPhoneError("");
+                      }}
+                      placeholder="+1 (555) 123-4567"
+                    />
+                    {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
                   </div>
-                </div>
-              }
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -108,8 +138,8 @@ export default function Auth() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  required />
-
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -120,8 +150,8 @@ export default function Auth() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={6} />
-
+                  minLength={6}
+                />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
@@ -131,16 +161,14 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors">
-
-                {isSignUp ?
-                "Already have an account? Sign in" :
-                "Don't have an account? Sign up"}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
               </button>
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>);
-
+    </div>
+  );
 }
