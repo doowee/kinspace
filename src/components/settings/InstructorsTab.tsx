@@ -131,20 +131,15 @@ export default function InstructorsTab() {
     setLinking(true);
     setLinkError("");
 
-    // Look up the profile by email
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .eq("email", linkEmail.trim().toLowerCase())
-      .limit(1);
+    // Look up the user by email using security definer function
+    const { data: userId, error: lookupError } = await supabase
+      .rpc("lookup_user_id_by_email", { _email: linkEmail.trim().toLowerCase() });
 
-    if (profileError || !profiles || profiles.length === 0) {
+    if (lookupError || !userId) {
       setLinkError("No user found with that email. They must have an account first.");
       setLinking(false);
       return;
     }
-
-    const userId = profiles[0].id;
 
     // Ensure they have a studio_member record with instructor role
     const { data: existingMember } = await supabase
