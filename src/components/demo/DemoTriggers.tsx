@@ -230,7 +230,7 @@ export default function DemoTriggers() {
           onClick={async () => {
             try {
               toast({ title: "Seeding...", description: "Creating demo data, please wait." });
-              const result = await seedDemoData(activeStudio?.id);
+              const result = await seedDemoData();
               toast({
                 title: "Studio Seeded ✓",
                 description: `${result.classCount} Classes, ${result.studentCount} Students, ${result.bookingCount} Bookings created. Waitlist ready on "${result.waitlistClassName}".`,
