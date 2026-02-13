@@ -2,7 +2,8 @@ import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw } from "lucide-react";
+import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw, Database } from "lucide-react";
+import { seedDemoData } from "@/lib/seed-demo-data";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -224,6 +225,24 @@ export default function DemoTriggers() {
         >
           <RotateCcw className="h-4 w-4" />
           Reset Waitlist Demo
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={async () => {
+            try {
+              toast({ title: "Seeding...", description: "Creating demo data, please wait." });
+              const result = await seedDemoData(activeStudio?.id);
+              toast({
+                title: "Studio Seeded ✓",
+                description: `${result.classCount} Classes, ${result.studentCount} Students, ${result.bookingCount} Bookings created. Waitlist ready on "${result.waitlistClassName}".`,
+              });
+            } catch (e: any) {
+              toast({ title: "Seed Failed", description: e.message, variant: "destructive" });
+            }
+          }}
+          className="gap-2 cursor-pointer text-muted-foreground"
+        >
+          <Database className="h-4 w-4" />
+          ⚡ Seed Realistic Demo Data
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
