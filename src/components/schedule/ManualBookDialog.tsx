@@ -95,7 +95,12 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
         status: "confirmed",
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === "23505") {
+          throw new Error(`${student.first_name || student.email} is already booked for this class.`);
+        }
+        throw error;
+      }
 
       toast({
         title: "Student booked",
