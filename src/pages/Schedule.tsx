@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, Eye } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -410,7 +410,7 @@ export default function Schedule() {
                     {canManage ? (
                       <div className="flex items-center gap-1.5">
                         <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)}>
-                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          <UsersRound className="h-3.5 w-3.5 mr-1" />
                           {count}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setManualBookClass(cls)}>
