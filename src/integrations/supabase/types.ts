@@ -375,6 +375,7 @@ export type Database = {
           brand_highlight: string | null
           brand_primary: string | null
           brand_secondary: string | null
+          brand_text: string | null
           created_at: string
           id: string
           location: string | null
@@ -390,6 +391,7 @@ export type Database = {
           brand_highlight?: string | null
           brand_primary?: string | null
           brand_secondary?: string | null
+          brand_text?: string | null
           created_at?: string
           id?: string
           location?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           brand_highlight?: string | null
           brand_primary?: string | null
           brand_secondary?: string | null
+          brand_text?: string | null
           created_at?: string
           id?: string
           location?: string | null
@@ -517,6 +520,7 @@ export type Database = {
           brand_highlight: string
           brand_primary: string
           brand_secondary: string
+          brand_text: string
           id: string
           location: string
           logo_url: string

@@ -1,5 +1,7 @@
 import { useEffect, useState, createContext, useContext } from "react";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StudioBrand {
   id: string;
@@ -10,6 +12,7 @@ interface StudioBrand {
   brand_primary: string;
   brand_secondary: string;
   brand_highlight: string;
+  brand_text: string;
 }
 
 interface StudioThemeContextType {
@@ -27,6 +30,14 @@ const StudioThemeContext = createContext<StudioThemeContextType>({
 export function useStudioTheme() {
   return useContext(StudioThemeContext);
 }
+
+/** Default Kinspace brand colours (HSL values matching index.css) */
+const DEFAULTS = {
+  primary: "150 12% 55%",
+  "primary-foreground": "50 52% 93%",
+  secondary: "12 62% 68%",
+  ring: "150 12% 55%",
+};
 
 /** Convert a hex color (#RRGGBB) to an HSL string "H S% L%" for CSS variables */
 function hexToHSL(hex: string): string {
@@ -60,61 +71,119 @@ function hexToHSL(hex: string): string {
 }
 
 interface Props {
-  slug: string;
+  slug?: string;
   children: React.ReactNode;
 }
 
-export default function StudioThemeProvider({ slug, children }: Props) {
+/**
+ * StudioThemeProvider
+ * ---
+ * 1. If a `slug` prop is provided (or `:slug` URL param exists), fetch that studio's branding.
+ * 2. If the user is logged in (student) and no slug is present, fetch branding from their
+ *    most-recently-booked "home studio".
+ * 3. Inject CSS variables onto :root so the entire UI adapts.
+ * 4. Falls back to default Kinspace colours when no studio is resolved.
+ */
+export default function StudioThemeProvider({ slug: slugProp, children }: Props) {
+  const params = useParams<{ slug?: string; studio_slug?: string }>();
+  const { user } = useAuth();
+
+  const resolvedSlug = slugProp || params.slug || params.studio_slug;
+
   const [studio, setStudio] = useState<StudioBrand | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  // ---- Fetch by slug ----
   useEffect(() => {
-    if (!slug) return;
-    const fetch = async () => {
+    if (!resolvedSlug) {
+      // No slug — try home studio for logged-in students
+      if (user) {
+        fetchHomeStudio(user.id);
+      } else {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const fetchBySlug = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc("get_public_studio_by_slug", { _slug: slug });
+      const { data, error } = await supabase.rpc("get_public_studio_by_slug", { _slug: resolvedSlug });
       if (error || !data || (data as any[]).length === 0) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      const s = (data as any[])[0] as StudioBrand;
-      setStudio(s);
+      setStudio((data as any[])[0] as StudioBrand);
       setLoading(false);
     };
-    fetch();
-  }, [slug]);
 
-  // Apply CSS variables when studio loads
+    fetchBySlug();
+  }, [resolvedSlug, user?.id]);
+
+  // ---- Fetch home studio (most recent booking) ----
+  const fetchHomeStudio = async (userId: string) => {
+    setLoading(true);
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .select("studio_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (!bookings || bookings.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    const studioId = bookings[0].studio_id;
+    const { data: studios } = await supabase
+      .from("studios")
+      .select("id, name, slug, location, logo_url, brand_primary, brand_secondary, brand_highlight, brand_text")
+      .eq("id", studioId)
+      .limit(1);
+
+    if (studios && studios.length > 0) {
+      setStudio(studios[0] as unknown as StudioBrand);
+    }
+    setLoading(false);
+  };
+
+  // ---- Inject / clean up CSS variables ----
   useEffect(() => {
-    if (!studio) return;
     const root = document.documentElement;
+    const vars: string[] = [];
 
-    // Apply brand colors as CSS custom properties
-    if (studio.brand_primary) {
-      root.style.setProperty("--studio-primary", hexToHSL(studio.brand_primary));
-      root.style.setProperty("--primary", hexToHSL(studio.brand_primary));
-      root.style.setProperty("--ring", hexToHSL(studio.brand_primary));
-    }
-    if (studio.brand_secondary) {
-      root.style.setProperty("--studio-secondary", hexToHSL(studio.brand_secondary));
-      root.style.setProperty("--secondary", hexToHSL(studio.brand_secondary));
-    }
-    if (studio.brand_highlight) {
-      root.style.setProperty("--studio-highlight", hexToHSL(studio.brand_highlight));
-      root.style.setProperty("--highlight", hexToHSL(studio.brand_highlight));
+    const set = (name: string, value: string) => {
+      root.style.setProperty(name, value);
+      vars.push(name);
+    };
+
+    if (studio) {
+      if (studio.brand_primary) {
+        const hsl = hexToHSL(studio.brand_primary);
+        set("--primary", hsl);
+        set("--ring", hsl);
+        set("--studio-primary", hsl);
+      }
+      if (studio.brand_secondary) {
+        const hsl = hexToHSL(studio.brand_secondary);
+        set("--secondary", hsl);
+        set("--studio-secondary", hsl);
+      }
+      if (studio.brand_highlight) {
+        const hsl = hexToHSL(studio.brand_highlight);
+        set("--highlight", hsl);
+        set("--studio-highlight", hsl);
+      }
+      if (studio.brand_text) {
+        const hsl = hexToHSL(studio.brand_text);
+        set("--primary-foreground", hsl);
+      }
     }
 
-    // Cleanup: restore defaults when unmounting
     return () => {
-      root.style.removeProperty("--studio-primary");
-      root.style.removeProperty("--studio-secondary");
-      root.style.removeProperty("--studio-highlight");
-      root.style.removeProperty("--primary");
-      root.style.removeProperty("--secondary");
-      root.style.removeProperty("--highlight");
-      root.style.removeProperty("--ring");
+      vars.forEach((v) => root.style.removeProperty(v));
     };
   }, [studio]);
 
