@@ -553,6 +553,7 @@ export type Database = {
         Args: { _studio_id: string; _user_id: string }
         Returns: boolean
       }
+      lookup_user_id_by_email: { Args: { _email: string }; Returns: string }
     }
     Enums: {
       booking_status:
