@@ -100,7 +100,11 @@ export default {
 			},
 			cream: 'hsl(var(--cream))',
 			terracotta: 'hsl(var(--terracotta))',
-			highlight: 'hsl(var(--highlight))'
+			highlight: 'hsl(var(--highlight))',
+			success: {
+				DEFAULT: 'hsl(var(--success))',
+				foreground: 'hsl(var(--success-foreground))'
+			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
