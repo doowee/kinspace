@@ -11,21 +11,21 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard, User as UserIcon } from "lucide-react";
+import { Clock, Users, MapPin, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard, User as UserIcon, CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   format,
-  startOfWeek,
   addDays,
   isSameDay,
-  addWeeks,
-  subWeeks,
   isToday,
-  isPast,
+  isBefore,
+  startOfDay,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import AuthModal from "@/components/booking/AuthModal";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { User } from "@supabase/supabase-js";
 
 interface StudioInfo {
@@ -52,9 +52,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const [studio, setStudio] = useState<StudioInfo | null>(null);
   const [classes, setClasses] = useState<PublicClass[]>([]);
-  const [weekStart, setWeekStart] = useState<Date>(
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -134,9 +132,9 @@ export default function BookingPage() {
     }
   }, [user]);
 
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  }, [weekStart]);
+  const days = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+  }, [startDate]);
 
   const handleBookClick = (cls: PublicClass, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -274,45 +272,38 @@ export default function BookingPage() {
         </div>
       </section>
 
-      {/* Schedule — 7 day list */}
+      {/* Schedule — rolling 7 days */}
       <main className="container py-8 animate-fade-in">
-        {/* Week Navigation */}
+        {/* Header with calendar picker */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-display text-xl font-bold text-foreground">
-            {format(weekStart, "MMMM yyyy")}
+            Upcoming Classes
           </h3>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setWeekStart(subWeeks(weekStart, 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-            >
-              Today
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setWeekStart(addWeeks(weekStart, 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CalendarIcon className="mr-1.5 h-4 w-4" />
+                Jump to Date
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={(d) => d && setStartDate(startOfDay(d))}
+                disabled={(date) => isBefore(date, startOfDay(new Date()))}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* All 7 days listed */}
         <div className="space-y-8">
-          {weekDays.map((day) => {
-            const dayClasses = classes.filter((c) =>
-              isSameDay(new Date(c.start_time), day)
-            );
-            const dayPast = isPast(addDays(day, 1));
+          {days.map((day) => {
+            const dayClasses = classes
+              .filter((c) => isSameDay(new Date(c.start_time), day))
+              .filter((c) => !isBefore(new Date(c.start_time), new Date()));
 
             return (
               <section key={day.toISOString()}>
@@ -344,8 +335,7 @@ export default function BookingPage() {
                           key={cls.id}
                           className={cn(
                             "overflow-hidden transition-shadow hover:shadow-lg cursor-pointer",
-                            isBooked && "ring-2 ring-primary/30",
-                            dayPast && "opacity-60"
+                            isBooked && "ring-2 ring-primary/30"
                           )}
                           onClick={() => setDetailClass(cls)}
                         >
@@ -383,7 +373,7 @@ export default function BookingPage() {
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Booked
                                   </Badge>
-                                ) : !dayPast ? (
+                                ) : (
                                   <Button
                                     size="sm"
                                     className="shrink-0"
@@ -392,7 +382,7 @@ export default function BookingPage() {
                                   >
                                     {isBooking ? "Booking…" : "Book"}
                                   </Button>
-                                ) : null}
+                                )}
                               </div>
                             </div>
                           </CardContent>
@@ -422,7 +412,7 @@ export default function BookingPage() {
             const instructor = instructorName(detailClass);
             const isBooked = userBookedClassIds.has(detailClass.id);
             const isBooking = bookingClassId === detailClass.id;
-            const classPast = isPast(new Date(detailClass.start_time));
+            const classPast = isBefore(new Date(detailClass.start_time), new Date());
 
             return (
               <>
