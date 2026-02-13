@@ -39,8 +39,9 @@ const STUDIO_COLORS = [
   "bg-teal-500/15 text-teal-700 dark:text-teal-400 border-teal-500/30",
 ];
 
-export default function StudentPortal() {
+export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
   const { user } = useAuth();
+  const effectiveUserId = demoUserId || user?.id;
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [pastBookings, setPastBookings] = useState<Booking[]>([]);
@@ -63,21 +64,21 @@ export default function StudentPortal() {
   const [rebookConfirming, setRebookConfirming] = useState(false);
 
   const fetchAll = useCallback(async () => {
-    if (!user) return;
+    if (!effectiveUserId) return;
     setLoading(true);
 
     const [profileRes, bookingsRes, creditsRes] = await Promise.all([
-      supabase.from("profiles").select("first_name").eq("id", user.id).single(),
+      supabase.from("profiles").select("first_name").eq("id", effectiveUserId).single(),
       supabase
         .from("bookings")
         .select("id, class_id, status, studio_id, classes(name, start_time, instructors:instructor_id(name)), studios:studio_id(name, slug)")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .in("status", ["confirmed", "checked_in", "waitlist"])
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
         .select("credits_remaining, studio_id, studios:studio_id(name, slug)")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .gt("credits_remaining", 0)
         .gt("expires_at", new Date().toISOString()),
     ]);
@@ -139,7 +140,7 @@ export default function StudentPortal() {
     setStudioPasses(Object.values(passMap));
 
     setLoading(false);
-  }, [user?.id]);
+  }, [effectiveUserId]);
 
   useEffect(() => {
     fetchAll();
@@ -176,13 +177,13 @@ export default function StudentPortal() {
   };
 
   const executeCancel = async () => {
-    if (!user || !cancelTarget) return;
+    if (!effectiveUserId || !cancelTarget) return;
     setCancellingId(cancelTarget.id);
     setCancelDialogOpen(false);
 
     const { data, error } = await supabase.rpc("cancel_booking_logic", {
       _booking_id: cancelTarget.id,
-      _user_id: user.id,
+      _user_id: effectiveUserId,
     });
 
     if (error) {
@@ -233,14 +234,14 @@ export default function StudentPortal() {
   };
 
   const confirmRebook = async () => {
-    if (!user || !rebookCandidate || !rebookSourceBooking) return;
+    if (!effectiveUserId || !rebookCandidate || !rebookSourceBooking) return;
     setRebookConfirming(true);
 
     // Deduct credit from earliest-expiring pass
     const { data: passes } = await supabase
       .from("student_passes")
       .select("id, credits_remaining")
-      .eq("user_id", user.id)
+      .eq("user_id", effectiveUserId)
       .eq("studio_id", rebookSourceBooking.studio_id)
       .gt("credits_remaining", 0)
       .gt("expires_at", new Date().toISOString())
@@ -261,7 +262,7 @@ export default function StudentPortal() {
 
     // Create booking
     const { error: bookingError } = await supabase.from("bookings").insert({
-      user_id: user.id,
+      user_id: effectiveUserId,
       class_id: rebookCandidate.id,
       studio_id: rebookSourceBooking.studio_id,
       status: "confirmed",
