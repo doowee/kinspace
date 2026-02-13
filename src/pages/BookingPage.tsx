@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   format,
   startOfWeek,
@@ -44,6 +45,7 @@ interface PublicClass {
 export default function BookingPage() {
   const { studio_slug } = useParams<{ studio_slug: string }>();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [studio, setStudio] = useState<StudioInfo | null>(null);
   const [classes, setClasses] = useState<PublicClass[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -437,14 +439,22 @@ export default function BookingPage() {
       <Dialog open={noCreditsOpen} onOpenChange={setNoCreditsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display">No Credits Available</DialogTitle>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+              Pass Required
+            </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            You don't have any active credits to book this class. Purchase a
-            package to get started.
+            You need a class pass to book this session. Browse available packages and grab some credits.
           </p>
-          <Button className="w-full mt-2" onClick={() => setNoCreditsOpen(false)}>
-            Got it
+          <Button
+            className="w-full mt-2 gap-2"
+            onClick={() => {
+              setNoCreditsOpen(false);
+              navigate(`/book/${studio_slug}/packages?return_url=/book/${studio_slug}`);
+            }}
+          >
+            View Packages
           </Button>
         </DialogContent>
       </Dialog>

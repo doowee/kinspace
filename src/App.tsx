@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import AppLayout from "./components/AppLayout";
 import BookingPage from "./pages/BookingPage";
+import PublicPackagesPage from "./pages/PublicPackagesPage";
 import OrgRevenue from "./pages/OrgRevenue";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="/book/:studio_slug" element={<BookingPage />} />
+            <Route path="/book/:studio_slug/packages" element={<PublicPackagesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
