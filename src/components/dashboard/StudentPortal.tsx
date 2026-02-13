@@ -3,10 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Ticket, X } from "lucide-react";
+import { CalendarDays, Ticket, X, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 
 interface Booking {
   id: string;
@@ -15,6 +15,12 @@ interface Booking {
   class_name: string;
   start_time: string;
   studio_name: string;
+  studio_slug: string;
+}
+
+interface MyStudio {
+  slug: string;
+  name: string;
 }
 
 export default function StudentPortal() {
@@ -22,6 +28,7 @@ export default function StudentPortal() {
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalCredits, setTotalCredits] = useState(0);
+  const [myStudios, setMyStudios] = useState<MyStudio[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -29,11 +36,11 @@ export default function StudentPortal() {
     if (!user) return;
     setLoading(true);
 
-    const [profileRes, bookingsRes, creditsRes] = await Promise.all([
+    const [profileRes, bookingsRes, creditsRes, studiosRes] = await Promise.all([
       supabase.from("profiles").select("first_name").eq("id", user.id).single(),
       supabase
         .from("bookings")
-        .select("id, class_id, status, studio_id, classes(name, start_time), studios:studio_id(name)")
+        .select("id, class_id, status, studio_id, classes(name, start_time), studios:studio_id(name, slug)")
         .eq("user_id", user.id)
         .eq("status", "confirmed")
         .order("created_at", { ascending: true }),
@@ -43,6 +50,11 @@ export default function StudentPortal() {
         .eq("user_id", user.id)
         .gt("credits_remaining", 0)
         .gt("expires_at", new Date().toISOString()),
+      supabase
+        .from("studio_members")
+        .select("studios:studio_id(name, slug)")
+        .eq("user_id", user.id)
+        .eq("role", "student" as any),
     ]);
 
     setFirstName(profileRes.data?.first_name || "");
@@ -53,12 +65,18 @@ export default function StudentPortal() {
       status: b.status,
       class_name: b.classes?.name ?? "Unknown Class",
       start_time: b.classes?.start_time ?? "",
-      studio_name: b.studios?.name ?? "",
+      studio_name: (b.studios as any)?.name ?? "",
+      studio_slug: (b.studios as any)?.slug ?? "",
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-    // Only show upcoming
     const now = new Date();
     setBookings(mapped.filter((b) => new Date(b.start_time) > now));
+
+    const studios: MyStudio[] = (studiosRes.data ?? []).map((s: any) => ({
+      name: (s.studios as any)?.name ?? "",
+      slug: (s.studios as any)?.slug ?? "",
+    })).filter((s: MyStudio) => s.slug);
+    setMyStudios(studios);
 
     const sum = (creditsRes.data ?? []).reduce(
       (acc: number, p: any) => acc + p.credits_remaining,
@@ -87,7 +105,6 @@ export default function StudentPortal() {
       return;
     }
 
-    // Refund credit to earliest-expiring active pass
     const { data: passes } = await supabase
       .from("student_passes")
       .select("id, credits_remaining, studio_id")
@@ -126,6 +143,20 @@ export default function StudentPortal() {
           Here's what's coming up for you.
         </p>
       </div>
+
+      {/* Quick Actions — Book a Class */}
+      {myStudios.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {myStudios.map((s) => (
+            <Button key={s.slug} variant="outline" asChild className="gap-2">
+              <Link to={`/book/${s.slug}`}>
+                <ExternalLink className="h-4 w-4" />
+                Book at {s.name}
+              </Link>
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Wallet */}
       <Card>
