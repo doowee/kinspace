@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudioTheme } from "@/components/StudioThemeProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,6 @@ import { MapPin, Ticket, ArrowLeft, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AuthModal from "@/components/booking/AuthModal";
 import type { User } from "@supabase/supabase-js";
-
-interface StudioInfo {
-  id: string;
-  name: string;
-  slug: string;
-  location: string | null;
-}
 
 interface PublicPackage {
   id: string;
@@ -31,11 +25,11 @@ export default function PublicPackagesPage() {
   const returnUrl = searchParams.get("return_url");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { studio, loading: themeLoading, notFound } = useStudioTheme();
 
-  const [studio, setStudio] = useState<StudioInfo | null>(null);
   const [packages, setPackages] = useState<PublicPackage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const loading = themeLoading || packagesLoading;
   const [user, setUser] = useState<User | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
@@ -52,34 +46,22 @@ export default function PublicPackagesPage() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Fetch packages when studio is available
   useEffect(() => {
-    if (!studio_slug) return;
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: studioData, error: studioErr } = await supabase.rpc(
-        "get_public_studio_by_slug",
-        { _slug: studio_slug }
-      );
-      if (studioErr || !studioData || (studioData as any[]).length === 0) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-      const s = (studioData as any[])[0] as StudioInfo;
-      setStudio(s);
-
+    if (!studio) { setPackagesLoading(false); return; }
+    const fetchPackages = async () => {
+      setPackagesLoading(true);
       const { data: pkgData } = await supabase
         .from("packages")
         .select("id, name, price, credits, expiration_days")
-        .eq("studio_id", s.id)
+        .eq("studio_id", studio.id)
         .eq("active", true)
         .order("price", { ascending: true });
-
       setPackages((pkgData as PublicPackage[]) ?? []);
-      setLoading(false);
+      setPackagesLoading(false);
     };
-    fetchData();
-  }, [studio_slug]);
+    fetchPackages();
+  }, [studio?.id]);
 
   // After auth, retry pending purchase
   useEffect(() => {
@@ -182,22 +164,28 @@ export default function PublicPackagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-30">
         <div className="container flex h-16 items-center gap-3">
-          <img src="/kinspace-logo-sage.png" alt="Kinspace" className="h-9 w-9 rounded-lg" />
-          <div>
-            <h1 className="font-display text-lg font-bold text-foreground leading-tight">
-              {studio.name}
-            </h1>
-            {studio.location && (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                {studio.location}
-              </p>
-            )}
-          </div>
+          {studio.logo_url ? (
+            <img src={studio.logo_url} alt={studio.name} className="h-9 w-auto max-w-[140px] object-contain" />
+          ) : (
+            <span className="font-display text-xl font-bold text-foreground">{studio.name}</span>
+          )}
+          {studio.logo_url && (
+            <div>
+              <h1 className="font-display text-lg font-bold text-foreground leading-tight">
+                {studio.name}
+              </h1>
+            </div>
+          )}
+          {studio.location && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {studio.location}
+            </p>
+          )}
         </div>
       </header>
 

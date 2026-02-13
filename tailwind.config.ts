@@ -94,7 +94,8 @@ export default {
 				light: 'hsl(var(--sage-light))'
 			},
 			cream: 'hsl(var(--cream))',
-			terracotta: 'hsl(var(--terracotta))'
+			terracotta: 'hsl(var(--terracotta))',
+			highlight: 'hsl(var(--highlight))'
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

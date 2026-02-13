@@ -35,6 +35,7 @@
     --border: 50 20% 84%;
     --input: 50 20% 84%;
     --ring: 150 12% 55%;
+    --highlight: 140 49% 97%;
 
     --radius: 0.75rem;
 
@@ -84,6 +85,7 @@
     --border: 230 12% 22%;
     --input: 230 12% 22%;
     --ring: 150 12% 50%;
+    --highlight: 150 10% 18%;
 
     --sidebar-background: 230 14% 13%;
     --sidebar-foreground: 50 30% 90%;
