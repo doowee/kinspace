@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useDemoPhone } from "@/contexts/DemoPhoneContext";
+import { useStudio } from "@/contexts/StudioContext";
+import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,9 @@ interface ViewStudentsDialogProps {
 export default function ViewStudentsDialog({ open, onOpenChange, classId, className, capacity, classStartTime }: ViewStudentsDialogProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [chainRunning, setChainRunning] = useState(false);
   const { triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
+  const { activeRole } = useStudio();
 
   const fetchBookings = useCallback(async () => {
     if (!classId) return;
@@ -64,17 +68,47 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
     return p?.email || "Unknown";
   };
 
-  const handleSimulateWaitlist = () => {
-    const first = waitlisted[0];
-    if (!first) return;
-    triggerWaitlistPromotion({
-      bookingId: first.id,
-      userId: first.user_id,
-      studioId: first.studio_id,
-      className,
-      classTime: classStartTime || "",
+  const handleChainReaction = async () => {
+    if (!classId || confirmed.length === 0 || waitlisted.length === 0) return;
+    setChainRunning(true);
+
+    // Phase 1: Cancel the last confirmed booking
+    const lastConfirmed = confirmed[confirmed.length - 1];
+    await supabase
+      .from("bookings")
+      .update({ status: "cancelled" as any })
+      .eq("id", lastConfirmed.id);
+
+    // Instantly refresh roster to show the cancellation
+    await fetchBookings();
+
+    toast({
+      title: "Student cancelled. 1 spot opened.",
+      description: "Triggering Waitlist...",
     });
+
+    // Phase 2: After 1.5s, trigger the SMS to the first waitlisted student
+    setTimeout(() => {
+      // Re-read waitlisted from current state – use the first waitlisted we already have
+      const firstWaitlisted = waitlisted[0];
+      if (!firstWaitlisted) {
+        setChainRunning(false);
+        return;
+      }
+
+      triggerWaitlistPromotion({
+        bookingId: firstWaitlisted.id,
+        userId: firstWaitlisted.user_id,
+        studioId: firstWaitlisted.studio_id,
+        className,
+        classTime: classStartTime || "",
+      });
+
+      setChainRunning(false);
+    }, 1500);
   };
+
+  const showChainButton = activeRole === "owner" && confirmed.length > 0 && waitlisted.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,27 +145,29 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
 
             {waitlisted.length > 0 && (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium">Waitlist ({waitlisted.length})</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={handleSimulateWaitlist}
-                  >
-                    <Zap className="h-3.5 w-3.5" />
-                    Simulate Waitlist Opening
-                  </Button>
-                </div>
+                <p className="text-sm font-medium mb-2">Waitlist ({waitlisted.length})</p>
                 <div className="space-y-1">
                   {waitlisted.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                    <div key={b.id} className="flex items-center justify-between rounded-md border border-amber-200/60 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-950/10 px-3 py-2 text-sm">
                       <span className="text-foreground">{studentName(b)}</span>
-                      <Badge variant="outline" className="text-xs">Waitlist</Badge>
+                      <Badge variant="outline" className="text-xs border-amber-300 text-amber-600">Waitlist</Badge>
                     </div>
                   ))}
                 </div>
               </div>
+            )}
+
+            {showChainButton && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-dashed border-amber-400/60 bg-amber-50/50 text-amber-700 hover:bg-amber-100/60 hover:text-amber-800"
+                onClick={handleChainReaction}
+                disabled={chainRunning}
+              >
+                <Zap className="h-4 w-4" />
+                {chainRunning ? "Running…" : "⚡ Simulate Waitlist Chain Reaction"}
+              </Button>
             )}
           </div>
         )}
