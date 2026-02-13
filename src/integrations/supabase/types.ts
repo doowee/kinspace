@@ -19,6 +19,7 @@ export type Database = {
           class_id: string
           created_at: string
           id: string
+          reminder_sent: boolean
           status: Database["public"]["Enums"]["booking_status"]
           studio_id: string
           user_id: string
@@ -27,6 +28,7 @@ export type Database = {
           class_id: string
           created_at?: string
           id?: string
+          reminder_sent?: boolean
           status?: Database["public"]["Enums"]["booking_status"]
           studio_id: string
           user_id: string
@@ -35,6 +37,7 @@ export type Database = {
           class_id?: string
           created_at?: string
           id?: string
+          reminder_sent?: boolean
           status?: Database["public"]["Enums"]["booking_status"]
           studio_id?: string
           user_id?: string
