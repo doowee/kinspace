@@ -192,20 +192,6 @@ export default function StudentPortal() {
         </p>
       </div>
 
-      {/* Quick Actions — Book a Class */}
-      {myStudios.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {myStudios.map((s) => (
-            <Button key={s.slug} variant="outline" asChild className="gap-2">
-              <Link to={`/book/${s.slug}`}>
-                <ExternalLink className="h-4 w-4" />
-                Book at {s.name}
-              </Link>
-            </Button>
-          ))}
-        </div>
-      )}
-
       {/* My Memberships — Studio-Specific Credits */}
       <div>
         <h3 className="font-display text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -235,13 +221,21 @@ export default function StudentPortal() {
                     </div>
                     <p className="text-xs text-muted-foreground">credits remaining</p>
                   </div>
-                  {sp.studio_slug && (
-                    <Button variant="ghost" size="sm" asChild className="text-xs gap-1">
-                      <Link to={`/packages/${sp.studio_slug}`}>
-                        <ShoppingBag className="h-3.5 w-3.5" />
-                        Buy More
-                      </Link>
-                    </Button>
+                   {sp.studio_slug && (
+                    <div className="flex flex-col gap-1.5">
+                      <Button variant="outline" size="sm" asChild className="text-xs gap-1">
+                        <Link to={`/book/${sp.studio_slug}`}>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Book a Class
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild className="text-xs gap-1">
+                        <Link to={`/packages/${sp.studio_slug}`}>
+                          <ShoppingBag className="h-3.5 w-3.5" />
+                          Buy More
+                        </Link>
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
