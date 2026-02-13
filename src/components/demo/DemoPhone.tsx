@@ -56,7 +56,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 export default function DemoPhone() {
-  const { messages, isOpen, setIsOpen, sendStudentReply, awaitingReply, clearMessages } =
+  const { messages, isOpen, setIsOpen, sendStudentReply, awaitingReply, clearMessages, typing } =
     useDemoPhone();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -241,6 +241,13 @@ export default function DemoPhone() {
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}
+          {typing && (
+            <div className="animate-fade-in" style={{ display: "flex", justifyContent: "flex-start", marginBottom: 6 }}>
+              <div style={{ padding: "10px 16px", borderRadius: 18, background: "#E9E9EB", borderBottomLeftRadius: 4, fontSize: 18, letterSpacing: 2 }}>
+                <span className="animate-pulse">•••</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input area */}
