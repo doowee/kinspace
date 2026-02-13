@@ -23,6 +23,7 @@ import Profile from "./pages/Profile";
 import BookClass from "./pages/BookClass";
 import NotFound from "./pages/NotFound";
 import CreateStudio from "./pages/CreateStudio";
+import InstructorPortal from "./pages/InstructorPortal";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,14 @@ const App = () => (
             </Route>
             <Route path="/book/:studio_slug" element={<ThemedBookingPage />} />
             <Route path="/book/:studio_slug/packages" element={<ThemedPackagesPage />} />
+            <Route
+              path="/instructor-portal"
+              element={
+                <AuthGate>
+                  <InstructorPortal />
+                </AuthGate>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
