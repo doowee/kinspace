@@ -14,6 +14,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["booking_status"]
+          studio_id: string
+          user_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          studio_id: string
+          user_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          studio_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           capacity: number
@@ -425,6 +474,7 @@ export type Database = {
       }
     }
     Enums: {
+      booking_status: "confirmed" | "cancelled" | "waitlist"
       org_role: "owner" | "admin" | "viewer"
       payment_method: "card" | "cash" | "transfer" | "check"
       studio_role: "owner" | "instructor" | "student"
@@ -556,6 +606,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      booking_status: ["confirmed", "cancelled", "waitlist"],
       org_role: ["owner", "admin", "viewer"],
       payment_method: ["card", "cash", "transfer", "check"],
       studio_role: ["owner", "instructor", "student"],
