@@ -65,7 +65,7 @@ export default function CreditsBadge() {
           )}
         >
           <Ticket className="h-3.5 w-3.5" />
-          <span>{totalCredits}</span>
+          <span>{totalCredits} Credit{totalCredits !== 1 ? "s" : ""}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs space-y-1">

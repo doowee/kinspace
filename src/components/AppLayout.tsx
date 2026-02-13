@@ -34,7 +34,7 @@ export default function AppLayout() {
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <img src="/kinspace-logo-sage.png" alt="Kinspace logo" className="h-8 w-8" />
+              <img src="/kinspace-logo-sage.png" alt="Kinspace logo" className="h-8 w-8 rounded" />
             </div>
             <div className="h-5 w-px bg-border" />
             <StudioSwitcher />
