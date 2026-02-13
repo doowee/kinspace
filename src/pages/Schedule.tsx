@@ -69,6 +69,7 @@ export default function Schedule() {
   const [className, setClassName] = useState("");
   const [classTime, setClassTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
+  const [classDescription, setClassDescription] = useState("");
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>("none");
   const [submitting, setSubmitting] = useState(false);
 
@@ -226,6 +227,7 @@ export default function Schedule() {
 
     const { error } = await supabase.from("classes").insert({
       name: className,
+      description: classDescription || null,
       start_time: dt.toISOString(),
       capacity: parseInt(capacity) || 10,
       studio_id: activeStudio.id,
@@ -237,6 +239,7 @@ export default function Schedule() {
     } else {
       toast({ title: "Class created" });
       setClassName("");
+      setClassDescription("");
       setClassTime({ hour: 9, minute: 0 });
       setCapacity("10");
       setSelectedInstructorId("none");
@@ -278,6 +281,17 @@ export default function Schedule() {
                     onChange={(e) => setClassName(e.target.value)}
                     placeholder="e.g. Morning Flow"
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="class-description">Description</Label>
+                  <textarea
+                    id="class-description"
+                    value={classDescription}
+                    onChange={(e) => setClassDescription(e.target.value)}
+                    placeholder="Brief description of the class…"
+                    rows={3}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   />
                 </div>
                 <div>
