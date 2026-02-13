@@ -13,6 +13,7 @@ export default function BrandingTab() {
   const [primary, setPrimary] = useState("#374151");
   const [secondary, setSecondary] = useState("#F3D2C1");
   const [highlight, setHighlight] = useState("#F0FDF4");
+  const [brandText, setBrandText] = useState("#FFFFFF");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -20,13 +21,14 @@ export default function BrandingTab() {
     const load = async () => {
       const { data } = await supabase
         .from("studios")
-        .select("brand_primary, brand_secondary, brand_highlight")
+        .select("brand_primary, brand_secondary, brand_highlight, brand_text")
         .eq("id", activeStudio.id)
         .single();
       if (data) {
         setPrimary(data.brand_primary ?? "#374151");
         setSecondary(data.brand_secondary ?? "#F3D2C1");
         setHighlight(data.brand_highlight ?? "#F0FDF4");
+        setBrandText((data as any).brand_text ?? "#FFFFFF");
       }
     };
     load();
@@ -37,7 +39,7 @@ export default function BrandingTab() {
     setSaving(true);
     const { error } = await supabase
       .from("studios")
-      .update({ brand_primary: primary, brand_secondary: secondary, brand_highlight: highlight })
+      .update({ brand_primary: primary, brand_secondary: secondary, brand_highlight: highlight, brand_text: brandText } as any)
       .eq("id", activeStudio.id);
     setSaving(false);
     if (error) {
@@ -62,6 +64,7 @@ export default function BrandingTab() {
           <ColorField label="Primary Brand Color" description="Headings, buttons, and heavy accents" value={primary} onChange={setPrimary} />
           <ColorField label="Secondary / Accent Color" description="Tags, badges, and secondary buttons" value={secondary} onChange={setSecondary} />
           <ColorField label="Background Highlight" description="Soft background for cards and sections" value={highlight} onChange={setHighlight} />
+          <ColorField label="Button Text Color" description="Text color on primary-colored buttons and headers" value={brandText} onChange={setBrandText} />
         </CardContent>
       </Card>
 
@@ -87,8 +90,8 @@ export default function BrandingTab() {
             </div>
             <p className="text-sm text-muted-foreground">Mon, Feb 17 · 9:00 AM · Sarah J.</p>
             <button
-              className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: primary }}
+              className="rounded-md px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90"
+              style={{ backgroundColor: primary, color: brandText }}
             >
               Book Now
             </button>
