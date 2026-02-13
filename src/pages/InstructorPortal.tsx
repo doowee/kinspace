@@ -23,6 +23,7 @@ interface InstructorClass {
   start_time: string;
   capacity: number;
   studio_name: string;
+  studio_brand_primary: string | null;
   booked_count: number;
 }
 
@@ -68,7 +69,7 @@ export default function InstructorPortal() {
     // Fetch upcoming classes with studio name
     const { data: classData } = await supabase
       .from("classes")
-      .select("id, name, description, start_time, capacity, instructor_id, studios:studio_id(name)")
+      .select("id, name, description, start_time, capacity, instructor_id, studios:studio_id(name, brand_primary)")
       .in("instructor_id", instructorIds)
       .gt("start_time", new Date().toISOString())
       .order("start_time", { ascending: true });
@@ -99,6 +100,7 @@ export default function InstructorPortal() {
       start_time: c.start_time,
       capacity: c.capacity,
       studio_name: (c.studios as any)?.name ?? "",
+      studio_brand_primary: (c.studios as any)?.brand_primary ?? null,
       booked_count: countMap[c.id] || 0,
     }));
 
@@ -238,11 +240,6 @@ export default function InstructorPortal() {
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm">{cls.name}</p>
-                        {cls.studio_name && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-                            {cls.studio_name}
-                          </Badge>
-                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
@@ -252,8 +249,20 @@ export default function InstructorPortal() {
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {format(new Date(cls.start_time), "h:mm a")}
-                          {cls.studio_name && <span className="text-foreground font-medium">· {cls.studio_name}</span>}
                         </span>
+                        {cls.studio_name && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 shrink-0 font-medium"
+                            style={cls.studio_brand_primary ? {
+                              borderColor: cls.studio_brand_primary,
+                              color: cls.studio_brand_primary,
+                              backgroundColor: `${cls.studio_brand_primary}15`,
+                            } : undefined}
+                          >
+                            {cls.studio_name}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 pt-0.5">
                         <Users className="h-3 w-3 text-muted-foreground" />
