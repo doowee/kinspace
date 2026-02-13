@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users } from "lucide-react";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Outlet, Navigate } from "react-router-dom";
 import { NavLink } from "./NavLink";
@@ -61,13 +61,21 @@ export default function AppLayout() {
               )}
               {activeRole !== "student" && (
                 <>
-                  <NavLink
+                   <NavLink
                     to="/schedule"
                     className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                     activeClassName="bg-accent text-accent-foreground font-medium"
                   >
                     <CalendarDays className="h-4 w-4" />
                     Schedule
+                  </NavLink>
+                  <NavLink
+                    to="/students"
+                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    activeClassName="bg-accent text-accent-foreground font-medium"
+                  >
+                    <Users className="h-4 w-4" />
+                    Students
                   </NavLink>
                   <NavLink
                     to="/finance"

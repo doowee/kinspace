@@ -524,6 +524,18 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["org_role"]
       }
+      get_org_students: {
+        Args: { _org_id: string }
+        Returns: {
+          email: string
+          first_name: string
+          home_studio_name: string
+          last_booking_at: string
+          last_name: string
+          total_bookings: number
+          user_id: string
+        }[]
+      }
       get_public_classes_by_studio_slug: {
         Args: { _slug: string }
         Returns: {
