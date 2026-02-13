@@ -54,7 +54,7 @@ export default function InstructorPortal() {
     // Find instructor records linked to this user
     const { data: instRecords } = await supabase
       .from("instructors")
-      .select("id, name, studio_id, studios:studio_id(name)")
+      .select("id, name")
       .eq("user_id", user.id);
 
     if (!instRecords || instRecords.length === 0) {
@@ -64,15 +64,11 @@ export default function InstructorPortal() {
 
     setInstructorName((instRecords[0] as any).name || "");
     const instructorIds = instRecords.map((i: any) => i.id);
-    const studioMap: Record<string, string> = {};
-    instRecords.forEach((i: any) => {
-      studioMap[i.id] = (i.studios as any)?.name ?? "";
-    });
 
-    // Fetch upcoming classes for these instructor IDs
+    // Fetch upcoming classes with studio name
     const { data: classData } = await supabase
       .from("classes")
-      .select("id, name, description, start_time, capacity, instructor_id")
+      .select("id, name, description, start_time, capacity, instructor_id, studios:studio_id(name)")
       .in("instructor_id", instructorIds)
       .gt("start_time", new Date().toISOString())
       .order("start_time", { ascending: true });
@@ -102,7 +98,7 @@ export default function InstructorPortal() {
       description: c.description,
       start_time: c.start_time,
       capacity: c.capacity,
-      studio_name: studioMap[c.instructor_id] ?? "",
+      studio_name: (c.studios as any)?.name ?? "",
       booked_count: countMap[c.id] || 0,
     }));
 
@@ -238,12 +234,16 @@ export default function InstructorPortal() {
                   className="cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
                   onClick={() => openRoster(cls)}
                 >
-                  <CardContent className="p-4 flex items-center justify-between">
+                    <CardContent className="p-4 flex items-center justify-between">
                     <div className="space-y-1 min-w-0">
-                      <p className="font-semibold text-sm">{cls.name}</p>
-                      {cls.studio_name && (
-                        <p className="text-[11px] text-muted-foreground">{cls.studio_name}</p>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm">{cls.name}</p>
+                        {cls.studio_name && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                            {cls.studio_name}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <CalendarDays className="h-3 w-3" />
@@ -252,6 +252,7 @@ export default function InstructorPortal() {
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {format(new Date(cls.start_time), "h:mm a")}
+                          {cls.studio_name && <span className="text-foreground font-medium">· {cls.studio_name}</span>}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 pt-0.5">
