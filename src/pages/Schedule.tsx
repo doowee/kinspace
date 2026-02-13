@@ -23,8 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon } from "lucide-react";
 import { format, isSameDay } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import TimePicker from "@/components/schedule/TimePicker";
@@ -76,6 +77,7 @@ export default function Schedule() {
 
   // Form state
   const [className, setClassName] = useState("");
+  const [classDate, setClassDate] = useState<Date>(new Date());
   const [classTime, setClassTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
   const [classDescription, setClassDescription] = useState("");
@@ -231,7 +233,7 @@ export default function Schedule() {
     setSubmitting(true);
 
     // Build a proper local Date, then convert to ISO for storage
-    const dt = new Date(selectedDate);
+    const dt = new Date(classDate);
     dt.setHours(classTime.hour, classTime.minute, 0, 0);
 
     const { error } = await supabase.from("classes").insert({
@@ -319,24 +321,28 @@ export default function Schedule() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <TimePicker
-                    label="Time"
-                    value={classTime}
-                    onChange={setClassTime}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="class-date">Date</Label>
-                  <Input
-                    id="class-date"
-                    value={format(selectedDate, "PPP")}
-                    disabled
-                    className="text-muted-foreground"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Select a different date on the calendar to change
-                  </p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Label className="flex items-center gap-1.5 mb-1.5"><CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
+                          {format(classDate, "MMM d, yyyy")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={classDate}
+                          onSelect={(d) => d && setClassDate(d)}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div>
+                    <TimePicker label="Time" value={classTime} onChange={setClassTime} />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="class-capacity">Capacity</Label>

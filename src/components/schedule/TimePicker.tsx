@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Clock } from "lucide-react";
 
 interface TimePickerProps {
   value: { hour: number; minute: number };
@@ -16,13 +17,14 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
   const isPM = value.hour >= 12;
   const display12 = value.hour % 12 || 12;
 
-  const setHour12 = (h12: number) => {
+  const setHour12 = (h12str: string) => {
+    const h12 = parseInt(h12str);
     const h24 = isPM ? (h12 === 12 ? 12 : h12 + 12) : h12 === 12 ? 0 : h12;
     onChange({ ...value, hour: h24 });
   };
 
-  const setMinute = (m: number) => {
-    onChange({ ...value, minute: m });
+  const setMinute = (mStr: string) => {
+    onChange({ ...value, minute: parseInt(mStr) });
   };
 
   const togglePeriod = (pm: boolean) => {
@@ -33,94 +35,57 @@ export default function TimePicker({ value, onChange, label }: TimePickerProps) 
   };
 
   return (
-    <div className="space-y-2">
-      {label && <Label>{label}</Label>}
-      <div className="flex items-center gap-2 rounded-md border bg-background p-2">
-        {/* Hour */}
-        <ScrollColumn
-          items={HOURS}
-          selected={display12}
-          onSelect={setHour12}
-          formatItem={(h) => String(h).padStart(2, "0")}
-        />
-        <span className="text-lg font-semibold text-muted-foreground">:</span>
-        {/* Minute */}
-        <ScrollColumn
-          items={MINUTES}
-          selected={value.minute}
-          onSelect={setMinute}
-          formatItem={(m) => String(m).padStart(2, "0")}
-        />
-        {/* AM/PM */}
-        <div className="flex flex-col gap-1 ml-1">
-          <Button
+    <div className="space-y-1.5">
+      {label && <Label className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-muted-foreground" />{label}</Label>}
+      <div className="flex items-center gap-1.5">
+        <Select value={String(display12)} onValueChange={setHour12}>
+          <SelectTrigger className="w-[70px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {HOURS.map((h) => (
+              <SelectItem key={h} value={String(h)}>
+                {String(h).padStart(2, "0")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground font-semibold">:</span>
+        <Select value={String(value.minute)} onValueChange={setMinute}>
+          <SelectTrigger className="w-[70px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MINUTES.map((m) => (
+              <SelectItem key={m} value={String(m)}>
+                {String(m).padStart(2, "0")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex rounded-md border overflow-hidden h-9">
+          <button
             type="button"
-            size="sm"
-            variant={!isPM ? "default" : "ghost"}
-            className="h-8 px-3 text-xs"
             onClick={() => togglePeriod(false)}
+            className={cn(
+              "px-2.5 text-xs font-medium transition-colors",
+              !isPM ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent"
+            )}
           >
             AM
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            size="sm"
-            variant={isPM ? "default" : "ghost"}
-            className="h-8 px-3 text-xs"
             onClick={() => togglePeriod(true)}
+            className={cn(
+              "px-2.5 text-xs font-medium transition-colors border-l",
+              isPM ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent"
+            )}
           >
             PM
-          </Button>
+          </button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {String(display12).padStart(2, "0")}:{String(value.minute).padStart(2, "0")} {isPM ? "PM" : "AM"}
-      </p>
-    </div>
-  );
-}
-
-function ScrollColumn<T extends number>({
-  items,
-  selected,
-  onSelect,
-  formatItem,
-}: {
-  items: T[];
-  selected: T;
-  onSelect: (item: T) => void;
-  formatItem: (item: T) => string;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const idx = items.indexOf(selected);
-    if (idx >= 0 && containerRef.current) {
-      const child = containerRef.current.children[idx] as HTMLElement;
-      child?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
-  }, []);
-
-  return (
-    <div
-      ref={containerRef}
-      className="flex h-28 w-12 flex-col items-center gap-0.5 overflow-y-auto rounded-md scrollbar-thin"
-    >
-      {items.map((item) => (
-        <button
-          key={item}
-          type="button"
-          onClick={() => onSelect(item)}
-          className={cn(
-            "flex h-9 w-full shrink-0 items-center justify-center rounded-md text-sm font-medium transition-colors",
-            selected === item
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          )}
-        >
-          {formatItem(item)}
-        </button>
-      ))}
     </div>
   );
 }

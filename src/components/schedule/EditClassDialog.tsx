@@ -5,7 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import TimePicker from "@/components/schedule/TimePicker";
 
 interface EditClassDialogProps {
@@ -27,6 +32,7 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [classDate, setClassDate] = useState<Date>(new Date());
   const [time, setTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
   const [instructorId, setInstructorId] = useState("none");
@@ -37,6 +43,7 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
       setName(cls.name);
       setDescription((cls as any).description || "");
       const dt = new Date(cls.start_time);
+      setClassDate(dt);
       setTime({ hour: dt.getHours(), minute: dt.getMinutes() });
       setCapacity(String(cls.capacity));
       setInstructorId(cls.instructor_id || "none");
@@ -48,7 +55,7 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
     if (!cls) return;
     setSubmitting(true);
 
-    const dt = new Date(cls.start_time);
+    const dt = new Date(classDate);
     dt.setHours(time.hour, time.minute, 0, 0);
 
     const { error } = await supabase
@@ -106,7 +113,29 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
               </SelectContent>
             </Select>
           </div>
-          <TimePicker label="Time" value={time} onChange={setTime} />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label className="flex items-center gap-1.5 mb-1.5"><CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
+                    {format(classDate, "MMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={classDate}
+                    onSelect={(d) => d && setClassDate(d)}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <TimePicker label="Time" value={time} onChange={setTime} />
+            </div>
+          </div>
           <div>
             <Label htmlFor="edit-capacity">Capacity</Label>
             <Input id="edit-capacity" type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
