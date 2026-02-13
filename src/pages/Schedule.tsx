@@ -91,11 +91,18 @@ export default function Schedule() {
 
   const fetchInstructors = async () => {
     if (!activeStudio) return;
-    const { data } = await supabase
+    let query = supabase
       .from("instructors")
       .select("id, name")
-      .eq("studio_id", activeStudio.id)
       .order("display_order");
+
+    if (activeStudio.organization_id) {
+      query = query.eq("organization_id", activeStudio.organization_id);
+    } else {
+      query = query.eq("studio_id", activeStudio.id);
+    }
+
+    const { data } = await query;
     setInstructors(data ?? []);
   };
 
