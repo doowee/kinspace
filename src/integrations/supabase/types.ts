@@ -372,6 +372,9 @@ export type Database = {
       }
       studios: {
         Row: {
+          brand_highlight: string | null
+          brand_primary: string | null
+          brand_secondary: string | null
           created_at: string
           id: string
           location: string | null
@@ -384,6 +387,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_highlight?: string | null
+          brand_primary?: string | null
+          brand_secondary?: string | null
           created_at?: string
           id?: string
           location?: string | null
@@ -396,6 +402,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_highlight?: string | null
+          brand_primary?: string | null
+          brand_secondary?: string | null
           created_at?: string
           id?: string
           location?: string | null
@@ -505,6 +514,9 @@ export type Database = {
       get_public_studio_by_slug: {
         Args: { _slug: string }
         Returns: {
+          brand_highlight: string
+          brand_primary: string
+          brand_secondary: string
           id: string
           location: string
           logo_url: string

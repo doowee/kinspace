@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudioTheme } from "@/components/StudioThemeProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,9 @@ interface StudioInfo {
   slug: string;
   location: string | null;
   logo_url: string | null;
+  brand_primary: string;
+  brand_secondary: string;
+  brand_highlight: string;
 }
 
 interface PublicClass {
@@ -52,15 +56,17 @@ interface PublicClass {
 
 export default function BookingPage() {
   const { studio_slug } = useParams<{ studio_slug: string }>();
+  const { studio: themeStudio, loading: themeLoading, notFound: themeNotFound } = useStudioTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [studio, setStudio] = useState<StudioInfo | null>(null);
+  const studio = themeStudio as StudioInfo | null;
   const [classes, setClasses] = useState<PublicClass[]>([]);
+  const [classesLoading, setClassesLoading] = useState(true);
   const [weekStart, setWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const loading = themeLoading || classesLoading;
+  const notFound = themeNotFound;
 
   // Auth & booking state
   const [user, setUser] = useState<User | null>(null);
@@ -84,32 +90,20 @@ export default function BookingPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch studio & classes
+  // Fetch classes when studio is available
   useEffect(() => {
-    if (!studio_slug) return;
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: studioData, error: studioErr } = await supabase.rpc(
-        "get_public_studio_by_slug",
-        { _slug: studio_slug }
-      );
-      if (studioErr || !studioData || (studioData as any[]).length === 0) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-      const s = (studioData as any[])[0] as StudioInfo;
-      setStudio(s);
-
+    if (!studio_slug || !studio) return;
+    const fetchClasses = async () => {
+      setClassesLoading(true);
       const { data: classData } = await supabase.rpc(
         "get_public_classes_by_studio_slug",
         { _slug: studio_slug }
       );
       setClasses((classData as PublicClass[]) ?? []);
-      setLoading(false);
+      setClassesLoading(false);
     };
-    fetchData();
-  }, [studio_slug]);
+    fetchClasses();
+  }, [studio_slug, studio?.id]);
 
   // Fetch booking data when user or studio changes
   useEffect(() => {

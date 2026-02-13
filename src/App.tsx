@@ -2,10 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StudioProvider } from "@/contexts/StudioContext";
 import StudioGate from "./components/StudioGate";
+import StudioThemeProvider from "./components/StudioThemeProvider";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -31,6 +32,24 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
+}
+
+function ThemedBookingPage() {
+  const { studio_slug } = useParams<{ studio_slug: string }>();
+  return (
+    <StudioThemeProvider slug={studio_slug ?? ""}>
+      <BookingPage />
+    </StudioThemeProvider>
+  );
+}
+
+function ThemedPackagesPage() {
+  const { studio_slug } = useParams<{ studio_slug: string }>();
+  return (
+    <StudioThemeProvider slug={studio_slug ?? ""}>
+      <PublicPackagesPage />
+    </StudioThemeProvider>
+  );
 }
 
 const App = () => (
@@ -76,8 +95,8 @@ const App = () => (
               <Route path="/finance" element={<Finance />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
-            <Route path="/book/:studio_slug" element={<BookingPage />} />
-            <Route path="/book/:studio_slug/packages" element={<PublicPackagesPage />} />
+            <Route path="/book/:studio_slug" element={<ThemedBookingPage />} />
+            <Route path="/book/:studio_slug/packages" element={<ThemedPackagesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
