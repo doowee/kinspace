@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Clock, Users, MapPin, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard, User as UserIcon, CalendarIcon } from "lucide-react";
+import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard, User as UserIcon, CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   format,
@@ -20,6 +20,9 @@ import {
   isToday,
   isBefore,
   startOfDay,
+  startOfWeek,
+  addWeeks,
+  subWeeks,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +55,9 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const [studio, setStudio] = useState<StudioInfo | null>(null);
   const [classes, setClasses] = useState<PublicClass[]>([]);
-  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [weekStart, setWeekStart] = useState<Date>(
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -132,9 +137,9 @@ export default function BookingPage() {
     }
   }, [user]);
 
-  const days = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
-  }, [startDate]);
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  }, [weekStart]);
 
   const handleBookClick = (cls: PublicClass, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -272,41 +277,101 @@ export default function BookingPage() {
         </div>
       </section>
 
-      {/* Schedule — rolling 7 days */}
+      {/* Schedule */}
       <main className="container py-8 animate-fade-in">
-        {/* Header with calendar picker */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Week Navigation */}
+        <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-xl font-bold text-foreground">
-            Upcoming Classes
+            {format(weekStart, "MMMM yyyy")}
           </h3>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CalendarIcon className="mr-1.5 h-4 w-4" />
-                Jump to Date
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={(d) => d && setStartDate(startOfDay(d))}
-                disabled={(date) => isBefore(date, startOfDay(new Date()))}
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setWeekStart(subWeeks(weekStart, 1))}
+              disabled={isBefore(addDays(weekStart, -1), startOfDay(new Date()))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+            >
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setWeekStart(addWeeks(weekStart, 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={weekStart}
+                  onSelect={(d) => d && setWeekStart(startOfWeek(d, { weekStartsOn: 1 }))}
+                  disabled={(date) => isBefore(date, startOfDay(new Date()))}
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Day Strip */}
+        <div className="grid grid-cols-7 gap-2 mb-8">
+          {weekDays.map((day) => {
+            const hasClasses = classes.some((c) =>
+              isSameDay(new Date(c.start_time), day)
+            );
+            const dayPast = isBefore(day, startOfDay(new Date()));
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() => {
+                  const el = document.getElementById(`day-${format(day, "yyyy-MM-dd")}`);
+                  el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className={cn(
+                  "flex flex-col items-center rounded-xl py-3 px-1 transition-all text-center",
+                  isToday(day)
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "hover:bg-accent",
+                  dayPast && !isToday(day) && "opacity-40"
+                )}
+              >
+                <span className="text-[10px] uppercase tracking-wider font-medium opacity-70">
+                  {format(day, "EEE")}
+                </span>
+                <span className="text-lg font-bold">{format(day, "d")}</span>
+                {hasClasses && !isToday(day) && (
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* All 7 days listed */}
         <div className="space-y-8">
-          {days.map((day) => {
+          {weekDays.map((day) => {
+            const dayPast = isBefore(day, startOfDay(new Date()));
             const dayClasses = classes
               .filter((c) => isSameDay(new Date(c.start_time), day))
-              .filter((c) => !isBefore(new Date(c.start_time), new Date()));
+              .filter((c) => !dayPast || !isBefore(new Date(c.start_time), new Date()));
+
+            if (dayPast && dayClasses.length === 0) return null;
 
             return (
-              <section key={day.toISOString()}>
+              <section key={day.toISOString()} id={`day-${format(day, "yyyy-MM-dd")}`}>
                 <div className="flex items-center gap-3 mb-3">
                   <h4
                     className={cn(
@@ -341,7 +406,6 @@ export default function BookingPage() {
                         >
                           <CardContent className="p-0">
                             <div className="flex">
-                              {/* Time strip */}
                               <div className="flex w-20 shrink-0 flex-col items-center justify-center bg-primary/10 py-5">
                                 <span className="text-xs font-medium uppercase text-primary/70">
                                   {format(new Date(cls.start_time), "a")}
@@ -351,7 +415,6 @@ export default function BookingPage() {
                                 </span>
                               </div>
 
-                              {/* Details */}
                               <div className="flex flex-1 items-center justify-between gap-3 p-4">
                                 <div className="space-y-1 min-w-0">
                                   <p className="font-display font-bold text-foreground truncate">
