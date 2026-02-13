@@ -2,7 +2,7 @@ import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Bell, Users, AlertTriangle, Star } from "lucide-react";
+import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 
 export default function DemoTriggers() {
   const { activeRole, activeStudio } = useStudio();
-  const { triggerScenario, triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
+  const { triggerScenario, triggerWaitlistPromotion, onWaitlistPromoted, clearMessages } = useDemoPhone();
 
   const studioName = activeStudio?.name || "Your Studio";
 
@@ -87,6 +87,90 @@ export default function DemoTriggers() {
     }, 1500);
   };
 
+  const handleResetWaitlistDemo = async () => {
+    // Find the class that has a waitlist or recently promoted booking
+    // Look for classes with both cancelled and confirmed bookings from same user
+    const { data: waitlistBookings } = await supabase
+      .from("bookings")
+      .select("id, user_id, class_id, status")
+      .eq("studio_id", activeStudio?.id ?? "")
+      .in("status", ["confirmed", "waitlist"])
+      .order("created_at", { ascending: false });
+
+    // Find the class that had the demo run on it - look for the last cancelled booking
+    const { data: cancelledBookings } = await supabase
+      .from("bookings")
+      .select("id, user_id, class_id")
+      .eq("studio_id", activeStudio?.id ?? "")
+      .eq("status", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!cancelledBookings) {
+      toast({
+        title: "Nothing to reset",
+        description: "No cancelled bookings found from a previous demo run.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const classId = cancelledBookings.class_id;
+
+    // Re-confirm the cancelled booking
+    await supabase
+      .from("bookings")
+      .update({ status: "confirmed" as any })
+      .eq("id", cancelledBookings.id);
+
+    // Find the promoted student's booking (confirmed, same class, different user)
+    // and reset it back to waitlist
+    const { data: promotedBooking } = await supabase
+      .from("bookings")
+      .select("id, user_id")
+      .eq("class_id", classId)
+      .eq("status", "confirmed")
+      .neq("user_id", cancelledBookings.user_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (promotedBooking) {
+      await supabase
+        .from("bookings")
+        .update({ status: "waitlist" as any })
+        .eq("id", promotedBooking.id);
+
+      // Restore the credit that was deducted
+      const { data: pass } = await supabase
+        .from("student_passes")
+        .select("id, credits_remaining")
+        .eq("user_id", promotedBooking.user_id)
+        .eq("studio_id", activeStudio?.id ?? "")
+        .order("expires_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (pass) {
+        await supabase
+          .from("student_passes")
+          .update({ credits_remaining: pass.credits_remaining + 1 })
+          .eq("id", pass.id);
+      }
+    }
+
+    // Clear demo phone messages
+    clearMessages();
+
+    // Refresh roster
+    onWaitlistPromoted.current?.();
+
+    toast({
+      title: "Demo Reset ✓",
+      description: "Waitlist demo restored to initial state. Ready to run again.",
+    });
+  };
 
   return (
     <DropdownMenu>
@@ -132,6 +216,14 @@ export default function DemoTriggers() {
         >
           <Star className="h-4 w-4 text-purple-500" />
           Trigger: Review Request
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={handleResetWaitlistDemo}
+          className="gap-2 cursor-pointer text-muted-foreground"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Reset Waitlist Demo
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
