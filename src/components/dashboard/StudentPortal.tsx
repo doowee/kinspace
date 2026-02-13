@@ -12,10 +12,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag, AlertTriangle } from "lucide-react";
+import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag, AlertTriangle, RotateCw, CalendarPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
+import { findNextClassInstance, type NextClassInstance } from "@/lib/rebook-helpers";
 
 interface Booking {
   id: string;
@@ -42,6 +43,7 @@ export default function StudentPortal() {
   const { user } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [pastBookings, setPastBookings] = useState<Booking[]>([]);
   const [creditsSummary, setCreditsSummary] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -53,6 +55,13 @@ export default function StudentPortal() {
   const [isLateCancel, setIsLateCancel] = useState(false);
   const [lateCancelWindowHours, setLateCancelWindowHours] = useState(12);
 
+  // Rebook dialog state
+  const [rebookDialogOpen, setRebookDialogOpen] = useState(false);
+  const [rebookLoading, setRebookLoading] = useState(false);
+  const [rebookCandidate, setRebookCandidate] = useState<NextClassInstance | null>(null);
+  const [rebookSourceBooking, setRebookSourceBooking] = useState<Booking | null>(null);
+  const [rebookConfirming, setRebookConfirming] = useState(false);
+
   const fetchAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -63,7 +72,7 @@ export default function StudentPortal() {
         .from("bookings")
         .select("id, class_id, status, studio_id, classes(name, start_time, instructors:instructor_id(name)), studios:studio_id(name, slug)")
         .eq("user_id", user.id)
-        .eq("status", "confirmed")
+        .in("status", ["confirmed", "checked_in"])
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
@@ -87,8 +96,10 @@ export default function StudentPortal() {
       instructor_name: (b.classes?.instructors as any)?.name ?? null,
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
     const now = new Date();
     setBookings(mapped.filter((b) => new Date(b.start_time) > now));
+    setPastBookings(mapped.filter((b) => new Date(b.start_time) <= now).reverse().slice(0, 10));
 
     const total = (creditsRes.data ?? []).reduce((sum: number, p: any) => sum + (p.credits_remaining ?? 0), 0);
     setCreditsSummary(total);
@@ -119,6 +130,7 @@ export default function StudentPortal() {
   const studioColorMap = useMemo(() => {
     const ids = new Set<string>();
     bookings.forEach((b) => ids.add(b.studio_id));
+    pastBookings.forEach((b) => ids.add(b.studio_id));
     const map: Record<string, string> = {};
     let i = 0;
     ids.forEach((id) => {
@@ -126,11 +138,10 @@ export default function StudentPortal() {
       i++;
     });
     return map;
-  }, [bookings]);
+  }, [bookings, pastBookings]);
 
-  // Pre-check cancellation type and open dialog
+  // Cancel handlers
   const handleCancelClick = async (booking: Booking) => {
-    // Fetch studio's late cancel window
     const { data: studioData } = await supabase
       .from("studios")
       .select("late_cancel_window_hours")
@@ -146,7 +157,6 @@ export default function StudentPortal() {
     setCancelDialogOpen(true);
   };
 
-  // Execute cancellation via RPC
   const executeCancel = async () => {
     if (!user || !cancelTarget) return;
     setCancellingId(cancelTarget.id);
@@ -171,6 +181,99 @@ export default function StudentPortal() {
 
     setCancellingId(null);
     setCancelTarget(null);
+    fetchAll();
+  };
+
+  // Rebook handlers
+  const handleRebook = async (booking: Booking, afterCurrentClass: boolean) => {
+    setRebookLoading(true);
+    setRebookSourceBooking(booking);
+
+    const preferredHour = new Date(booking.start_time).getHours();
+    const afterDate = afterCurrentClass ? booking.start_time : undefined;
+
+    const result = await findNextClassInstance(
+      booking.class_name,
+      booking.studio_id,
+      afterDate,
+      preferredHour,
+    );
+
+    setRebookLoading(false);
+
+    if (!result) {
+      toast({
+        title: "No classes found",
+        description: `No upcoming classes found for "${booking.class_name}".`,
+      });
+      setRebookSourceBooking(null);
+      return;
+    }
+
+    setRebookCandidate(result);
+    setRebookDialogOpen(true);
+  };
+
+  const confirmRebook = async () => {
+    if (!user || !rebookCandidate || !rebookSourceBooking) return;
+    setRebookConfirming(true);
+
+    // Deduct credit from earliest-expiring pass
+    const { data: passes } = await supabase
+      .from("student_passes")
+      .select("id, credits_remaining")
+      .eq("user_id", user.id)
+      .eq("studio_id", rebookSourceBooking.studio_id)
+      .gt("credits_remaining", 0)
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: true })
+      .limit(1);
+
+    if (!passes || passes.length === 0) {
+      toast({
+        title: "No credits",
+        description: "You don't have any credits available at this studio.",
+        variant: "destructive",
+      });
+      setRebookConfirming(false);
+      return;
+    }
+
+    const pass = passes[0];
+
+    // Create booking
+    const { error: bookingError } = await supabase.from("bookings").insert({
+      user_id: user.id,
+      class_id: rebookCandidate.id,
+      studio_id: rebookSourceBooking.studio_id,
+      status: "confirmed",
+    });
+
+    if (bookingError) {
+      if (bookingError.code === "23505") {
+        toast({ title: "Already booked", description: "You're already booked for this class.", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: bookingError.message, variant: "destructive" });
+      }
+      setRebookConfirming(false);
+      return;
+    }
+
+    // Deduct 1 credit
+    await supabase
+      .from("student_passes")
+      .update({ credits_remaining: pass.credits_remaining - 1 })
+      .eq("id", pass.id);
+
+    toast({
+      title: "Booked!",
+      description: `${rebookCandidate.name} on ${format(new Date(rebookCandidate.start_time), "EEE, MMM d · h:mm a")}`,
+    });
+
+    setRebookConfirming(false);
+    setRebookDialogOpen(false);
+    setRebookCandidate(null);
+    setRebookSourceBooking(null);
     fetchAll();
   };
 
@@ -253,7 +356,7 @@ export default function StudentPortal() {
         </Link>
       </div>
 
-      {/* My Schedule */}
+      {/* My Schedule (Upcoming) */}
       <Card>
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
@@ -271,7 +374,7 @@ export default function StudentPortal() {
               {bookings.map((b) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2"
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -290,22 +393,85 @@ export default function StudentPortal() {
                       {format(new Date(b.start_time), "EEE, MMM d · h:mm a")}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-4"
-                    disabled={cancellingId === b.id}
-                    onClick={() => handleCancelClick(b)}
-                  >
-                    <X className="h-3.5 w-3.5 mr-1" />
-                    Cancel
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary hover:text-primary hover:bg-primary/10 text-xs gap-1"
+                      disabled={rebookLoading && rebookSourceBooking?.id === b.id}
+                      onClick={() => handleRebook(b, true)}
+                      title="Book the next session of this class"
+                    >
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Next Session</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={cancellingId === b.id}
+                      onClick={() => handleCancelClick(b)}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Past Classes */}
+      {pastBookings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display flex items-center gap-2 text-muted-foreground">
+              <RotateCw className="h-5 w-5" />
+              Past Classes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {pastBookings.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm truncate text-muted-foreground">{b.class_name}</p>
+                      {b.studio_name && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-2 py-0 border ${studioColorMap[b.studio_id] ?? ""}`}
+                        >
+                          {b.studio_name}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {b.instructor_name && <span>{b.instructor_name} · </span>}
+                      {format(new Date(b.start_time), "EEE, MMM d · h:mm a")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 shrink-0"
+                    disabled={rebookLoading && rebookSourceBooking?.id === b.id}
+                    onClick={() => handleRebook(b, false)}
+                  >
+                    <RotateCw className="h-3.5 w-3.5" />
+                    Book Again
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -365,6 +531,55 @@ export default function StudentPortal() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Rebook Confirmation Dialog */}
+      <Dialog open={rebookDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setRebookDialogOpen(false);
+          setRebookCandidate(null);
+          setRebookSourceBooking(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5 text-primary" />
+              Book Next Available?
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              We found the next available session for you.
+            </DialogDescription>
+          </DialogHeader>
+          {rebookCandidate && (
+            <div className="rounded-md border bg-primary/5 border-primary/20 p-4 space-y-1">
+              <p className="font-semibold text-sm">{rebookCandidate.name}</p>
+              {rebookCandidate.instructor_name && (
+                <p className="text-xs text-muted-foreground">
+                  with {rebookCandidate.instructor_name}
+                </p>
+              )}
+              <p className="text-sm font-medium text-primary">
+                {format(new Date(rebookCandidate.start_time), "EEEE, MMM d · h:mm a")}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {rebookCandidate.current_bookings}/{rebookCandidate.capacity} spots filled
+              </p>
+            </div>
+          )}
+          <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
+            <Ticket className="h-3.5 w-3.5 shrink-0" />
+            This will use 1 credit from your pass.
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRebookDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmRebook} disabled={rebookConfirming}>
+              {rebookConfirming ? "Booking…" : "Confirm Booking"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
