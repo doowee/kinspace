@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Ticket, X, ExternalLink, ShoppingBag } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CalendarDays, Ticket, X, ExternalLink, ShoppingBag, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -24,12 +25,14 @@ interface StudioPass {
   studio_id: string;
   studio_name: string;
   studio_slug: string;
+  studio_logo_url: string | null;
   credits_remaining: number;
 }
 
 interface MyStudio {
   slug: string;
   name: string;
+  logo_url: string | null;
 }
 
 // Consistent color palette for studio badges
@@ -43,7 +46,7 @@ const STUDIO_COLORS = [
 ];
 
 export default function StudentPortal() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [studioPasses, setStudioPasses] = useState<StudioPass[]>([]);
@@ -65,13 +68,13 @@ export default function StudentPortal() {
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
-        .select("credits_remaining, studio_id, studios:studio_id(name, slug)")
+        .select("credits_remaining, studio_id, studios:studio_id(name, slug, logo_url)")
         .eq("user_id", user.id)
         .gt("credits_remaining", 0)
         .gt("expires_at", new Date().toISOString()),
       supabase
         .from("studio_members")
-        .select("studios:studio_id(name, slug)")
+        .select("studios:studio_id(name, slug, logo_url)")
         .eq("user_id", user.id)
         .eq("role", "student" as any),
     ]);
@@ -101,6 +104,7 @@ export default function StudentPortal() {
           studio_id: sid,
           studio_name: (p.studios as any)?.name ?? "Unknown",
           studio_slug: (p.studios as any)?.slug ?? "",
+          studio_logo_url: (p.studios as any)?.logo_url ?? null,
           credits_remaining: 0,
         };
       }
@@ -111,6 +115,7 @@ export default function StudentPortal() {
     const studios: MyStudio[] = (studiosRes.data ?? []).map((s: any) => ({
       name: (s.studios as any)?.name ?? "",
       slug: (s.studios as any)?.slug ?? "",
+      logo_url: (s.studios as any)?.logo_url ?? null,
     })).filter((s: MyStudio) => s.slug);
     setMyStudios(studios);
 
@@ -134,6 +139,22 @@ export default function StudentPortal() {
     });
     return map;
   }, [bookings, studioPasses]);
+
+  // White-label brand: single studio → show their brand, multi → neutral
+  const brandInfo = useMemo(() => {
+    const uniqueStudios = new Map<string, MyStudio>();
+    myStudios.forEach((s) => uniqueStudios.set(s.slug, s));
+    studioPasses.forEach((sp) => {
+      if (sp.studio_slug && !uniqueStudios.has(sp.studio_slug)) {
+        uniqueStudios.set(sp.studio_slug, { slug: sp.studio_slug, name: sp.studio_name, logo_url: sp.studio_logo_url });
+      }
+    });
+    const all = Array.from(uniqueStudios.values());
+    if (all.length === 1) {
+      return { name: all[0].name, logo_url: all[0].logo_url, multi: false };
+    }
+    return { name: "My Studios", logo_url: null, multi: true };
+  }, [myStudios, studioPasses]);
 
   const handleCancel = async (booking: Booking) => {
     if (!user) return;
@@ -180,17 +201,45 @@ export default function StudentPortal() {
     );
   }
 
+  const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
+
   return (
-    <div className="animate-fade-in space-y-8 max-w-3xl mx-auto px-4 py-8">
-      {/* Greeting */}
-      <div>
-        <h2 className="font-display text-3xl font-bold text-foreground">
-          Welcome back, {firstName || "Student"}.
-        </h2>
-        <p className="mt-1 text-muted-foreground">
-          Here's what's coming up for you.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* White-label Header */}
+      <header className="border-b bg-card">
+        <div className="container flex h-14 items-center justify-between">
+          <div className="flex items-center gap-3">
+            {brandInfo.logo_url ? (
+              <img
+                src={brandInfo.logo_url}
+                alt={brandInfo.name}
+                className="h-8 w-auto max-w-[140px] object-contain"
+              />
+            ) : (
+              <span className="font-display text-lg font-bold text-foreground">
+                {brandInfo.name}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={signOut} className="gap-1.5 text-muted-foreground">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="animate-fade-in space-y-8 max-w-3xl mx-auto px-4 py-8 flex-1">
+        {/* Greeting */}
+        <div>
+          <h2 className="font-display text-3xl font-bold text-foreground">
+            Welcome back, {firstName || "Student"}.
+          </h2>
+          <p className="mt-1 text-muted-foreground">
+            Here's what's coming up for you.
+          </p>
+        </div>
 
       {/* My Memberships — Studio-Specific Credits */}
       <div>
@@ -296,6 +345,22 @@ export default function StudentPortal() {
           )}
         </CardContent>
       </Card>
+      </div>
+
+      {/* Powered by Footer */}
+      <footer className="border-t bg-card/50 py-6 mt-auto">
+        <div className="container flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
+          <span>Powered by</span>
+          <a
+            href="https://kinspace.studio"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:text-muted-foreground transition-colors"
+          >
+            Kinspace.studio
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
