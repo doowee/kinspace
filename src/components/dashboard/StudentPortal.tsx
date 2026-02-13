@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag, AlertTriangle, RotateCw, CalendarPlus } from "lucide-react";
+import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag, AlertTriangle, RotateCw, CalendarPlus, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -72,7 +72,7 @@ export default function StudentPortal() {
         .from("bookings")
         .select("id, class_id, status, studio_id, classes(name, start_time, instructors:instructor_id(name)), studios:studio_id(name, slug)")
         .eq("user_id", user.id)
-        .in("status", ["confirmed", "checked_in"])
+        .in("status", ["confirmed", "checked_in", "waitlist"])
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
@@ -385,6 +385,15 @@ export default function StudentPortal() {
                           className={`text-[10px] px-2 py-0 border ${studioColorMap[b.studio_id] ?? ""}`}
                         >
                           {b.studio_name}
+                        </Badge>
+                      )}
+                      {b.status === "waitlist" && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-2 py-0 border border-amber-400 text-amber-600"
+                        >
+                          <Clock className="h-2.5 w-2.5 mr-0.5" />
+                          Waitlisted
                         </Badge>
                       )}
                     </div>
