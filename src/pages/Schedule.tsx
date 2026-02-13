@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon, Flame, AlertTriangle, ListOrdered } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +73,7 @@ export default function Schedule() {
 
   // Booking counts per class & user's own bookings
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
+  const [waitlistCounts, setWaitlistCounts] = useState<Record<string, number>>({});
   const [userBookedClassIds, setUserBookedClassIds] = useState<Set<string>>(new Set());
 
   // Form state
@@ -133,14 +134,18 @@ export default function Schedule() {
       .eq("studio_id", activeStudio.id)
       .in("status", ["confirmed", "waitlist"]);
 
-    // Count confirmed bookings per class
+    // Count confirmed and waitlist bookings per class
     const counts: Record<string, number> = {};
+    const wCounts: Record<string, number> = {};
     allBookings?.forEach((b) => {
       if (b.status === "confirmed") {
         counts[b.class_id] = (counts[b.class_id] || 0) + 1;
+      } else if (b.status === "waitlist") {
+        wCounts[b.class_id] = (wCounts[b.class_id] || 0) + 1;
       }
     });
     setBookingCounts(counts);
+    setWaitlistCounts(wCounts);
 
     // Fetch user's own bookings
     const { data: myBookings } = await supabase
@@ -397,59 +402,110 @@ export default function Schedule() {
           ) : (
             classesOnDate.map((cls) => {
               const count = bookingCounts[cls.id] || 0;
+              const waitlistCount = waitlistCounts[cls.id] || 0;
               const isFull = count >= cls.capacity;
+              const isLow = count < 2 && cls.capacity >= 3;
               const isBooked = userBookedClassIds.has(cls.id);
               const isBooking = bookingClassId === cls.id;
+              const fillPercent = Math.min((count / cls.capacity) * 100, 100);
 
               return (
-                <Card key={cls.id}>
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="space-y-1">
-                      <p className="font-semibold">{cls.name}</p>
-                      {cls.instructors?.name && (
-                        <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
+                <Card
+                  key={cls.id}
+                  className={cn(
+                    "transition-all duration-300",
+                    isFull && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
+                    isLow && !isFull && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
+                  )}
+                >
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold">{cls.name}</p>
+                          {isFull && (
+                            <Badge className="bg-primary/15 text-primary border-primary/25 gap-1 text-[10px] font-bold uppercase tracking-wide">
+                              <Flame className="h-3 w-3" />
+                              Sold Out
+                            </Badge>
+                          )}
+                          {isLow && !isFull && (
+                            <Badge variant="outline" className="border-orange-300 text-orange-600 bg-orange-50 dark:bg-orange-950/30 gap-1 text-[10px] font-bold uppercase tracking-wide">
+                              <AlertTriangle className="h-3 w-3" />
+                              Low Enrollment
+                            </Badge>
+                          )}
+                        </div>
+                        {cls.instructors?.name && (
+                          <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
+                        )}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(cls.start_time), "h:mm a")}
+                          </span>
+                        </div>
+                      </div>
+                      {canManage ? (
+                        <div className="flex items-center gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)} className="gap-1.5">
+                            <UsersRound className="h-3.5 w-3.5" />
+                            {count}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setManualBookClass(cls)}>
+                            <UserPlus className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditClass(cls)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : user && (
+                        isBooked ? (
+                          <Badge className="bg-primary/10 text-primary border-primary/20">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Booked
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={isFull ? "outline" : "default"}
+                            disabled={isBooking}
+                            onClick={() => handleBook(cls)}
+                          >
+                            {isBooking ? "Booking…" : isFull ? "Waitlist" : "Book"}
+                          </Button>
+                        )
                       )}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {format(new Date(cls.start_time), "h:mm a")}
-                        </span>
-                        <span className="flex items-center gap-1">
+                    </div>
+
+                    {/* Capacity bar + waitlist */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" />
                           {count}/{cls.capacity} booked
                         </span>
+                        {waitlistCount > 0 && (
+                          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                            <ListOrdered className="h-3 w-3" />
+                            {waitlistCount} on waitlist
+                          </span>
+                        )}
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            isFull
+                              ? "bg-primary"
+                              : isLow
+                                ? "bg-orange-400"
+                                : "bg-primary/60"
+                          )}
+                          style={{ width: `${fillPercent}%` }}
+                        />
                       </div>
                     </div>
-                    {canManage ? (
-                      <div className="flex items-center gap-1.5">
-                        <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)}>
-                          <UsersRound className="h-3.5 w-3.5 mr-1" />
-                          {count}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setManualBookClass(cls)}>
-                          <UserPlus className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditClass(cls)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : user && (
-                      isBooked ? (
-                        <Badge className="bg-primary/10 text-primary border-primary/20">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Booked
-                        </Badge>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant={isFull ? "outline" : "default"}
-                          disabled={isBooking}
-                          onClick={() => handleBook(cls)}
-                        >
-                          {isBooking ? "Booking…" : isFull ? "Waitlist" : "Book"}
-                        </Button>
-                      )
-                    )}
                   </CardContent>
                 </Card>
               );
