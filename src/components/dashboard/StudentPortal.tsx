@@ -19,6 +19,7 @@ interface Booking {
   studio_id: string;
   studio_name: string;
   studio_slug: string;
+  instructor_name: string | null;
 }
 
 interface StudioPass {
@@ -62,7 +63,7 @@ export default function StudentPortal() {
       supabase.from("profiles").select("first_name").eq("id", user.id).single(),
       supabase
         .from("bookings")
-        .select("id, class_id, status, studio_id, classes(name, start_time), studios:studio_id(name, slug)")
+        .select("id, class_id, status, studio_id, classes(name, start_time, instructors:instructor_id(name)), studios:studio_id(name, slug)")
         .eq("user_id", user.id)
         .eq("status", "confirmed")
         .order("created_at", { ascending: true }),
@@ -90,6 +91,7 @@ export default function StudentPortal() {
       studio_id: b.studio_id,
       studio_name: (b.studios as any)?.name ?? "",
       studio_slug: (b.studios as any)?.slug ?? "",
+      instructor_name: (b.classes?.instructors as any)?.name ?? null,
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     const now = new Date();
@@ -204,7 +206,7 @@ export default function StudentPortal() {
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* White-label Header */}
       <header className="border-b bg-card">
         <div className="container flex h-14 items-center justify-between">
@@ -326,6 +328,7 @@ export default function StudentPortal() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
+                      {b.instructor_name && <span>{b.instructor_name} · </span>}
                       {format(new Date(b.start_time), "EEE, MMM d · h:mm a")}
                     </p>
                   </div>
