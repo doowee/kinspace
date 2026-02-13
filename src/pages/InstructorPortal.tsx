@@ -35,8 +35,9 @@ interface RosterStudent {
   email: string;
 }
 
-export default function InstructorPortal() {
+export default function InstructorPortal({ demoUserId }: { demoUserId?: string }) {
   const { user, signOut } = useAuth();
+  const effectiveUserId = demoUserId || user?.id;
   const [instructorName, setInstructorName] = useState("");
   const [classes, setClasses] = useState<InstructorClass[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,14 +74,14 @@ export default function InstructorPortal() {
   }, [classes]);
 
   const fetchClasses = useCallback(async () => {
-    if (!user) return;
+    if (!effectiveUserId) return;
     setLoading(true);
 
     // Find instructor records linked to this user
     const { data: instRecords } = await supabase
       .from("instructors")
       .select("id, name")
-      .eq("user_id", user.id);
+      .eq("user_id", effectiveUserId);
 
     if (!instRecords || instRecords.length === 0) {
       setLoading(false);
@@ -142,7 +143,7 @@ export default function InstructorPortal() {
 
     setClasses(mapped);
     setLoading(false);
-  }, [user?.id]);
+  }, [effectiveUserId]);
 
   useEffect(() => {
     fetchClasses();
@@ -225,9 +226,11 @@ export default function InstructorPortal() {
             </h1>
             <p className="text-xs text-muted-foreground">Instructor Portal</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          {!demoUserId && (
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </header>
 

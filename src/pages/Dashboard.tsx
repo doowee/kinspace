@@ -4,17 +4,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, Eye, ArrowLeft } from "lucide-react";
+import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap } from "lucide-react";
 import StudentPortal from "@/components/dashboard/StudentPortal";
+import InstructorPortal from "@/pages/InstructorPortal";
+
+const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
+const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84"; // Elena Voss
 
 type DashboardView = "loading" | "owner" | "student" | "new-user";
+type DemoMode = false | "student" | "instructor";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [view, setView] = useState<DashboardView>("loading");
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [demoMode, setDemoMode] = useState<DemoMode>(false);
 
   useEffect(() => {
     if (!user) return;
@@ -83,10 +88,10 @@ export default function Dashboard() {
 
   // Owner at /dashboard → redirect into AppLayout at /
   useEffect(() => {
-    if (view === "owner" && !isDemoMode && location.pathname === "/dashboard") {
+    if (view === "owner" && !demoMode && location.pathname === "/dashboard") {
       navigate("/", { replace: true });
     }
-  }, [view, isDemoMode, location.pathname, navigate]);
+  }, [view, demoMode, location.pathname, navigate]);
 
   if (view === "loading") {
     return (
@@ -100,29 +105,37 @@ export default function Dashboard() {
     return <NewUserWelcome />;
   }
 
-  if (view === "student" || (view === "owner" && isDemoMode)) {
+  if (view === "student" || (view === "owner" && demoMode)) {
+    const exitDemo = () => {
+      setDemoMode(false);
+      if (location.pathname === "/dashboard") {
+        navigate("/", { replace: true });
+      }
+    };
+
     return (
       <>
-        {isDemoMode && (
+        {demoMode && (
           <div className="sticky top-0 z-50 flex items-center justify-between bg-yellow-400 px-4 py-2 text-yellow-900">
-            <span className="text-sm font-semibold">👁️ Viewing as Student (Demo Mode)</span>
+            <span className="text-sm font-semibold">
+              👁️ Viewing as {demoMode === "student" ? "Student (Jen)" : "Instructor (Elena)"}
+            </span>
             <Button
               size="sm"
               variant="outline"
               className="border-yellow-600 bg-yellow-300 text-yellow-900 hover:bg-yellow-200"
-              onClick={() => {
-                setIsDemoMode(false);
-                if (location.pathname === "/dashboard") {
-                  navigate("/", { replace: true });
-                }
-              }}
+              onClick={exitDemo}
             >
               <ArrowLeft className="mr-1 h-3.5 w-3.5" />
               Return to Owner View
             </Button>
           </div>
         )}
-        <StudentPortal />
+        {(!demoMode || demoMode === "student") ? (
+          <StudentPortal demoUserId={demoMode === "student" ? DEMO_STUDENT_USER_ID : undefined} />
+        ) : (
+          <InstructorPortal demoUserId={DEMO_INSTRUCTOR_USER_ID} />
+        )}
       </>
     );
   }
@@ -140,10 +153,16 @@ export default function Dashboard() {
           <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1">Welcome back, Owner.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setIsDemoMode(true)}>
-          <Eye className="mr-1.5 h-4 w-4" />
-          View as Student
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setDemoMode("student")}>
+            <Eye className="mr-1.5 h-4 w-4" />
+            View as Student
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setDemoMode("instructor")}>
+            <GraduationCap className="mr-1.5 h-4 w-4" />
+            View as Instructor
+          </Button>
+        </div>
       </div>
     </div>
   );
