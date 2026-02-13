@@ -44,25 +44,54 @@ Deno.serve(async (req) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // 1. Create 20 student profiles
-    const studentProfiles = FIRST_NAMES.map((first, i) => ({
-      id: crypto.randomUUID(),
-      email: `${first.toLowerCase()}.${LAST_NAMES[i].toLowerCase()}@demo.kinspace.app`,
-      first_name: first,
-      last_name: LAST_NAMES[i],
-      phone: `555-0${String(100 + i).slice(-3)}`,
-    }));
+    // 1. Create 20 auth users + profiles via admin API
+    const studentIds: string[] = [];
+    const studentProfiles: { id: string; first_name: string; last_name: string }[] = [];
 
-    const { error: profileErr } = await supabaseAdmin.from("profiles").upsert(studentProfiles, { onConflict: "id" });
-    if (profileErr) throw new Error(`Profiles: ${profileErr.message}`);
+    for (let i = 0; i < FIRST_NAMES.length; i++) {
+      const email = `${FIRST_NAMES[i].toLowerCase()}.${LAST_NAMES[i].toLowerCase()}@demo.kinspace.app`;
+      const phone = `555-0${String(100 + i).slice(-3)}`;
 
-    // 2. Studio memberships
-    const memberRows = studentProfiles.flatMap((p) =>
-      STUDIO_IDS.map((sid) => ({ user_id: p.id, studio_id: sid, role: "student" }))
-    );
-    // Insert individually to skip duplicates
-    for (const m of memberRows) {
-      await supabaseAdmin.from("studio_members").upsert(m, { onConflict: "user_id,studio_id" as any }).single();
+      // Try to create auth user; if exists, look up existing
+      const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: "demo-password-123!",
+        email_confirm: true,
+        user_metadata: { first_name: FIRST_NAMES[i], last_name: LAST_NAMES[i], phone },
+      });
+
+      let userId: string;
+      if (authErr) {
+        // User likely exists, look up by email
+        const { data: existing } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        if (!existing) {
+          console.warn(`Skipping ${email}: ${authErr.message}`);
+          continue;
+        }
+        userId = existing.id;
+      } else {
+        userId = authUser.user.id;
+      }
+
+      // Update profile with phone
+      await supabaseAdmin.from("profiles").update({ phone }).eq("id", userId);
+
+      studentIds.push(userId);
+      studentProfiles.push({ id: userId, first_name: FIRST_NAMES[i], last_name: LAST_NAMES[i] });
+    }
+
+    if (studentIds.length === 0) throw new Error("No students created");
+
+    // 2. Studio memberships (ignore duplicates)
+    for (const sid of STUDIO_IDS) {
+      for (const uid of studentIds) {
+        await supabaseAdmin.from("studio_members")
+          .upsert({ user_id: uid, studio_id: sid, role: "student" }, { onConflict: "user_id,studio_id" as any });
+      }
     }
 
     // 3. Create 13 classes
@@ -96,12 +125,12 @@ Deno.serve(async (req) => {
       const classDate = new Date(cls.start_time);
       const isPast = classDate < now;
       const isWaitlistTarget = waitlistClass && cls.id === waitlistClass.id;
-      const shuffled = [...studentProfiles].sort(() => Math.random() - 0.5);
+      const shuffled = [...studentIds].sort(() => Math.random() - 0.5);
 
       if (isWaitlistTarget) {
         for (let j = 0; j < cls.capacity + 2 && j < shuffled.length; j++) {
           bookingRows.push({
-            class_id: cls.id, user_id: shuffled[j].id, studio_id: cls.studio_id,
+            class_id: cls.id, user_id: shuffled[j], studio_id: cls.studio_id,
             status: j < cls.capacity ? "confirmed" : "waitlist",
           });
         }
@@ -109,7 +138,7 @@ Deno.serve(async (req) => {
         const fill = Math.min(randInt(Math.ceil(cls.capacity * 0.8), cls.capacity), shuffled.length);
         for (let j = 0; j < fill; j++) {
           bookingRows.push({
-            class_id: cls.id, user_id: shuffled[j].id, studio_id: cls.studio_id,
+            class_id: cls.id, user_id: shuffled[j], studio_id: cls.studio_id,
             status: Math.random() > 0.3 ? "checked_in" : "confirmed",
           });
         }
@@ -117,7 +146,7 @@ Deno.serve(async (req) => {
         const fill = Math.min(randInt(Math.ceil(cls.capacity * 0.5), Math.ceil(cls.capacity * 0.8)), shuffled.length);
         for (let j = 0; j < fill; j++) {
           bookingRows.push({
-            class_id: cls.id, user_id: shuffled[j].id, studio_id: cls.studio_id,
+            class_id: cls.id, user_id: shuffled[j], studio_id: cls.studio_id,
             status: "confirmed",
           });
         }
@@ -130,8 +159,8 @@ Deno.serve(async (req) => {
     }
 
     // 5. Student passes
-    const passRows = studentProfiles.map((p) => ({
-      user_id: p.id,
+    const passRows = studentIds.map((uid) => ({
+      user_id: uid,
       studio_id: pick(STUDIO_IDS),
       package_id: pick(PACKAGE_IDS),
       credits_remaining: randInt(0, 12),
@@ -144,7 +173,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       classCount: classRows.length,
-      studentCount: studentProfiles.length,
+      studentCount: studentIds.length,
       bookingCount: bookingRows.length,
       waitlistClassName: waitlistClass?.name ?? "none",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
