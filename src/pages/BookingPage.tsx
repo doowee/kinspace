@@ -233,7 +233,7 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Browser tab title */}
       {(() => { document.title = `${studio.name} | Booking`; return null; })()}
 
