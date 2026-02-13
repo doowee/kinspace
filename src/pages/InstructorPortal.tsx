@@ -66,10 +66,10 @@ export default function InstructorPortal() {
     setInstructorName((instRecords[0] as any).name || "");
     const instructorIds = instRecords.map((i: any) => i.id);
 
-    // Fetch upcoming classes with studio name
+    // Fetch upcoming classes (without studio join — RLS on studios blocks cross-studio joins)
     const { data: classData } = await supabase
       .from("classes")
-      .select("id, name, description, start_time, capacity, instructor_id, studios:studio_id(name, brand_primary)")
+      .select("id, name, description, start_time, capacity, instructor_id, studio_id")
       .in("instructor_id", instructorIds)
       .gt("start_time", new Date().toISOString())
       .order("start_time", { ascending: true });
@@ -79,6 +79,18 @@ export default function InstructorPortal() {
       setLoading(false);
       return;
     }
+
+    // Fetch studio names separately (studios has a public SELECT policy)
+    const studioIds = [...new Set(classData.map((c) => c.studio_id))];
+    const { data: studioData } = await supabase
+      .from("studios")
+      .select("id, name, brand_primary")
+      .in("id", studioIds);
+
+    const studioMap: Record<string, { name: string; brand_primary: string | null }> = {};
+    (studioData ?? []).forEach((s: any) => {
+      studioMap[s.id] = { name: s.name, brand_primary: s.brand_primary };
+    });
 
     // Fetch booking counts
     const classIds = classData.map((c) => c.id);
@@ -99,8 +111,8 @@ export default function InstructorPortal() {
       description: c.description,
       start_time: c.start_time,
       capacity: c.capacity,
-      studio_name: (c.studios as any)?.name ?? "",
-      studio_brand_primary: (c.studios as any)?.brand_primary ?? null,
+      studio_name: studioMap[c.studio_id]?.name ?? "",
+      studio_brand_primary: studioMap[c.studio_id]?.brand_primary ?? null,
       booked_count: countMap[c.id] || 0,
     }));
 
