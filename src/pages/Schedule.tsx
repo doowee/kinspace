@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Clock, Users } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -29,13 +31,26 @@ interface ClassRow {
   studio_id: string;
 }
 
+interface BookingCount {
+  class_id: string;
+  count: number;
+}
+
 export default function Schedule() {
+  const { user } = useAuth();
   const { activeStudio, activeRole } = useStudio();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [noCreditsOpen, setNoCreditsOpen] = useState(false);
+  const [bookingClassId, setBookingClassId] = useState<string | null>(null);
+
+  // Booking counts per class & user's own bookings
+  const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
+  const [userBookedClassIds, setUserBookedClassIds] = useState<Set<string>>(new Set());
 
   // Form state
   const [className, setClassName] = useState("");
@@ -62,15 +77,114 @@ export default function Schedule() {
     setLoading(false);
   };
 
+  const fetchBookingData = async () => {
+    if (!activeStudio || !user) return;
+
+    // Fetch all confirmed bookings for this studio to get counts
+    const { data: allBookings } = await supabase
+      .from("bookings")
+      .select("class_id, status")
+      .eq("studio_id", activeStudio.id)
+      .in("status", ["confirmed", "waitlist"]);
+
+    // Count confirmed bookings per class
+    const counts: Record<string, number> = {};
+    allBookings?.forEach((b) => {
+      if (b.status === "confirmed") {
+        counts[b.class_id] = (counts[b.class_id] || 0) + 1;
+      }
+    });
+    setBookingCounts(counts);
+
+    // Fetch user's own bookings
+    const { data: myBookings } = await supabase
+      .from("bookings")
+      .select("class_id")
+      .eq("user_id", user.id)
+      .eq("studio_id", activeStudio.id)
+      .in("status", ["confirmed", "waitlist"]);
+
+    setUserBookedClassIds(new Set(myBookings?.map((b) => b.class_id) ?? []));
+  };
+
   useEffect(() => {
     fetchClasses();
   }, [activeStudio?.id]);
+
+  useEffect(() => {
+    if (classes.length > 0) fetchBookingData();
+  }, [classes, activeStudio?.id, user?.id]);
 
   const classesOnDate = classes.filter((c) =>
     isSameDay(new Date(c.start_time), selectedDate)
   );
 
   const datesWithClasses = classes.map((c) => new Date(c.start_time));
+
+  const handleBook = async (cls: ClassRow) => {
+    if (!user || !activeStudio) return;
+    setBookingClassId(cls.id);
+
+    try {
+      // Step A: Check for active student pass with credits
+      const { data: passes } = await supabase
+        .from("student_passes")
+        .select("id, credits_remaining, expires_at")
+        .eq("user_id", user.id)
+        .eq("studio_id", activeStudio.id)
+        .gt("credits_remaining", 0)
+        .gt("expires_at", new Date().toISOString())
+        .order("expires_at", { ascending: true })
+        .limit(1);
+
+      if (!passes || passes.length === 0) {
+        // Step C: No credits
+        setBookingClassId(null);
+        setNoCreditsOpen(true);
+        return;
+      }
+
+      const pass = passes[0];
+      const isFull = (bookingCounts[cls.id] || 0) >= cls.capacity;
+      const bookingStatus = isFull ? "waitlist" : "confirmed";
+
+      // Step B: Decrement credits
+      const { error: passError } = await supabase
+        .from("student_passes")
+        .update({ credits_remaining: pass.credits_remaining - 1 })
+        .eq("id", pass.id);
+
+      if (passError) throw passError;
+
+      // Insert booking
+      const { error: bookError } = await supabase.from("bookings").insert({
+        studio_id: activeStudio.id,
+        user_id: user.id,
+        class_id: cls.id,
+        status: bookingStatus,
+      });
+
+      if (bookError) throw bookError;
+
+      toast({
+        title: isFull ? "Added to Waitlist" : "Success! You are booked",
+        description: isFull
+          ? `You've been added to the waitlist for ${cls.name}.`
+          : `You're confirmed for ${cls.name}.`,
+      });
+
+      // Refresh
+      await fetchBookingData();
+    } catch (err: any) {
+      toast({
+        title: "Booking failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBookingClassId(null);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,31 +313,67 @@ export default function Schedule() {
           ) : classesOnDate.length === 0 ? (
             <p className="text-sm text-muted-foreground">No classes scheduled for this day.</p>
           ) : (
-            classesOnDate.map((cls) => (
-              <Card key={cls.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="space-y-1">
-                    <p className="font-semibold">{cls.name}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(cls.start_time), "h:mm a")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {cls.capacity} spots
-                      </span>
+            classesOnDate.map((cls) => {
+              const count = bookingCounts[cls.id] || 0;
+              const isFull = count >= cls.capacity;
+              const isBooked = userBookedClassIds.has(cls.id);
+              const isBooking = bookingClassId === cls.id;
+
+              return (
+                <Card key={cls.id}>
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="space-y-1">
+                      <p className="font-semibold">{cls.name}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(cls.start_time), "h:mm a")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {count}/{cls.capacity} booked
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {format(new Date(cls.start_time), "h:mm a")}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))
+                    {user && (
+                      isBooked ? (
+                        <Badge className="bg-primary/10 text-primary border-primary/20">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Booked
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant={isFull ? "outline" : "default"}
+                          disabled={isBooking}
+                          onClick={() => handleBook(cls)}
+                        >
+                          {isBooking ? "Booking…" : isFull ? "Waitlist" : "Book"}
+                        </Button>
+                      )
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
+
+      {/* No Credits Modal */}
+      <Dialog open={noCreditsOpen} onOpenChange={setNoCreditsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">No Credits Available</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You don't have any active credits to book this class. Purchase a package to get started.
+          </p>
+          <Button className="w-full mt-2" onClick={() => { setNoCreditsOpen(false); navigate("/settings"); }}>
+            Buy a Package
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
