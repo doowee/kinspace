@@ -10,7 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket } from "lucide-react";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Outlet, Navigate } from "react-router-dom";
 import { NavLink } from "./NavLink";
 
@@ -76,28 +77,11 @@ export default function AppLayout() {
                     <Wallet className="h-4 w-4" />
                     Finance
                   </NavLink>
-                  <NavLink
-                    to="/org-revenue"
-                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    activeClassName="bg-accent text-accent-foreground font-medium"
-                  >
-                    <Building2 className="h-4 w-4" />
-                    Organization
-                  </NavLink>
-                  <NavLink
-                    to="/settings"
-                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    activeClassName="bg-accent text-accent-foreground font-medium"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </NavLink>
                 </>
               )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <CreditsBadge />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
@@ -108,10 +92,32 @@ export default function AppLayout() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
                   {user.email}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5">
+                  <CreditsBadge />
+                </div>
+                <DropdownMenuSeparator />
+                {activeRole !== "student" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <a href="/org-revenue" className="flex items-center gap-2 cursor-pointer">
+                        <Building2 className="h-4 w-4" />
+                        Organization
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a href="/settings" className="flex items-center gap-2 cursor-pointer">
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
