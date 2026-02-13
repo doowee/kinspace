@@ -23,11 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, Users, CheckCircle2 } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, Eye } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import TimePicker from "@/components/schedule/TimePicker";
+import EditClassDialog from "@/components/schedule/EditClassDialog";
+import ViewStudentsDialog from "@/components/schedule/ViewStudentsDialog";
+import ManualBookDialog from "@/components/schedule/ManualBookDialog";
 
 interface InstructorRow {
   id: string;
@@ -37,6 +40,7 @@ interface InstructorRow {
 interface ClassRow {
   id: string;
   name: string;
+  description: string | null;
   start_time: string;
   capacity: number;
   instructor_id: string | null;
@@ -60,6 +64,11 @@ export default function Schedule() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [noCreditsOpen, setNoCreditsOpen] = useState(false);
   const [bookingClassId, setBookingClassId] = useState<string | null>(null);
+
+  // Owner dialog state
+  const [editClass, setEditClass] = useState<ClassRow | null>(null);
+  const [viewStudentsClass, setViewStudentsClass] = useState<ClassRow | null>(null);
+  const [manualBookClass, setManualBookClass] = useState<ClassRow | null>(null);
 
   // Booking counts per class & user's own bookings
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
@@ -398,7 +407,20 @@ export default function Schedule() {
                         </span>
                       </div>
                     </div>
-                    {user && (
+                    {canManage ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)}>
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          {count}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setManualBookClass(cls)}>
+                          <UserPlus className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditClass(cls)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : user && (
                       isBooked ? (
                         <Badge className="bg-primary/10 text-primary border-primary/20">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -437,6 +459,32 @@ export default function Schedule() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Owner Dialogs */}
+      <EditClassDialog
+        open={!!editClass}
+        onOpenChange={(open) => !open && setEditClass(null)}
+        cls={editClass}
+        instructors={instructors}
+        onSaved={fetchClasses}
+      />
+      <ViewStudentsDialog
+        open={!!viewStudentsClass}
+        onOpenChange={(open) => !open && setViewStudentsClass(null)}
+        classId={viewStudentsClass?.id ?? null}
+        className={viewStudentsClass?.name ?? ""}
+        capacity={viewStudentsClass?.capacity ?? 0}
+      />
+      {activeStudio && (
+        <ManualBookDialog
+          open={!!manualBookClass}
+          onOpenChange={(open) => !open && setManualBookClass(null)}
+          classId={manualBookClass?.id ?? null}
+          className={manualBookClass?.name ?? ""}
+          studioId={activeStudio.id}
+          onBooked={() => { fetchBookingData(); }}
+        />
+      )}
     </div>
   );
 }
