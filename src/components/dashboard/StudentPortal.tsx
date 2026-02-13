@@ -47,7 +47,7 @@ export default function StudentPortal() {
   const [creditsSummary, setCreditsSummary] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [studioPasses, setStudioPasses] = useState<{ studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number }[]>([]);
+  const [studioPasses, setStudioPasses] = useState<{ studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number; upcoming_classes: number }[]>([]);
 
   // Cancel dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -105,7 +105,7 @@ export default function StudentPortal() {
     setCreditsSummary(total);
 
     // Group passes by studio
-    const passMap: Record<string, { studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number }> = {};
+    const passMap: Record<string, { studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number; upcoming_classes: number }> = {};
     (creditsRes.data ?? []).forEach((p: any) => {
       const sid = p.studio_id;
       if (!passMap[sid]) {
@@ -114,10 +114,28 @@ export default function StudentPortal() {
           studio_name: (p.studios as any)?.name ?? "Unknown",
           studio_slug: (p.studios as any)?.slug ?? "",
           credits_remaining: 0,
+          upcoming_classes: 0,
         };
       }
       passMap[sid].credits_remaining += p.credits_remaining;
     });
+
+    // Count upcoming classes per studio
+    const upcomingByStudio = mapped.filter((b) => new Date(b.start_time) > now);
+    upcomingByStudio.forEach((b) => {
+      if (passMap[b.studio_id]) {
+        passMap[b.studio_id].upcoming_classes += 1;
+      } else {
+        passMap[b.studio_id] = {
+          studio_id: b.studio_id,
+          studio_name: b.studio_name,
+          studio_slug: b.studio_slug,
+          credits_remaining: 0,
+          upcoming_classes: 1,
+        };
+      }
+    });
+
     setStudioPasses(Object.values(passMap));
 
     setLoading(false);
@@ -307,11 +325,19 @@ export default function StudentPortal() {
                 <CardTitle className="text-sm font-medium font-sans truncate">{sp.studio_name}</CardTitle>
               </CardHeader>
               <CardContent className="pl-5 flex items-end justify-between">
-                <div>
-                  <div className={`text-2xl font-bold font-display ${sp.credits_remaining > 0 ? "text-primary" : "text-destructive"}`}>
-                    {sp.credits_remaining}
+                <div className="flex gap-6">
+                  <div>
+                    <div className={`text-2xl font-bold font-display ${sp.credits_remaining > 0 ? "text-primary" : "text-destructive"}`}>
+                      {sp.credits_remaining}
+                    </div>
+                    <p className="text-xs text-muted-foreground">credits remaining</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">credits remaining</p>
+                  <div>
+                    <div className="text-2xl font-bold font-display text-primary">
+                      {sp.upcoming_classes}
+                    </div>
+                    <p className="text-xs text-muted-foreground">upcoming classes</p>
+                  </div>
                 </div>
                 {sp.studio_slug && (
                   <div className="flex flex-col gap-1.5">
@@ -335,26 +361,28 @@ export default function StudentPortal() {
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="py-4 text-center">
-            <div className="text-2xl font-bold font-display text-primary">{bookings.length}</div>
-            <p className="text-xs text-muted-foreground">Upcoming Classes</p>
-          </CardContent>
-        </Card>
-        <Link to="/wallet">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+      {/* Aggregated Quick Stats — only show when multiple studios */}
+      {studioPasses.length > 1 && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
             <CardContent className="py-4 text-center">
-              <div className="text-2xl font-bold font-display text-primary flex items-center justify-center gap-1">
-                <Ticket className="h-5 w-5" />
-                {creditsSummary}
-              </div>
-              <p className="text-xs text-muted-foreground">Credits Available</p>
+              <div className="text-2xl font-bold font-display text-primary">{bookings.length}</div>
+              <p className="text-xs text-muted-foreground">Upcoming Classes</p>
             </CardContent>
           </Card>
-        </Link>
-      </div>
+          <Link to="/wallet">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="py-4 text-center">
+                <div className="text-2xl font-bold font-display text-primary flex items-center justify-center gap-1">
+                  <Ticket className="h-5 w-5" />
+                  {creditsSummary}
+                </div>
+                <p className="text-xs text-muted-foreground">Credits Available</p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
 
       {/* My Schedule (Upcoming) */}
       <Card>
