@@ -67,6 +67,7 @@ export type Database = {
         Row: {
           capacity: number
           created_at: string
+          description: string | null
           id: string
           instructor_id: string | null
           name: string
@@ -77,6 +78,7 @@ export type Database = {
         Insert: {
           capacity?: number
           created_at?: string
+          description?: string | null
           id?: string
           instructor_id?: string | null
           name: string
@@ -87,6 +89,7 @@ export type Database = {
         Update: {
           capacity?: number
           created_at?: string
+          description?: string | null
           id?: string
           instructor_id?: string | null
           name?: string
@@ -484,7 +487,9 @@ export type Database = {
         Args: { _slug: string }
         Returns: {
           capacity: number
+          description: string
           id: string
+          instructor_bio: string
           instructor_first_name: string
           instructor_last_name: string
           name: string
