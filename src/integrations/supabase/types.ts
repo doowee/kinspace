@@ -378,6 +378,8 @@ export type Database = {
           brand_text: string | null
           created_at: string
           id: string
+          late_cancel_fee: number | null
+          late_cancel_window_hours: number
           location: string | null
           logo_url: string | null
           name: string
@@ -394,6 +396,8 @@ export type Database = {
           brand_text?: string | null
           created_at?: string
           id?: string
+          late_cancel_fee?: number | null
+          late_cancel_window_hours?: number
           location?: string | null
           logo_url?: string | null
           name: string
@@ -410,6 +414,8 @@ export type Database = {
           brand_text?: string | null
           created_at?: string
           id?: string
+          late_cancel_fee?: number | null
+          late_cancel_window_hours?: number
           location?: string | null
           logo_url?: string | null
           name?: string
@@ -489,6 +495,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_booking_logic: {
+        Args: { _booking_id: string; _user_id: string }
+        Returns: string
+      }
       create_org_with_membership: {
         Args: { _name: string; _slug: string }
         Returns: string
@@ -542,7 +552,7 @@ export type Database = {
       }
     }
     Enums: {
-      booking_status: "confirmed" | "cancelled" | "waitlist"
+      booking_status: "confirmed" | "cancelled" | "waitlist" | "late_cancelled"
       org_role: "owner" | "admin" | "viewer"
       payment_method: "card" | "cash" | "transfer" | "check"
       studio_role: "owner" | "instructor" | "student"
@@ -674,7 +684,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      booking_status: ["confirmed", "cancelled", "waitlist"],
+      booking_status: ["confirmed", "cancelled", "waitlist", "late_cancelled"],
       org_role: ["owner", "admin", "viewer"],
       payment_method: ["card", "cash", "transfer", "check"],
       studio_role: ["owner", "instructor", "student"],
