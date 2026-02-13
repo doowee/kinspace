@@ -1,5 +1,7 @@
 import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { Zap, Bell, Users, AlertTriangle, Star } from "lucide-react";
 import {
   DropdownMenu,
@@ -13,12 +15,41 @@ import { Button } from "@/components/ui/button";
 
 export default function DemoTriggers() {
   const { activeRole, activeStudio } = useStudio();
-  const { triggerScenario } = useDemoPhone();
+  const { triggerScenario, triggerWaitlistPromotion } = useDemoPhone();
 
   // Only visible to owners
   if (activeRole !== "owner") return null;
 
   const studioName = activeStudio?.name || "Your Studio";
+
+  const handleWaitlistTrigger = async () => {
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("id, user_id, studio_id, class_id, classes(name, start_time)")
+      .eq("status", "waitlist")
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      toast({
+        title: "Demo Failed",
+        description: "No waitlisted students found. Please waitlist a student first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    triggerWaitlistPromotion({
+      bookingId: data.id,
+      userId: data.user_id,
+      studioId: data.studio_id,
+      className: (data.classes as any)?.name ?? "Class",
+      classTime: (data.classes as any)?.start_time ?? "",
+    });
+  };
+
+  // Only visible to owners
+  if (activeRole !== "owner") return null;
 
   return (
     <DropdownMenu>
@@ -45,11 +76,11 @@ export default function DemoTriggers() {
           Trigger: 2-Hour Reminder
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => triggerScenario("waitlist", studioName)}
+          onClick={handleWaitlistTrigger}
           className="gap-2 cursor-pointer"
         >
           <Users className="h-4 w-4 text-green-500" />
-          Trigger: Waitlist Promotion
+          Simulate Waitlist Opening
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => triggerScenario("low-balance", studioName)}

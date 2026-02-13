@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export interface ChatMessage {
   id: string;
@@ -150,13 +151,14 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
 
           setTimeout(() => {
             setTyping(false);
-            const timeStr = meta?.classTime
-              ? new Date(meta.classTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-              : "class";
             addMessage(
-              `You're in! Confirmation sent. See you at ${timeStr}! 💪`,
+              `You're in! We've charged 1 credit. See you there! 💪`,
               "system"
             );
+            toast({
+              title: "Spot claimed via SMS!",
+              description: "Revenue saved.",
+            });
             // Trigger refetch callback
             onWaitlistPromoted.current?.();
             waitlistMetaRef.current = null;
