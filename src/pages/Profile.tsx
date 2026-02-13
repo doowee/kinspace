@@ -3,14 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Mail, LogOut } from "lucide-react";
+import { User, Mail, LogOut, Pencil, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editFirst, setEditFirst] = useState("");
+  const [editLast, setEditLast] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -22,10 +30,37 @@ export default function Profile() {
         .single();
       setFirstName(data?.first_name ?? "");
       setLastName(data?.last_name ?? "");
+      setEditFirst(data?.first_name ?? "");
+      setEditLast(data?.last_name ?? "");
       setLoading(false);
     };
     load();
   }, [user?.id]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ first_name: editFirst.trim(), last_name: editLast.trim() })
+      .eq("id", user.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setFirstName(editFirst.trim());
+      setLastName(editLast.trim());
+      setEditing(false);
+      toast({ title: "Profile updated" });
+    }
+    setSaving(false);
+  };
+
+  const handleCancel = () => {
+    setEditFirst(firstName);
+    setEditLast(lastName);
+    setEditing(false);
+  };
 
   if (loading) {
     return (
@@ -53,27 +88,74 @@ export default function Profile() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-display text-base flex items-center gap-2">
             <User className="h-4 w-4" />
             Account Details
           </CardTitle>
+          {!editing && (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="gap-1">
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Name</p>
-              <p className="text-sm font-medium">{fullName}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Email</p>
-              <p className="text-sm font-medium">{user?.email}</p>
-            </div>
-          </div>
+          {editing ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={editFirst}
+                  onChange={(e) => setEditFirst(e.target.value)}
+                  placeholder="First name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={editLast}
+                  onChange={(e) => setEditLast(e.target.value)}
+                  placeholder="Last name"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium">{user?.email}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button onClick={handleSave} disabled={saving} className="gap-1">
+                  <Check className="h-3.5 w-3.5" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+                <Button variant="outline" onClick={handleCancel} disabled={saving}>
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Name</p>
+                  <p className="text-sm font-medium">{fullName}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium">{user?.email}</p>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
