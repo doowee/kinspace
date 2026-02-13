@@ -24,9 +24,10 @@ interface ViewStudentsDialogProps {
   className: string;
   capacity: number;
   classStartTime?: string;
+  onBookingsChanged?: () => void;
 }
 
-export default function ViewStudentsDialog({ open, onOpenChange, classId, className, capacity, classStartTime }: ViewStudentsDialogProps) {
+export default function ViewStudentsDialog({ open, onOpenChange, classId, className, capacity, classStartTime, onBookingsChanged }: ViewStudentsDialogProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [chainRunning, setChainRunning] = useState(false);
@@ -51,13 +52,16 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
     fetchBookings();
   }, [open, classId, fetchBookings]);
 
-  // Register refetch callback so DemoPhone can trigger it
+  // Register refetch callback so DemoPhone can trigger it AND parent schedule updates
   useEffect(() => {
-    onWaitlistPromoted.current = fetchBookings;
+    onWaitlistPromoted.current = () => {
+      fetchBookings();
+      onBookingsChanged?.();
+    };
     return () => {
       onWaitlistPromoted.current = null;
     };
-  }, [fetchBookings, onWaitlistPromoted]);
+  }, [fetchBookings, onWaitlistPromoted, onBookingsChanged]);
 
   const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "checked_in");
   const waitlisted = bookings.filter((b) => b.status === "waitlist");
@@ -79,8 +83,9 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
       .update({ status: "cancelled" as any })
       .eq("id", lastConfirmed.id);
 
-    // Instantly refresh roster to show the cancellation
+    // Instantly refresh roster and parent schedule to show the cancellation
     await fetchBookings();
+    onBookingsChanged?.();
 
     toast({
       title: "Student cancelled. 1 spot opened.",

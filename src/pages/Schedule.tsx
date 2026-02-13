@@ -544,6 +544,7 @@ export default function Schedule() {
         className={viewStudentsClass?.name ?? ""}
         capacity={viewStudentsClass?.capacity ?? 0}
         classStartTime={viewStudentsClass?.start_time}
+        onBookingsChanged={fetchBookingData}
       />
       {activeStudio && (
         <ManualBookDialog
