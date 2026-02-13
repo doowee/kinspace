@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, X, Ticket } from "lucide-react";
+import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -37,6 +37,7 @@ export default function StudentPortal() {
   const [creditsSummary, setCreditsSummary] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [studioPasses, setStudioPasses] = useState<{ studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number }[]>([]);
 
   const fetchAll = useCallback(async () => {
     if (!user) return;
@@ -52,7 +53,7 @@ export default function StudentPortal() {
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
-        .select("credits_remaining")
+        .select("credits_remaining, studio_id, studios:studio_id(name, slug)")
         .eq("user_id", user.id)
         .gt("credits_remaining", 0)
         .gt("expires_at", new Date().toISOString()),
@@ -77,6 +78,22 @@ export default function StudentPortal() {
 
     const total = (creditsRes.data ?? []).reduce((sum: number, p: any) => sum + (p.credits_remaining ?? 0), 0);
     setCreditsSummary(total);
+
+    // Group passes by studio
+    const passMap: Record<string, { studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number }> = {};
+    (creditsRes.data ?? []).forEach((p: any) => {
+      const sid = p.studio_id;
+      if (!passMap[sid]) {
+        passMap[sid] = {
+          studio_id: sid,
+          studio_name: (p.studios as any)?.name ?? "Unknown",
+          studio_slug: (p.studios as any)?.slug ?? "",
+          credits_remaining: 0,
+        };
+      }
+      passMap[sid].credits_remaining += p.credits_remaining;
+    });
+    setStudioPasses(Object.values(passMap));
 
     setLoading(false);
   }, [user?.id]);
@@ -152,6 +169,44 @@ export default function StudentPortal() {
           Here's what's coming up for you.
         </p>
       </div>
+
+      {/* My Studios */}
+      {studioPasses.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {studioPasses.map((sp) => (
+            <Card key={sp.studio_id} className="relative overflow-hidden">
+              <div className="absolute inset-y-0 left-0 w-1 bg-primary/30" />
+              <CardHeader className="pb-2 pl-5">
+                <CardTitle className="text-sm font-medium font-sans truncate">{sp.studio_name}</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-5 flex items-end justify-between">
+                <div>
+                  <div className={`text-2xl font-bold font-display ${sp.credits_remaining > 0 ? "text-primary" : "text-destructive"}`}>
+                    {sp.credits_remaining}
+                  </div>
+                  <p className="text-xs text-muted-foreground">credits remaining</p>
+                </div>
+                {sp.studio_slug && (
+                  <div className="flex flex-col gap-1.5">
+                    <Button variant="outline" size="sm" asChild className="text-xs gap-1">
+                      <Link to={`/book/${sp.studio_slug}`}>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Book
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild className="text-xs gap-1">
+                      <Link to={`/book/${sp.studio_slug}/packages`}>
+                        <ShoppingBag className="h-3.5 w-3.5" />
+                        Buy More
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3">

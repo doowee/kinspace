@@ -134,7 +134,7 @@ export default function Wallet() {
                       </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild className="text-xs gap-1">
-                      <Link to={`/packages/${sp.studio_slug}`}>
+                      <Link to={`/book/${sp.studio_slug}/packages`}>
                         <ShoppingBag className="h-3.5 w-3.5" />
                         Buy More
                       </Link>
@@ -170,7 +170,7 @@ export default function Wallet() {
                     </p>
                   </div>
                   <div className="text-right shrink-0 ml-4">
-                    <p className="font-medium text-sm">${(t.amount / 100).toFixed(2)}</p>
+                    <p className="font-medium text-sm">${t.amount.toFixed(2)}</p>
                     <Badge variant="outline" className="text-[10px]">
                       {t.payment_method}
                     </Badge>

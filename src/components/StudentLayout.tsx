@@ -16,7 +16,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: Home, label: "Home" },
-  { to: "/book-class", icon: CalendarDays, label: "Book" },
+  { to: "/wallet", icon: Ticket, label: "My Passes" },
+];
+
+const MOBILE_NAV_ITEMS = [
+  { to: "/dashboard", icon: Home, label: "Home" },
   { to: "/wallet", icon: Ticket, label: "My Passes" },
   { to: "/profile", icon: User, label: "Profile" },
 ];
@@ -91,6 +95,13 @@ export default function StudentLayout() {
                   {user?.email}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a href="/profile" className="flex items-center gap-2 cursor-pointer">
+                    <User className="h-4 w-4" />
+                    Profile
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
@@ -110,7 +121,7 @@ export default function StudentLayout() {
       {isMobile && (
         <nav className="fixed bottom-0 inset-x-0 z-50 bg-card border-t shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
           <div className="flex items-center justify-around h-16">
-            {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+            {MOBILE_NAV_ITEMS.map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
                 to={to}
