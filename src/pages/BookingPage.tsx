@@ -169,6 +169,16 @@ export default function BookingPage() {
 
       const pass = passes[0];
 
+      // Check capacity
+      const { count } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("class_id", cls.id)
+        .eq("status", "confirmed");
+
+      const isFull = (count ?? 0) >= cls.capacity;
+      const bookingStatus = isFull ? "waitlist" : "confirmed";
+
       const { error: passError } = await supabase
         .from("student_passes")
         .update({ credits_remaining: pass.credits_remaining - 1 })
@@ -179,18 +189,20 @@ export default function BookingPage() {
         studio_id: studio.id,
         user_id: user.id,
         class_id: cls.id,
-        status: "confirmed",
+        status: bookingStatus,
       });
       if (bookError) throw bookError;
 
       toast({
-        title: "Success! You are booked",
-        description: `You're confirmed for ${cls.name}.`,
+        title: isFull ? "Added to Waitlist" : "Success! You are booked",
+        description: isFull
+          ? `You've been added to the waitlist for ${cls.name}.`
+          : `You're confirmed for ${cls.name}.`,
       });
 
       setUserBookedClassIds((prev) => new Set([...prev, cls.id]));
       setDetailClass(null);
-      setSuccessClass(cls);
+      if (!isFull) setSuccessClass(cls);
     } catch (err: any) {
       toast({
         title: "Booking failed",
