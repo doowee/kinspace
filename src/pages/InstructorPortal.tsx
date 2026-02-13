@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,30 @@ export default function InstructorPortal() {
   const [roster, setRoster] = useState<RosterStudent[]>([]);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const FALLBACK_COLORS = [
+    "#7C9A85", "#E08E79", "#6B8EC4", "#C49B5F", "#9B7DB8", "#5BA8A0",
+  ];
+
+  const studioColorMap = useMemo(() => {
+    const studios = [...new Set(classes.map((c) => c.studio_name))];
+    const map: Record<string, string> = {};
+    const usedColors = new Set<string>();
+    let fallbackIdx = 0;
+
+    studios.forEach((name) => {
+      const cls = classes.find((c) => c.studio_name === name);
+      const brand = cls?.studio_brand_primary;
+      if (brand && !usedColors.has(brand)) {
+        map[name] = brand;
+        usedColors.add(brand);
+      } else {
+        map[name] = FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length];
+        fallbackIdx++;
+      }
+    });
+    return map;
+  }, [classes]);
 
   const fetchClasses = useCallback(async () => {
     if (!user) return;
@@ -266,11 +290,11 @@ export default function InstructorPortal() {
                           <Badge
                             variant="outline"
                             className="text-[10px] px-1.5 py-0 shrink-0 font-medium"
-                            style={cls.studio_brand_primary ? {
-                              borderColor: cls.studio_brand_primary,
-                              color: cls.studio_brand_primary,
-                              backgroundColor: `${cls.studio_brand_primary}15`,
-                            } : undefined}
+                            style={{
+                              borderColor: studioColorMap[cls.studio_name],
+                              color: studioColorMap[cls.studio_name],
+                              backgroundColor: `${studioColorMap[cls.studio_name]}15`,
+                            }}
                           >
                             {cls.studio_name}
                           </Badge>
