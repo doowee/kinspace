@@ -27,14 +27,23 @@ export default function StudioSwitcher() {
             {activeStudio.name}
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-          <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuLabel className="text-xs text-muted-foreground">
           Your Studios
         </DropdownMenuLabel>
-        {memberships.map((m) => (
+        {/* Deduplicate by studio, keeping highest role */}
+        {Object.values(
+          memberships.reduce((acc, m) => {
+            const existing = acc[m.studio_id];
+            const rolePriority: Record<string, number> = { owner: 3, instructor: 2, student: 1 };
+            if (!existing || (rolePriority[m.role] ?? 0) > (rolePriority[existing.role] ?? 0)) {
+              acc[m.studio_id] = m;
+            }
+            return acc;
+          }, {} as Record<string, typeof memberships[0]>)
+        ).map((m) => (
           <DropdownMenuItem
             key={m.studio_id}
             onClick={() => setActiveStudioId(m.studio_id)}
