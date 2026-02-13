@@ -15,16 +15,16 @@ export default {
   	extend: {
 		fontFamily: {
 			sans: [
-				'DM Sans',
+				'Inter',
 				'ui-sans-serif',
 				'system-ui',
 				'sans-serif'
 			],
 			display: [
-				'Nunito',
-				'ui-sans-serif',
-				'system-ui',
-				'sans-serif'
+				'Playfair Display',
+				'ui-serif',
+				'Georgia',
+				'serif'
 			],
   			serif: [
   				'ui-serif',
