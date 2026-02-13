@@ -74,7 +74,7 @@ export default function BookingPage() {
   const [noCreditsOpen, setNoCreditsOpen] = useState(false);
   const [bookingClassId, setBookingClassId] = useState<string | null>(null);
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
-  const [userBookedClassIds, setUserBookedClassIds] = useState<Set<string>>(new Set());
+  const [userBookedClassIds, setUserBookedClassIds] = useState<Map<string, string>>(new Map());
   const [pendingBookClass, setPendingBookClass] = useState<PublicClass | null>(null);
   const [successClass, setSuccessClass] = useState<PublicClass | null>(null);
   const [detailClass, setDetailClass] = useState<PublicClass | null>(null);
@@ -109,7 +109,7 @@ export default function BookingPage() {
   useEffect(() => {
     if (!studio || !user) {
       setBookingCounts({});
-      setUserBookedClassIds(new Set());
+      setUserBookedClassIds(new Map());
       return;
     }
     const fetchBookings = async () => {
@@ -119,7 +119,9 @@ export default function BookingPage() {
         .eq("user_id", user.id)
         .in("status", ["confirmed", "waitlist"]);
 
-      setUserBookedClassIds(new Set(myBookings?.map((b) => b.class_id) ?? []));
+      const map = new Map<string, string>();
+      myBookings?.forEach((b) => map.set(b.class_id, b.status));
+      setUserBookedClassIds(map);
     };
     fetchBookings();
   }, [studio?.id, user?.id, classes]);
@@ -200,7 +202,7 @@ export default function BookingPage() {
           : `You're confirmed for ${cls.name}.`,
       });
 
-      setUserBookedClassIds((prev) => new Set([...prev, cls.id]));
+      setUserBookedClassIds((prev) => new Map([...prev, [cls.id, bookingStatus]]));
       setDetailClass(null);
       if (!isFull) setSuccessClass(cls);
     } catch (err: any) {
@@ -408,7 +410,9 @@ export default function BookingPage() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {dayClasses.map((cls) => {
-                      const isBooked = userBookedClassIds.has(cls.id);
+                      const bookingStatus = userBookedClassIds.get(cls.id);
+                      const isBooked = !!bookingStatus;
+                      const isWaitlisted = bookingStatus === "waitlist";
                       const isBooking = bookingClassId === cls.id;
                       const instructor = instructorName(cls);
 
@@ -417,7 +421,8 @@ export default function BookingPage() {
                           key={cls.id}
                           className={cn(
                             "overflow-hidden transition-shadow hover:shadow-lg cursor-pointer",
-                            isBooked && "ring-2 ring-primary/30"
+                            isBooked && !isWaitlisted && "ring-2 ring-primary/30",
+                            isWaitlisted && "ring-2 ring-amber-400/30"
                           )}
                           onClick={() => setDetailClass(cls)}
                         >
@@ -448,7 +453,12 @@ export default function BookingPage() {
                                   </div>
                                 </div>
 
-                                {isBooked ? (
+                                {isWaitlisted ? (
+                                  <Badge variant="outline" className="shrink-0 border-amber-400 text-amber-600">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Waitlisted
+                                  </Badge>
+                                ) : isBooked ? (
                                   <Badge className="shrink-0 bg-primary/10 text-primary border-primary/20">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Booked
@@ -497,7 +507,9 @@ export default function BookingPage() {
         <DialogContent className="sm:max-w-lg">
           {detailClass && (() => {
             const instructor = instructorName(detailClass);
-            const isBooked = userBookedClassIds.has(detailClass.id);
+            const bookingStatus = userBookedClassIds.get(detailClass.id);
+            const isBooked = !!bookingStatus;
+            const isWaitlisted = bookingStatus === "waitlist";
             const isBooking = bookingClassId === detailClass.id;
             const classPast = isBefore(new Date(detailClass.start_time), new Date());
 
@@ -540,7 +552,12 @@ export default function BookingPage() {
                     </div>
                   )}
 
-                  {isBooked ? (
+                  {isWaitlisted ? (
+                    <Badge variant="outline" className="border-amber-400 text-amber-600 w-full justify-center py-2">
+                      <Clock className="h-4 w-4 mr-2" />
+                      You're on the waitlist — we'll notify you if a spot opens
+                    </Badge>
+                  ) : isBooked ? (
                     <Badge className="bg-primary/10 text-primary border-primary/20 w-full justify-center py-2">
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       You're booked for this class
