@@ -555,7 +555,12 @@ export type Database = {
       }
     }
     Enums: {
-      booking_status: "confirmed" | "cancelled" | "waitlist" | "late_cancelled"
+      booking_status:
+        | "confirmed"
+        | "cancelled"
+        | "waitlist"
+        | "late_cancelled"
+        | "checked_in"
       org_role: "owner" | "admin" | "viewer"
       payment_method: "card" | "cash" | "transfer" | "check"
       studio_role: "owner" | "instructor" | "student"
@@ -687,7 +692,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      booking_status: ["confirmed", "cancelled", "waitlist", "late_cancelled"],
+      booking_status: [
+        "confirmed",
+        "cancelled",
+        "waitlist",
+        "late_cancelled",
+        "checked_in",
+      ],
       org_role: ["owner", "admin", "viewer"],
       payment_method: ["card", "cash", "transfer", "check"],
       studio_role: ["owner", "instructor", "student"],

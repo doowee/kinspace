@@ -20,6 +20,31 @@ export default function Dashboard() {
     if (!user) return;
 
     const determine = async () => {
+      // Check if user is a linked instructor
+      const { data: instRecords } = await supabase
+        .from("instructors")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (instRecords && instRecords.length > 0) {
+        // Check if they're also an owner
+        const { data: ownerCheck } = await supabase
+          .from("studio_members")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("role", "owner");
+
+        if ((ownerCheck as any)?.length > 0 || (ownerCheck as any)?.count > 0) {
+          // Owner who is also instructor — show owner view
+          setView("owner");
+        } else {
+          // Pure instructor — redirect to portal
+          navigate("/instructor-portal", { replace: true });
+          return;
+        }
+      }
+
       const [ownedRes, bookingsRes] = await Promise.all([
         supabase
           .from("studio_members")
