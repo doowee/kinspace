@@ -88,11 +88,27 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
     setBooking(true);
 
     try {
+      // Check current confirmed count vs capacity
+      const { data: cls } = await supabase
+        .from("classes")
+        .select("capacity")
+        .eq("id", classId)
+        .single();
+
+      const { count } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("class_id", classId)
+        .eq("status", "confirmed");
+
+      const isFull = (count ?? 0) >= (cls?.capacity ?? 0);
+      const bookingStatus = isFull ? "waitlist" : "confirmed";
+
       const { error } = await supabase.from("bookings").insert({
         studio_id: studioId,
         user_id: student.id,
         class_id: classId,
-        status: "confirmed",
+        status: bookingStatus,
       });
 
       if (error) {
@@ -103,8 +119,10 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
       }
 
       toast({
-        title: "Student booked",
-        description: `${student.first_name || student.email} has been booked for ${className}.`,
+        title: isFull ? "Added to Waitlist" : "Student booked",
+        description: isFull
+          ? `${student.first_name || student.email} has been waitlisted for ${className}.`
+          : `${student.first_name || student.email} has been booked for ${className}.`,
       });
       onOpenChange(false);
       onBooked();
