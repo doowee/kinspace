@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarDays, Ticket, X, AlertTriangle } from "lucide-react";
+import { CalendarDays, Ticket, X, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -51,7 +51,7 @@ export default function StudentDashboard() {
         .select("id, class_id, status, classes(name, start_time)")
         .eq("user_id", user.id)
         .eq("studio_id", activeStudio.id)
-        .eq("status", "confirmed")
+        .in("status", ["confirmed", "waitlist"])
         .order("created_at", { ascending: true }),
       supabase
         .from("student_passes")
@@ -210,23 +210,31 @@ export default function StudentDashboard() {
                         {format(new Date(b.start_time), "EEE, MMM d · h:mm a")}
                       </p>
                     </div>
-                    {!isPast && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-4"
-                        disabled={cancellingId === b.id}
-                        onClick={() => handleCancelClick(b)}
-                      >
-                        <X className="h-3.5 w-3.5 mr-1" />
-                        Cancel
-                      </Button>
-                    )}
-                    {isPast && (
-                      <Badge variant="secondary" className="text-xs shrink-0 ml-4">
-                        Completed
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      {b.status === "waitlist" && (
+                        <Badge variant="outline" className="text-xs border-amber-400 text-amber-600">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Waitlisted
+                        </Badge>
+                      )}
+                      {!isPast && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          disabled={cancellingId === b.id}
+                          onClick={() => handleCancelClick(b)}
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          Cancel
+                        </Button>
+                      )}
+                      {isPast && (
+                        <Badge variant="secondary" className="text-xs">
+                          Completed
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 );
               })}
