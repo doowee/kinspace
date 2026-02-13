@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Ticket, ArrowLeft } from "lucide-react";
+import { MapPin, Ticket, ArrowLeft, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AuthModal from "@/components/booking/AuthModal";
 import type { User } from "@supabase/supabase-js";
@@ -39,6 +40,7 @@ export default function PublicPackagesPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [pendingPackage, setPendingPackage] = useState<PublicPackage | null>(null);
+  const [paymentModalPkg, setPaymentModalPkg] = useState<PublicPackage | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -82,7 +84,7 @@ export default function PublicPackagesPage() {
   // After auth, retry pending purchase
   useEffect(() => {
     if (user && pendingPackage) {
-      handlePurchase(pendingPackage);
+      setPaymentModalPkg(pendingPackage);
       setPendingPackage(null);
     }
   }, [user]);
@@ -93,15 +95,16 @@ export default function PublicPackagesPage() {
       setAuthModalOpen(true);
       return;
     }
-    handlePurchase(pkg);
+    setPaymentModalPkg(pkg);
   };
 
-  const handlePurchase = async (pkg: PublicPackage) => {
-    if (!user || !studio) return;
+  const handleConfirmPayment = async () => {
+    if (!user || !studio || !paymentModalPkg) return;
+    const pkg = paymentModalPkg;
     setPurchasingId(pkg.id);
 
     try {
-      // Check if user is already a studio member; if not, add as student
+      // Ensure studio membership
       const { data: membership } = await supabase
         .from("studio_members")
         .select("id")
@@ -116,6 +119,17 @@ export default function PublicPackagesPage() {
         if (memberErr) throw memberErr;
       }
 
+      // Create transaction record
+      const { error: txErr } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        studio_id: studio.id,
+        amount: pkg.price,
+        payment_method: "transfer" as const,
+        status: "completed" as const,
+        description: `Manual purchase of ${pkg.name}`,
+      });
+      if (txErr) throw txErr;
+
       // Create student pass
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + pkg.expiration_days);
@@ -129,12 +143,12 @@ export default function PublicPackagesPage() {
       });
       if (passErr) throw passErr;
 
+      setPaymentModalPkg(null);
       toast({
-        title: "Credits added!",
-        description: `${pkg.credits} credits from "${pkg.name}" are now in your wallet.`,
+        title: "Package Activated!",
+        description: "You can now book classes.",
       });
 
-      // Redirect back if return_url exists
       if (returnUrl) {
         navigate(returnUrl);
       }
@@ -258,6 +272,35 @@ export default function PublicPackagesPage() {
           <span>Powered by Kinspace</span>
         </div>
       </footer>
+
+      <Dialog open={!!paymentModalPkg} onOpenChange={(open) => !open && setPaymentModalPkg(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Payment for {paymentModalPkg?.name}</DialogTitle>
+            <DialogDescription>Send payment to activate your package.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex items-center gap-3 rounded-lg bg-primary/10 p-4">
+              <DollarSign className="h-6 w-6 text-primary" />
+              <span className="text-2xl font-bold text-foreground">${paymentModalPkg?.price.toFixed(2)}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              To activate this package, please send payment via Zelle/Venmo to:{" "}
+              <span className="font-semibold text-foreground">payments@kinspace.studio</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Include your email in the memo.
+            </p>
+          </div>
+          <Button
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            disabled={purchasingId === paymentModalPkg?.id}
+            onClick={handleConfirmPayment}
+          >
+            {purchasingId === paymentModalPkg?.id ? "Processing…" : "I have sent the payment"}
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <AuthModal
         open={authModalOpen}
