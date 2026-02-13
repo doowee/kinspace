@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard } from "lucide-react";
+import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   format,
@@ -21,6 +21,7 @@ import {
   addWeeks,
   subWeeks,
   isToday,
+  isPast,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +42,8 @@ interface PublicClass {
   capacity: number;
   instructor_first_name: string | null;
   instructor_last_name: string | null;
+  description: string | null;
+  instructor_bio: string | null;
 }
 
 export default function BookingPage() {
@@ -49,7 +52,6 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const [studio, setStudio] = useState<StudioInfo | null>(null);
   const [classes, setClasses] = useState<PublicClass[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [weekStart, setWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
@@ -65,6 +67,8 @@ export default function BookingPage() {
   const [userBookedClassIds, setUserBookedClassIds] = useState<Set<string>>(new Set());
   const [pendingBookClass, setPendingBookClass] = useState<PublicClass | null>(null);
   const [successClass, setSuccessClass] = useState<PublicClass | null>(null);
+  const [detailClass, setDetailClass] = useState<PublicClass | null>(null);
+
   // Listen to auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -111,8 +115,6 @@ export default function BookingPage() {
       return;
     }
     const fetchBookings = async () => {
-      // Need to be a studio member to query bookings
-      // For public page, we query via user's own bookings
       const { data: myBookings } = await supabase
         .from("bookings")
         .select("class_id, status")
@@ -136,11 +138,8 @@ export default function BookingPage() {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [weekStart]);
 
-  const classesOnDate = classes.filter((c) =>
-    isSameDay(new Date(c.start_time), selectedDate)
-  );
-
-  const handleBookClick = (cls: PublicClass) => {
+  const handleBookClick = (cls: PublicClass, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!user) {
       setPendingBookClass(cls);
       setAuthModalOpen(true);
@@ -154,7 +153,6 @@ export default function BookingPage() {
     setBookingClassId(cls.id);
 
     try {
-      // Check for active student pass with credits
       const { data: passes } = await supabase
         .from("student_passes")
         .select("id, credits_remaining, expires_at")
@@ -173,14 +171,12 @@ export default function BookingPage() {
 
       const pass = passes[0];
 
-      // Decrement credits
       const { error: passError } = await supabase
         .from("student_passes")
         .update({ credits_remaining: pass.credits_remaining - 1 })
         .eq("id", pass.id);
       if (passError) throw passError;
 
-      // Insert booking
       const { error: bookError } = await supabase.from("bookings").insert({
         studio_id: studio.id,
         user_id: user.id,
@@ -195,6 +191,7 @@ export default function BookingPage() {
       });
 
       setUserBookedClassIds((prev) => new Set([...prev, cls.id]));
+      setDetailClass(null);
       setSuccessClass(cls);
     } catch (err: any) {
       toast({
@@ -264,25 +261,21 @@ export default function BookingPage() {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Compact Hero */}
       <section className="relative overflow-hidden bg-primary/10 border-b">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.15),transparent_70%)]" />
-        <div className="container relative py-16 md:py-24">
-          <p className="text-sm font-medium uppercase tracking-widest text-primary mb-3">
+        <div className="container relative py-8 md:py-10">
+          <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight">
             Book a Class
-          </p>
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground max-w-lg leading-tight">
-            Your practice,{" "}
-            <span className="text-primary">your schedule.</span>
           </h2>
-          <p className="mt-4 text-muted-foreground max-w-md">
-            Browse the schedule below and reserve your spot in just a few taps.
+          <p className="mt-1 text-sm text-muted-foreground max-w-md">
+            Browse the weekly schedule below and reserve your spot.
           </p>
         </div>
       </section>
 
-      {/* Schedule */}
-      <main className="container py-10 animate-fade-in">
+      {/* Schedule — 7 day list */}
+      <main className="container py-8 animate-fade-in">
         {/* Week Navigation */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-display text-xl font-bold text-foreground">
@@ -299,11 +292,7 @@ export default function BookingPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const today = new Date();
-                setWeekStart(startOfWeek(today, { weekStartsOn: 1 }));
-                setSelectedDate(today);
-              }}
+              onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
             >
               Today
             </Button>
@@ -317,117 +306,105 @@ export default function BookingPage() {
           </div>
         </div>
 
-        {/* Day Tabs */}
-        <div className="grid grid-cols-7 gap-2 mb-8">
+        {/* All 7 days listed */}
+        <div className="space-y-8">
           {weekDays.map((day) => {
-            const hasClasses = classes.some((c) =>
+            const dayClasses = classes.filter((c) =>
               isSameDay(new Date(c.start_time), day)
             );
-            const isSelected = isSameDay(day, selectedDate);
+            const dayPast = isPast(addDays(day, 1));
+
             return (
-              <button
-                key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
-                className={cn(
-                  "flex flex-col items-center rounded-xl py-3 px-1 transition-all text-center",
-                  isSelected
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "hover:bg-accent",
-                  isToday(day) && !isSelected && "ring-2 ring-primary/30"
+              <section key={day.toISOString()}>
+                <div className="flex items-center gap-3 mb-3">
+                  <h4
+                    className={cn(
+                      "font-display text-lg font-semibold",
+                      isToday(day) && "text-primary"
+                    )}
+                  >
+                    {format(day, "EEEE, MMMM d")}
+                  </h4>
+                  {isToday(day) && (
+                    <Badge variant="secondary" className="text-xs">Today</Badge>
+                  )}
+                </div>
+
+                {dayClasses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground pl-1">No classes scheduled.</p>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {dayClasses.map((cls) => {
+                      const isBooked = userBookedClassIds.has(cls.id);
+                      const isBooking = bookingClassId === cls.id;
+                      const instructor = instructorName(cls);
+
+                      return (
+                        <Card
+                          key={cls.id}
+                          className={cn(
+                            "overflow-hidden transition-shadow hover:shadow-lg cursor-pointer",
+                            isBooked && "ring-2 ring-primary/30",
+                            dayPast && "opacity-60"
+                          )}
+                          onClick={() => setDetailClass(cls)}
+                        >
+                          <CardContent className="p-0">
+                            <div className="flex">
+                              {/* Time strip */}
+                              <div className="flex w-20 shrink-0 flex-col items-center justify-center bg-primary/10 py-5">
+                                <span className="text-xs font-medium uppercase text-primary/70">
+                                  {format(new Date(cls.start_time), "a")}
+                                </span>
+                                <span className="text-2xl font-bold text-primary">
+                                  {format(new Date(cls.start_time), "h:mm")}
+                                </span>
+                              </div>
+
+                              {/* Details */}
+                              <div className="flex flex-1 items-center justify-between gap-3 p-4">
+                                <div className="space-y-1 min-w-0">
+                                  <p className="font-display font-bold text-foreground truncate">
+                                    {cls.name}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                    {instructor && (
+                                      <span>{instructor}</span>
+                                    )}
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" />
+                                      {cls.capacity} spots
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {isBooked ? (
+                                  <Badge className="shrink-0 bg-primary/10 text-primary border-primary/20">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Booked
+                                  </Badge>
+                                ) : !dayPast ? (
+                                  <Button
+                                    size="sm"
+                                    className="shrink-0"
+                                    disabled={isBooking}
+                                    onClick={(e) => handleBookClick(cls, e)}
+                                  >
+                                    {isBooking ? "Booking…" : "Book"}
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <span className="text-[10px] uppercase tracking-wider font-medium opacity-70">
-                  {format(day, "EEE")}
-                </span>
-                <span className="text-lg font-bold">{format(day, "d")}</span>
-                {hasClasses && !isSelected && (
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
-                )}
-              </button>
+              </section>
             );
           })}
         </div>
-
-        {/* Selected Day */}
-        <h4 className="font-display text-lg font-semibold mb-4 text-foreground">
-          {format(selectedDate, "EEEE, MMMM d")}
-        </h4>
-
-        {classesOnDate.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-muted-foreground">
-                No classes scheduled for this day.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {classesOnDate.map((cls) => {
-              const isBooked = userBookedClassIds.has(cls.id);
-              const isBooking = bookingClassId === cls.id;
-              const instructor = instructorName(cls);
-
-              return (
-                <Card
-                  key={cls.id}
-                  className={cn(
-                    "overflow-hidden transition-shadow hover:shadow-lg",
-                    isBooked && "ring-2 ring-primary/30"
-                  )}
-                >
-                  <CardContent className="p-0">
-                    <div className="flex">
-                      {/* Time strip */}
-                      <div className="flex w-20 shrink-0 flex-col items-center justify-center bg-primary/10 py-5">
-                        <span className="text-xs font-medium uppercase text-primary/70">
-                          {format(new Date(cls.start_time), "a")}
-                        </span>
-                        <span className="text-2xl font-bold text-primary">
-                          {format(new Date(cls.start_time), "h:mm")}
-                        </span>
-                      </div>
-
-                      {/* Details */}
-                      <div className="flex flex-1 items-center justify-between gap-3 p-4">
-                        <div className="space-y-1 min-w-0">
-                          <p className="font-display font-bold text-foreground truncate">
-                            {cls.name}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            {instructor && (
-                              <span>{instructor}</span>
-                            )}
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {cls.capacity} spots
-                            </span>
-                          </div>
-                        </div>
-
-                        {isBooked ? (
-                          <Badge className="shrink-0 bg-primary/10 text-primary border-primary/20">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Booked
-                          </Badge>
-                        ) : (
-                          <Button
-                            size="sm"
-                            className="shrink-0"
-                            disabled={isBooking}
-                            onClick={() => handleBookClick(cls)}
-                          >
-                            {isBooking ? "Booking…" : "Book Now"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
       </main>
 
       {/* Footer */}
@@ -437,6 +414,77 @@ export default function BookingPage() {
           <span>Powered by Kinspace</span>
         </div>
       </footer>
+
+      {/* Class Detail Dialog */}
+      <Dialog open={!!detailClass} onOpenChange={(open) => !open && setDetailClass(null)}>
+        <DialogContent className="sm:max-w-lg">
+          {detailClass && (() => {
+            const instructor = instructorName(detailClass);
+            const isBooked = userBookedClassIds.has(detailClass.id);
+            const isBooking = bookingClassId === detailClass.id;
+            const classPast = isPast(new Date(detailClass.start_time));
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="font-display text-xl">{detailClass.name}</DialogTitle>
+                  <DialogDescription>
+                    {format(new Date(detailClass.start_time), "EEEE, MMMM d 'at' h:mm a")}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 pt-2">
+                  {detailClass.description && (
+                    <p className="text-sm text-muted-foreground">{detailClass.description}</p>
+                  )}
+
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
+                      {format(new Date(detailClass.start_time), "h:mm a")}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4" />
+                      {detailClass.capacity} spots
+                    </span>
+                  </div>
+
+                  {instructor && (
+                    <div className="rounded-lg border p-4 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                          <UserIcon className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="font-semibold text-foreground">{instructor}</span>
+                      </div>
+                      {detailClass.instructor_bio && (
+                        <p className="text-xs text-muted-foreground pl-10">{detailClass.instructor_bio}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {isBooked ? (
+                    <Badge className="bg-primary/10 text-primary border-primary/20 w-full justify-center py-2">
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      You're booked for this class
+                    </Badge>
+                  ) : !classPast ? (
+                    <Button
+                      className="w-full"
+                      disabled={isBooking}
+                      onClick={() => handleBookClick(detailClass)}
+                    >
+                      {isBooking ? "Booking…" : "Book This Class"}
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-center text-muted-foreground">This class has already passed.</p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Auth Modal */}
       <AuthModal
