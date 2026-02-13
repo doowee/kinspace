@@ -36,6 +36,7 @@ interface StudioInfo {
   name: string;
   slug: string;
   location: string | null;
+  logo_url: string | null;
 }
 
 interface PublicClass {
@@ -218,7 +219,6 @@ export default function BookingPage() {
   if (notFound || !studio) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-2">
-        <img src="/kinspace-logo-sage.png" alt="Kinspace" className="h-12 w-12 mb-4 rounded-lg" />
         <h1 className="font-display text-2xl font-bold text-foreground">Studio not found</h1>
         <p className="text-muted-foreground">The studio you're looking for doesn't exist.</p>
       </div>
@@ -233,27 +233,38 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Browser tab title */}
+      {(() => { document.title = `${studio.name} | Booking`; return null; })()}
+
       {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-30">
         <div className="container flex h-16 items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img
-              src="/kinspace-logo-sage.png"
-              alt="Kinspace"
-              className="h-9 w-9 rounded-lg"
-            />
-            <div>
-              <h1 className="font-display text-lg font-bold text-foreground leading-tight">
+            {studio.logo_url ? (
+              <img
+                src={studio.logo_url}
+                alt={studio.name}
+                className="h-9 w-auto max-w-[140px] object-contain"
+              />
+            ) : (
+              <span className="font-display text-xl font-bold text-foreground">
                 {studio.name}
-              </h1>
-              {studio.location && (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  {studio.location}
-                </p>
-              )}
-            </div>
+              </span>
+            )}
+            {studio.logo_url && (
+              <div>
+                <h1 className="font-display text-lg font-bold text-foreground leading-tight">
+                  {studio.name}
+                </h1>
+              </div>
+            )}
+            {studio.location && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                {studio.location}
+              </p>
+            )}
           </div>
           {user && (
             <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
@@ -460,11 +471,18 @@ export default function BookingPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-card/50 py-8 mt-12">
-        <div className="container flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <img src="/kinspace-logo-sage.png" alt="" className="h-4 w-4 rounded" />
-          <span>Powered by Kinspace</span>
+      {/* Powered by Footer */}
+      <footer className="border-t bg-card/50 py-6 mt-auto">
+        <div className="container flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
+          <span>Powered by</span>
+          <a
+            href="https://kinspace.studio"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium hover:text-muted-foreground transition-colors"
+          >
+            Kinspace.studio
+          </a>
         </div>
       </footer>
 

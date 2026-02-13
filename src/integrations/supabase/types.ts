@@ -375,9 +375,11 @@ export type Database = {
           created_at: string
           id: string
           location: string | null
+          logo_url: string | null
           name: string
           organization_id: string | null
           owner_id: string
+          primary_color: string | null
           slug: string
           updated_at: string
         }
@@ -385,9 +387,11 @@ export type Database = {
           created_at?: string
           id?: string
           location?: string | null
+          logo_url?: string | null
           name: string
           organization_id?: string | null
           owner_id: string
+          primary_color?: string | null
           slug: string
           updated_at?: string
         }
@@ -395,9 +399,11 @@ export type Database = {
           created_at?: string
           id?: string
           location?: string | null
+          logo_url?: string | null
           name?: string
           organization_id?: string | null
           owner_id?: string
+          primary_color?: string | null
           slug?: string
           updated_at?: string
         }
@@ -501,6 +507,7 @@ export type Database = {
         Returns: {
           id: string
           location: string
+          logo_url: string
           name: string
           slug: string
         }[]
