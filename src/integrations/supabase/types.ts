@@ -447,6 +447,8 @@ export type Database = {
         Returns: {
           capacity: number
           id: string
+          instructor_first_name: string
+          instructor_last_name: string
           name: string
           start_time: string
         }[]
