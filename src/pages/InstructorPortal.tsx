@@ -11,8 +11,17 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarDays, Clock, Users, ChevronRight, CheckCircle2, LogOut } from "lucide-react";
+import { CalendarDays, Clock, Users, ChevronRight, CheckCircle2, LogOut, RefreshCw, ArrowRightLeft, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -35,12 +44,56 @@ interface RosterStudent {
   email: string;
 }
 
+interface OpenShift {
+  id: string;
+  className: string;
+  instructor: string;
+  day: string;
+  time: string;
+  studio: string;
+  capacity: number;
+  booked: number;
+}
+
+const MOCK_OPEN_SHIFTS: OpenShift[] = [
+  {
+    id: "shift-1",
+    className: "Reformer Flow",
+    instructor: "Mike Chen",
+    day: "Thursday",
+    time: "6:00 AM",
+    studio: "Downtown Studio",
+    capacity: 18,
+    booked: 14,
+  },
+  {
+    id: "shift-2",
+    className: "Mat Pilates Basics",
+    instructor: "Liam Torres",
+    day: "Friday",
+    time: "9:00 AM",
+    studio: "West Side Studio",
+    capacity: 16,
+    booked: 8,
+  },
+];
+
 export default function InstructorPortal({ demoUserId }: { demoUserId?: string }) {
   const { user, signOut } = useAuth();
   const effectiveUserId = demoUserId || user?.id;
   const [instructorName, setInstructorName] = useState("");
   const [classes, setClasses] = useState<InstructorClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("schedule");
+
+  // Cover request state
+  const [coverRequestClass, setCoverRequestClass] = useState<InstructorClass | null>(null);
+  const [coverRequested, setCoverRequested] = useState<Set<string>>(new Set());
+
+  // SmartCover board state
+  const [openShifts, setOpenShifts] = useState<OpenShift[]>(MOCK_OPEN_SHIFTS);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [claimedShifts, setClaimedShifts] = useState<InstructorClass[]>([]);
 
   // Roster sheet
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -54,13 +107,14 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   ];
 
   const studioColorMap = useMemo(() => {
-    const studios = [...new Set(classes.map((c) => c.studio_name))];
+    const allClasses = [...classes, ...claimedShifts];
+    const studios = [...new Set(allClasses.map((c) => c.studio_name))];
     const map: Record<string, string> = {};
     const usedColors = new Set<string>();
     let fallbackIdx = 0;
 
     studios.forEach((name) => {
-      const cls = classes.find((c) => c.studio_name === name);
+      const cls = allClasses.find((c) => c.studio_name === name);
       const brand = cls?.studio_brand_primary;
       if (brand && !usedColors.has(brand)) {
         map[name] = brand;
@@ -71,7 +125,7 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
       }
     });
     return map;
-  }, [classes]);
+  }, [classes, claimedShifts]);
 
   const fetchClasses = useCallback(async () => {
     if (!effectiveUserId) return;
@@ -207,6 +261,64 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
     return s.email[0].toUpperCase();
   };
 
+  // SmartCover handlers
+  const confirmCoverRequest = (cls: InstructorClass, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCoverRequestClass(cls);
+  };
+
+  const handleCoverConfirm = () => {
+    if (!coverRequestClass) return;
+    setCoverRequested((prev) => new Set(prev).add(coverRequestClass.id));
+    setCoverRequestClass(null);
+    toast({
+      title: "Coverage Requested",
+      description: `All eligible instructors have been notified about ${coverRequestClass.name}.`,
+    });
+  };
+
+  const handleClaimShift = (shift: OpenShift) => {
+    setClaimingId(shift.id);
+    setTimeout(() => {
+      setOpenShifts((prev) => prev.filter((s) => s.id !== shift.id));
+      // Add claimed shift to My Schedule
+      const now = new Date();
+      const dayOffset = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(shift.day);
+      const currentDay = now.getDay();
+      const diff = dayOffset >= currentDay ? dayOffset - currentDay : 7 - (currentDay - dayOffset);
+      const shiftDate = new Date(now);
+      shiftDate.setDate(now.getDate() + diff);
+      const [hours, minutes] = shift.time.replace(/ AM| PM/, "").split(":").map(Number);
+      const isPM = shift.time.includes("PM") && hours !== 12;
+      const isAM12 = shift.time.includes("AM") && hours === 12;
+      shiftDate.setHours(isPM ? hours + 12 : isAM12 ? 0 : hours, minutes || 0, 0, 0);
+
+      const newClass: InstructorClass = {
+        id: `claimed-${shift.id}`,
+        name: shift.className,
+        description: null,
+        start_time: shiftDate.toISOString(),
+        capacity: shift.capacity,
+        studio_name: shift.studio,
+        studio_brand_primary: null,
+        booked_count: shift.booked,
+      };
+      setClaimedShifts((prev) => [...prev, newClass]);
+      setClaimingId(null);
+      setActiveTab("schedule");
+      toast({
+        title: "✅ Shift Claimed!",
+        description: "The schedule and the owner have been automatically updated.",
+      });
+    }, 1000);
+  };
+
+  const allMyClasses = useMemo(() => {
+    return [...classes, ...claimedShifts].sort(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    );
+  }, [classes, claimedShifts]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -239,86 +351,233 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
         <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardContent className="py-4 text-center">
-              <div className="text-2xl font-bold font-display text-primary">{classes.length}</div>
+              <div className="text-2xl font-bold font-display text-primary">{allMyClasses.length}</div>
               <p className="text-xs text-muted-foreground">Upcoming Classes</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="py-4 text-center">
               <div className="text-2xl font-bold font-display text-primary">
-                {classes.reduce((sum, c) => sum + c.booked_count, 0)}
+                {allMyClasses.reduce((sum, c) => sum + c.booked_count, 0)}
               </div>
               <p className="text-xs text-muted-foreground">Total Bookings</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Upcoming Classes */}
-        <div className="space-y-3">
-          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            My Upcoming Classes
-          </h2>
+        {/* Tabs: My Schedule / SmartCover */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full">
+            <TabsTrigger value="schedule" className="flex-1 gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5" />
+              My Schedule
+            </TabsTrigger>
+            <TabsTrigger value="smartcover" className="flex-1 gap-1.5">
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              SmartCover
+              {openShifts.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center rounded-full">
+                  {openShifts.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-          {classes.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                No upcoming classes assigned to you.
-              </CardContent>
-            </Card>
-          ) : (
-            classes.map((cls) => {
-              const isFull = cls.booked_count >= cls.capacity;
-              return (
-                <Card
-                  key={cls.id}
-                  className="cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
-                  onClick={() => openRoster(cls)}
-                >
+          {/* ── My Schedule Tab ─────────────────────────────── */}
+          <TabsContent value="schedule" className="mt-4 space-y-3">
+            <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              My Upcoming Classes
+            </h2>
+
+            {allMyClasses.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  No upcoming classes assigned to you.
+                </CardContent>
+              </Card>
+            ) : (
+              allMyClasses.map((cls) => {
+                const isFull = cls.booked_count >= cls.capacity;
+                const isCoverRequested = coverRequested.has(cls.id);
+                const isClaimed = cls.id.startsWith("claimed-");
+                return (
+                  <Card
+                    key={cls.id}
+                    className="transition-all hover:shadow-md active:scale-[0.99]"
+                  >
                     <CardContent className="p-4 flex items-center justify-between">
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm">{cls.name}</p>
+                      <div
+                        className="space-y-1 min-w-0 flex-1 cursor-pointer"
+                        onClick={() => openRoster(cls)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm">{cls.name}</p>
+                          {isCoverRequested && (
+                            <Badge className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-800 border-amber-300">
+                              Coverage Requested
+                            </Badge>
+                          )}
+                          {isClaimed && (
+                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                              Claimed
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />
+                            {format(new Date(cls.start_time), "EEE, MMM d")}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(cls.start_time), "h:mm a")}
+                          </span>
+                          {cls.studio_name && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0 shrink-0 font-medium"
+                              style={{
+                                borderColor: studioColorMap[cls.studio_name],
+                                color: studioColorMap[cls.studio_name],
+                                backgroundColor: `${studioColorMap[cls.studio_name]}15`,
+                              }}
+                            >
+                              {cls.studio_name}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 pt-0.5">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          <span className={`text-xs font-medium ${isFull ? "text-destructive" : "text-foreground"}`}>
+                            {cls.booked_count}/{cls.capacity} booked
+                          </span>
+                          {isFull && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">Full</Badge>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="h-3 w-3" />
-                          {format(new Date(cls.start_time), "EEE, MMM d")}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {format(new Date(cls.start_time), "h:mm a")}
-                        </span>
-                        {cls.studio_name && (
-                          <Badge
+                      <div className="flex items-center gap-2 shrink-0">
+                        {!isCoverRequested && !isClaimed && (
+                          <Button
                             variant="outline"
-                            className="text-[10px] px-1.5 py-0 shrink-0 font-medium"
-                            style={{
-                              borderColor: studioColorMap[cls.studio_name],
-                              color: studioColorMap[cls.studio_name],
-                              backgroundColor: `${studioColorMap[cls.studio_name]}15`,
-                            }}
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={(e) => confirmCoverRequest(cls, e)}
                           >
-                            {cls.studio_name}
-                          </Badge>
+                            <RefreshCw className="h-3 w-3" />
+                            Request Cover
+                          </Button>
                         )}
+                        <ChevronRight
+                          className="h-5 w-5 text-muted-foreground cursor-pointer"
+                          onClick={() => openRoster(cls)}
+                        />
                       </div>
-                      <div className="flex items-center gap-1 pt-0.5">
-                        <Users className="h-3 w-3 text-muted-foreground" />
-                        <span className={`text-xs font-medium ${isFull ? "text-destructive" : "text-foreground"}`}>
-                          {cls.booked_count}/{cls.capacity} booked
-                        </span>
-                        {isFull && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">Full</Badge>}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
+
+          {/* ── SmartCover Tab ──────────────────────────────── */}
+          <TabsContent value="smartcover" className="mt-4 space-y-3">
+            <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5 text-primary" />
+              Open Shifts
+            </h2>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Claim a shift to automatically update the schedule. The owner is notified instantly.
+            </p>
+
+            {openShifts.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+                  No open shifts right now. Check back later!
+                </CardContent>
+              </Card>
+            ) : (
+              openShifts.map((shift) => {
+                const isClaiming = claimingId === shift.id;
+                return (
+                  <Card key={shift.id} className="transition-all">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-sm text-foreground">{shift.className}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {shift.instructor} is requesting cover
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                            <span className="flex items-center gap-1">
+                              <CalendarDays className="h-3 w-3" />
+                              {shift.day}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {shift.time}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {shift.studio}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1 pt-0.5">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs font-medium text-foreground">
+                              {shift.booked}/{shift.capacity} booked
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+                      <Button
+                        className="w-full gap-1.5"
+                        disabled={isClaiming}
+                        onClick={() => handleClaimShift(shift)}
+                      >
+                        {isClaiming ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Checking availability…
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4" />
+                            Claim Shift
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* Cover Request Confirmation Dialog */}
+      <Dialog open={!!coverRequestClass} onOpenChange={(open) => !open && setCoverRequestClass(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Coverage</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to request coverage for{" "}
+              <span className="font-semibold text-foreground">{coverRequestClass?.name}</span>? This
+              will notify all eligible instructors. You are still responsible for this class until
+              someone claims it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCoverRequestClass(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCoverConfirm}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              Confirm Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Roster Sheet */}
       <Sheet open={rosterOpen} onOpenChange={setRosterOpen}>
