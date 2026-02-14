@@ -52,7 +52,7 @@ const GENERATED_EMAILS: Record<string, { subject: string; body: string; recipien
 
 We noticed it's been a minute since we saw you in the studio! Sarah is teaching a beautiful Reformer Flow tomorrow at 6:00 AM, and we have a few spots left.
 
-Because we'd love to see you, use code FLASH15 at checkout to drop in for just $15.
+Because we'd love to see you, book this class for just 0.5 pts instead of the usual 1 pt — on us!
 
 Tap here to claim your reformer. See you in the morning!
 
