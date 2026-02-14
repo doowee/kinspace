@@ -4,9 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap, Sparkles } from "lucide-react";
 import StudentPortal from "@/components/dashboard/StudentPortal";
 import InstructorPortal from "@/pages/InstructorPortal";
+import AIMarketingHub from "@/components/dashboard/AIMarketingHub";
 
 const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
 const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84"; // Elena Voss
@@ -164,6 +166,18 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      <Tabs defaultValue="marketing" className="w-full">
+        <TabsList>
+          <TabsTrigger value="marketing" className="gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" />
+            AI Marketing
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="marketing" className="mt-4">
+          <AIMarketingHub />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
