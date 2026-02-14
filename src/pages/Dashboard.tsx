@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap, Sparkles } from "lucide-react";
+import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap, Sparkles, BarChart3 } from "lucide-react";
 import StudentPortal from "@/components/dashboard/StudentPortal";
 import InstructorPortal from "@/pages/InstructorPortal";
 import AIMarketingHub from "@/components/dashboard/AIMarketingHub";
+import AnalyticsDashboard from "@/components/dashboard/AnalyticsDashboard";
 
 const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
 const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84"; // Elena Voss
@@ -167,13 +168,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="marketing" className="w-full">
+      <Tabs defaultValue="analytics" className="w-full">
         <TabsList>
+          <TabsTrigger value="analytics" className="gap-1.5">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Analytics
+          </TabsTrigger>
           <TabsTrigger value="marketing" className="gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
             AI Marketing
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="analytics" className="mt-4">
+          <AnalyticsDashboard />
+        </TabsContent>
         <TabsContent value="marketing" className="mt-4">
           <AIMarketingHub />
         </TabsContent>
