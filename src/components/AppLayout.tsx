@@ -100,26 +100,6 @@ export default function AppLayout() {
               </nav>
             </div>
             <div className="flex items-center gap-3">
-              {activeRole !== "student" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      View As: {viewAsRole === "owner" ? "👑 Owner" : "👋 Front Desk"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => setViewAsRole("owner")} className="gap-2">
-                      👑 Owner
-                      {viewAsRole === "owner" && <span className="ml-auto text-primary">✓</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setViewAsRole("front-desk")} className="gap-2">
-                      👋 Front Desk / Manager
-                      {viewAsRole === "front-desk" && <span className="ml-auto text-primary">✓</span>}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
               <DemoTriggers />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -142,6 +122,28 @@ export default function AppLayout() {
                   <DropdownMenuSeparator />
                   {activeRole !== "student" && (
                     <>
+                      <div className="px-2 py-1.5">
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">View As</p>
+                        <div className="flex gap-1">
+                          <Button
+                            variant={viewAsRole === "owner" ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 text-xs h-7"
+                            onClick={() => setViewAsRole("owner")}
+                          >
+                            👑 Owner
+                          </Button>
+                          <Button
+                            variant={viewAsRole === "front-desk" ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 text-xs h-7"
+                            onClick={() => setViewAsRole("front-desk")}
+                          >
+                            👋 Front Desk
+                          </Button>
+                        </div>
+                      </div>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <a href="/org-revenue" className="flex items-center gap-2 cursor-pointer">
                           <Building2 className="h-4 w-4" />
