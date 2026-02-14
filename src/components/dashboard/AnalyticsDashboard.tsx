@@ -26,7 +26,14 @@ import {
   UserCheck,
   Clock,
   CheckCircle2,
+  Bell,
+  ArrowRightLeft,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useViewAsRole, type ViewAsRole } from "@/components/AppLayout";
 
 /* ------------------------------------------------------------------ */
@@ -152,6 +159,26 @@ export default function AnalyticsDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* ── SmartCover Notification (Owner only) ───────────── */}
+      <div
+        className={`transition-all duration-300 ease-in-out ${
+          isOwner ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0 overflow-hidden"
+        }`}
+      >
+        <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <ArrowRightLeft className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">SmartCover Alert</p>
+            <p className="text-xs text-muted-foreground">
+              Sarah just picked up Mike's Thursday 6:00 AM class. Public schedule updated.
+            </p>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-xs text-muted-foreground">Just now</Badge>
+        </div>
       </div>
 
       {/* ── Filter Bar ──────────────────────────────────────── */}
