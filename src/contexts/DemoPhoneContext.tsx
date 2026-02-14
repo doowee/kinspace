@@ -126,7 +126,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
             break;
           case "flash-deal":
             addMessage(
-              `⚡ FLASH DROP: 2 spots left in 5 PM Flow! Reply CLAIM to grab one for just $15 (normally $30).`,
+              `⚡ FLASH DROP: 2 spots left in 5 PM Flow! Reply CLAIM to grab one for just 0.5 pts (normally 1pt).`,
               "system"
             );
             setAwaitingReply("flash-deal");
