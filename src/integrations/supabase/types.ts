@@ -394,6 +394,7 @@ export type Database = {
       }
       studios: {
         Row: {
+          brand_background: string | null
           brand_highlight: string | null
           brand_primary: string | null
           brand_secondary: string | null
@@ -412,6 +413,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_background?: string | null
           brand_highlight?: string | null
           brand_primary?: string | null
           brand_secondary?: string | null
@@ -430,6 +432,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_background?: string | null
           brand_highlight?: string | null
           brand_primary?: string | null
           brand_secondary?: string | null
