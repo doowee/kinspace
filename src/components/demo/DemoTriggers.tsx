@@ -2,7 +2,7 @@ import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw, Database } from "lucide-react";
+import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw, Database, MessageSquare, CreditCard, Flame } from "lucide-react";
 import { seedDemoData } from "@/lib/seed-demo-data";
 import {
   DropdownMenu,
@@ -211,12 +211,37 @@ export default function DemoTriggers() {
           <AlertTriangle className="h-4 w-4 text-orange-500" />
           Trigger: Low Balance Warning
         </DropdownMenuItem>
-        <DropdownMenuItem
+         <DropdownMenuItem
           onClick={() => triggerScenario("review", studioName)}
           className="gap-2 cursor-pointer"
         >
           <Star className="h-4 w-4 text-purple-500" />
           Trigger: Review Request
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          Frictionless Commerce
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => triggerScenario("smart-review", studioName)}
+          className="gap-2 cursor-pointer"
+        >
+          <MessageSquare className="h-4 w-4 text-teal-500" />
+          Trigger: Smart Review
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => triggerScenario("refill", studioName)}
+          className="gap-2 cursor-pointer"
+        >
+          <CreditCard className="h-4 w-4 text-emerald-500" />
+          Trigger: Low Balance Refill
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => triggerScenario("flash-deal", studioName)}
+          className="gap-2 cursor-pointer"
+        >
+          <Flame className="h-4 w-4 text-red-500" />
+          Trigger: 1-Hour Flash Deal
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
