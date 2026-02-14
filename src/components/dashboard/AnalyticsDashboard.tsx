@@ -22,7 +22,12 @@ import {
   Crown,
   AlertTriangle,
   Search,
+  CalendarDays,
+  UserCheck,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
+import { useViewAsRole, type ViewAsRole } from "@/components/AppLayout";
 
 /* ------------------------------------------------------------------ */
 /*  Mock Data                                                          */
@@ -60,6 +65,17 @@ const MOCK_CAPACITY_RISKS = [
   { className: "Power Reformer", instructor: "Sarah Kim", day: "Monday", time: "6:00 AM", capacity: 62 },
 ];
 
+const MOCK_UPCOMING_CLASSES = [
+  { name: "Morning Reformer Flow", time: "8:00 AM", instructor: "Sarah Kim", checkedIn: 14, capacity: 18 },
+  { name: "Mat Pilates Sculpt", time: "9:30 AM", instructor: "Elena Voss", checkedIn: 10, capacity: 16 },
+  { name: "Power Reformer", time: "11:00 AM", instructor: "Sarah Kim", checkedIn: 0, capacity: 18 },
+  { name: "Barre Fusion", time: "12:30 PM", instructor: "Ava Brooks", checkedIn: 0, capacity: 14 },
+  { name: "Stretch & Release", time: "2:00 PM", instructor: "Liam Torres", checkedIn: 0, capacity: 12 },
+  { name: "Evening Flow", time: "5:30 PM", instructor: "Elena Voss", checkedIn: 0, capacity: 16 },
+  { name: "Reformer Basics", time: "6:30 PM", instructor: "Mike Chen", checkedIn: 0, capacity: 18 },
+  { name: "Sunset Stretch", time: "7:30 PM", instructor: "Ava Brooks", checkedIn: 0, capacity: 12 },
+];
+
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 /* ------------------------------------------------------------------ */
@@ -67,6 +83,7 @@ const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 /* ------------------------------------------------------------------ */
 
 export default function AnalyticsDashboard() {
+  const viewAsRole = useViewAsRole();
   const [aiQuery, setAiQuery] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
@@ -89,45 +106,53 @@ export default function AnalyticsDashboard() {
   const toggleDay = (i: number) =>
     setActiveDays((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
 
+  const isOwner = viewAsRole === "owner";
+
   return (
     <div className="space-y-6">
-      {/* ── AI Data Analyst Bar ─────────────────────────────── */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-5 space-y-4">
-          <div className="relative">
-            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={aiQuery}
-              onChange={(e) => setAiQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
-              placeholder="Ask your data... (e.g., 'What was our revenue for the last 2 quarters?')"
-              className="pl-10 pr-12 h-12 text-sm bg-background"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9"
-              onClick={handleAiSearch}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {aiLoading && (
-            <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
+      {/* ── AI Data Analyst Bar (Owner only) ───────────────── */}
+      <div
+        className={`transition-all duration-300 ease-in-out ${
+          isOwner ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 overflow-hidden"
+        }`}
+      >
+        <Card className="overflow-hidden">
+          <CardContent className="p-5 space-y-4">
+            <div className="relative">
+              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={aiQuery}
+                onChange={(e) => setAiQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+                placeholder="Ask your data... (e.g., 'What was our revenue for the last 2 quarters?')"
+                className="pl-10 pr-12 h-12 text-sm bg-background"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9"
+                onClick={handleAiSearch}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
             </div>
-          )}
 
-          {aiResponse && !aiLoading && (
-            <div className="flex gap-3 rounded-xl border bg-muted/30 p-4">
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="text-sm leading-relaxed text-foreground">{aiResponse}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {aiLoading && (
+              <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            )}
+
+            {aiResponse && !aiLoading && (
+              <div className="flex gap-3 rounded-xl border bg-muted/30 p-4">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <p className="text-sm leading-relaxed text-foreground">{aiResponse}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* ── Filter Bar ──────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
@@ -175,29 +200,24 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* ── Topline KPIs ────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <KPICard
-          label="Total Revenue"
-          value="$14,250"
-          trend={12}
-          icon={<DollarSign className="h-4 w-4" />}
-        />
-        <KPICard
-          label="Avg Class Capacity"
-          value="78%"
-          trend={4}
-          icon={<BarChart3 className="h-4 w-4" />}
-        />
-        <KPICard
-          label="Active Memberships"
-          value="342"
-          trend={-2}
-          icon={<Users className="h-4 w-4" />}
-        />
+      <div className="grid gap-4 sm:grid-cols-3 transition-all duration-300 ease-in-out">
+        {isOwner ? (
+          <>
+            <KPICard label="Total Revenue" value="$14,250" trend={12} icon={<DollarSign className="h-4 w-4" />} />
+            <KPICard label="Avg Class Capacity" value="78%" trend={4} icon={<BarChart3 className="h-4 w-4" />} />
+            <KPICard label="Active Memberships" value="342" trend={-2} icon={<Users className="h-4 w-4" />} />
+          </>
+        ) : (
+          <>
+            <KPICard label="Classes Today" value="8" trend={0} icon={<CalendarDays className="h-4 w-4" />} hideTrend />
+            <KPICard label="Check-ins Expected" value="142" trend={0} icon={<UserCheck className="h-4 w-4" />} hideTrend />
+            <KPICard label="Waitlist Action Needed" value="3" trend={0} icon={<Clock className="h-4 w-4" />} hideTrend badgeLabel="spots pending" />
+          </>
+        )}
       </div>
 
       {/* ── Leaderboards ────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 transition-all duration-300 ease-in-out">
         {/* Top Instructors */}
         <Card>
           <CardHeader className="pb-3">
@@ -218,9 +238,11 @@ export default function AnalyticsDashboard() {
                   </p>
                   <p className="text-xs text-muted-foreground">{inst.classes} classes</p>
                 </div>
-                <span className="text-sm font-semibold text-foreground">
-                  ${inst.revenue.toLocaleString()}
-                </span>
+                {isOwner && (
+                  <span className="text-sm font-semibold text-foreground">
+                    ${inst.revenue.toLocaleString()}
+                  </span>
+                )}
               </div>
             ))}
           </CardContent>
@@ -241,9 +263,11 @@ export default function AnalyticsDashboard() {
                   <p className="text-sm font-medium text-foreground truncate">{cls.name}</p>
                   <p className="text-xs text-muted-foreground">{cls.instructor}</p>
                 </div>
-                <span className="text-sm font-semibold text-foreground">
-                  ${cls.revenue.toLocaleString()}
-                </span>
+                {isOwner && (
+                  <span className="text-sm font-semibold text-foreground">
+                    ${cls.revenue.toLocaleString()}
+                  </span>
+                )}
               </div>
             ))}
           </CardContent>
@@ -269,55 +293,90 @@ export default function AnalyticsDashboard() {
                   </p>
                   <p className="text-xs text-muted-foreground">{stu.attended} classes attended</p>
                 </div>
-                <span className="text-sm font-semibold text-foreground">
-                  ${stu.ltv.toLocaleString()}
-                </span>
+                {isOwner && (
+                  <span className="text-sm font-semibold text-foreground">
+                    ${stu.ltv.toLocaleString()}
+                  </span>
+                )}
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Capacity Risks & Utilization ────────────────────── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <CardTitle className="text-base">Capacity Risks & Utilization</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-0">
-          {MOCK_CAPACITY_RISKS.map((risk, i) => {
-            const isLowest = i === 0;
-            return (
-              <div
-                key={risk.className}
-                className={`flex items-center gap-4 rounded-lg border p-3 ${
-                  isLowest ? "border-destructive/40 bg-destructive/5" : "bg-card"
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {risk.instructor} — {risk.day} {risk.time} {risk.className}
-                  </p>
-                </div>
-                <Badge
-                  variant={isLowest ? "destructive" : "outline"}
-                  className="shrink-0"
-                >
-                  {risk.capacity}%
-                </Badge>
-                {isLowest && (
-                  <Button size="sm" variant="outline" className="shrink-0 gap-1.5 text-xs">
-                    <Sparkles className="h-3 w-3" />
-                    Send AI Promo
-                  </Button>
-                )}
+      {/* ── Bottom Section: Owner = Capacity Risks, Front Desk = Upcoming Classes ── */}
+      <div className="transition-all duration-300 ease-in-out">
+        {isOwner ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <CardTitle className="text-base">Capacity Risks & Utilization</CardTitle>
               </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {MOCK_CAPACITY_RISKS.map((risk, i) => {
+                const isLowest = i === 0;
+                return (
+                  <div
+                    key={risk.className}
+                    className={`flex items-center gap-4 rounded-lg border p-3 ${
+                      isLowest ? "border-destructive/40 bg-destructive/5" : "bg-card"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">
+                        {risk.instructor} — {risk.day} {risk.time} {risk.className}
+                      </p>
+                    </div>
+                    <Badge variant={isLowest ? "destructive" : "outline"} className="shrink-0">
+                      {risk.capacity}%
+                    </Badge>
+                    {isLowest && (
+                      <Button size="sm" variant="outline" className="shrink-0 gap-1.5 text-xs">
+                        <Sparkles className="h-3 w-3" />
+                        Send AI Promo
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base">Upcoming Classes Today</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {MOCK_UPCOMING_CLASSES.map((cls) => (
+                <div
+                  key={cls.name + cls.time}
+                  className="flex items-center gap-4 rounded-lg border bg-card p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{cls.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {cls.time} · {cls.instructor}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="shrink-0">
+                      {cls.checkedIn}/{cls.capacity}
+                    </Badge>
+                    {cls.checkedIn > 0 && (
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
@@ -331,11 +390,15 @@ function KPICard({
   value,
   trend,
   icon,
+  hideTrend,
+  badgeLabel,
 }: {
   label: string;
   value: string;
   trend: number;
   icon: React.ReactNode;
+  hideTrend?: boolean;
+  badgeLabel?: string;
 }) {
   const positive = trend >= 0;
   return (
@@ -348,13 +411,19 @@ function KPICard({
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className="text-2xl font-bold text-foreground">{value}</p>
         </div>
-        <Badge
-          variant="outline"
-          className={`gap-1 ${positive ? "text-success border-success/30" : "text-destructive border-destructive/30"}`}
-        >
-          {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {Math.abs(trend)}%
-        </Badge>
+        {!hideTrend ? (
+          <Badge
+            variant="outline"
+            className={`gap-1 ${positive ? "text-success border-success/30" : "text-destructive border-destructive/30"}`}
+          >
+            {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {Math.abs(trend)}%
+          </Badge>
+        ) : badgeLabel ? (
+          <Badge variant="outline" className="text-muted-foreground">
+            {badgeLabel}
+          </Badge>
+        ) : null}
       </CardContent>
     </Card>
   );

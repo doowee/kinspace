@@ -13,14 +13,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck } from "lucide-react";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Outlet, Navigate } from "react-router-dom";
+import { createContext, useContext, useState } from "react";
+
+export type ViewAsRole = "owner" | "front-desk";
+const ViewAsContext = createContext<ViewAsRole>("owner");
+export const useViewAsRole = () => useContext(ViewAsContext);
 import { NavLink } from "./NavLink";
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const { memberships, loading, activeStudio, activeRole } = useStudio();
+  const [viewAsRole, setViewAsRole] = useState<ViewAsRole>("owner");
 
   if (!user) return <Navigate to="/auth" replace />;
   if (loading) {
@@ -94,6 +100,26 @@ export default function AppLayout() {
               </nav>
             </div>
             <div className="flex items-center gap-3">
+              {activeRole !== "student" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      View As: {viewAsRole === "owner" ? "👑 Owner" : "👋 Front Desk"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setViewAsRole("owner")} className="gap-2">
+                      👑 Owner
+                      {viewAsRole === "owner" && <span className="ml-auto text-primary">✓</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setViewAsRole("front-desk")} className="gap-2">
+                      👋 Front Desk / Manager
+                      {viewAsRole === "front-desk" && <span className="ml-auto text-primary">✓</span>}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <DemoTriggers />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -141,7 +167,9 @@ export default function AppLayout() {
           </div>
         </header>
         <main className="container py-8">
-          <Outlet />
+          <ViewAsContext.Provider value={viewAsRole}>
+            <Outlet />
+          </ViewAsContext.Provider>
         </main>
         <DemoPhone />
       </div>
