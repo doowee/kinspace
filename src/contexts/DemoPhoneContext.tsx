@@ -9,7 +9,9 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-type ScenarioType = "reminder" | "waitlist" | "low-balance" | "review";
+type ScenarioType = "reminder" | "waitlist" | "low-balance" | "review" | "smart-review" | "refill" | "flash-deal";
+
+type ConversationStep = null | "smart-review-rating" | "smart-review-followup-positive" | "smart-review-followup-negative";
 
 interface WaitlistMeta {
   bookingId: string;
@@ -41,6 +43,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [awaitingReply, setAwaitingReply] = useState<ScenarioType | null>(null);
+  const [conversationStep, setConversationStep] = useState<ConversationStep>(null);
   const [typing, setTyping] = useState(false);
   const waitlistMetaRef = useRef<WaitlistMeta | null>(null);
   const onWaitlistPromoted = useRef<(() => void) | null>(null);
@@ -106,6 +109,28 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
             );
             setAwaitingReply("review");
             break;
+          case "smart-review":
+            addMessage(
+              `How was Sarah's Reformer Flow today? Reply 1 (Poor) to 5 (Amazing)!`,
+              "system"
+            );
+            setAwaitingReply("smart-review");
+            setConversationStep("smart-review-rating");
+            break;
+          case "refill":
+            addMessage(
+              `You just crushed your last class! 💪 Reply REFILL to instantly reload your usual 10-Class Pack ($199) using the card on file.`,
+              "system"
+            );
+            setAwaitingReply("refill");
+            break;
+          case "flash-deal":
+            addMessage(
+              `⚡ FLASH DROP: 2 spots left in 5 PM Flow! Reply CLAIM to grab one for just $15 (normally $30).`,
+              "system"
+            );
+            setAwaitingReply("flash-deal");
+            break;
         }
       }, 1500);
     },
@@ -115,8 +140,9 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
   const sendStudentReply = useCallback(
     (text: string) => {
       addMessage(text, "student");
+      const lower = text.toLowerCase().trim();
 
-      if (awaitingReply === "waitlist" && text.toLowerCase().includes("yes")) {
+      if (awaitingReply === "waitlist" && lower.includes("yes")) {
         setAwaitingReply(null);
         setTyping(true);
 
@@ -124,13 +150,11 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
 
         const doDbWork = async () => {
           if (meta) {
-            // Update booking status
             await supabase
               .from("bookings")
               .update({ status: "confirmed" as any })
               .eq("id", meta.bookingId);
 
-            // Deduct 1 credit from earliest-expiring pass
             const { data: passes } = await supabase
               .from("student_passes")
               .select("id, credits_remaining")
@@ -159,7 +183,6 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
               title: "Spot claimed via SMS!",
               description: "Revenue saved.",
             });
-            // Trigger refetch callback
             onWaitlistPromoted.current?.();
             waitlistMetaRef.current = null;
           }, 1800);
@@ -176,14 +199,91 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
             "system"
           );
         }, 1500);
+
+      // --- Smart Review: multi-step ---
+      } else if (awaitingReply === "smart-review" && conversationStep === "smart-review-rating") {
+        const rating = parseInt(lower);
+        if (rating >= 4 && rating <= 5) {
+          setConversationStep("smart-review-followup-positive");
+          setTyping(true);
+          setTimeout(() => {
+            setTyping(false);
+            addMessage(`Love to hear it! 🌟 What was your favorite part?`, "system");
+          }, 1500);
+        } else if (rating >= 1 && rating <= 3) {
+          setConversationStep("smart-review-followup-negative");
+          setTyping(true);
+          setTimeout(() => {
+            setTyping(false);
+            addMessage(`Oh no, we missed the mark. What could we do better?`, "system");
+          }, 1500);
+        }
+      } else if (awaitingReply === "smart-review" && conversationStep === "smart-review-followup-positive") {
+        setAwaitingReply(null);
+        setConversationStep(null);
+        setTyping(true);
+        setTimeout(() => {
+          setTyping(false);
+          addMessage(
+            `We'll tell Sarah! Mind tapping this link to drop that on Google? kinspace.app/review 🌟`,
+            "system"
+          );
+        }, 1800);
+      } else if (awaitingReply === "smart-review" && conversationStep === "smart-review-followup-negative") {
+        setAwaitingReply(null);
+        setConversationStep(null);
+        setTyping(true);
+        setTimeout(() => {
+          setTyping(false);
+          addMessage(
+            `Got it. The owner has been notified. We've added 1 free credit to your account to make it right!`,
+            "system"
+          );
+          toast({
+            title: "Feedback received",
+            description: "1 recovery credit added. Churn prevented.",
+          });
+        }, 1800);
+
+      // --- Refill ---
+      } else if (awaitingReply === "refill" && lower.includes("refill")) {
+        setAwaitingReply(null);
+        setTyping(true);
+        setTimeout(() => {
+          setTyping(false);
+          addMessage(`Done! 10 credits added. See you back in the studio!`, "system");
+          toast({
+            title: "Revenue Captured: $199 via SMS Auto-Refill",
+            description: "Pack renewed without leaving the chat.",
+            className: "border-success bg-success/10 text-success",
+          });
+        }, 1800);
+
+      // --- Flash Deal ---
+      } else if (awaitingReply === "flash-deal" && lower.includes("claim")) {
+        setAwaitingReply(null);
+        setTyping(true);
+        setTimeout(() => {
+          setTyping(false);
+          addMessage(
+            `You got it! Card charged $15. Hustle over, class starts in 45 mins!`,
+            "system"
+          );
+          toast({
+            title: "Flash Sale Claimed: $15 recovered from empty inventory",
+            description: "Last-minute revenue captured via SMS.",
+            className: "border-success bg-success/10 text-success",
+          });
+        }, 1800);
       }
     },
-    [awaitingReply, addMessage]
+    [awaitingReply, conversationStep, addMessage]
   );
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setAwaitingReply(null);
+    setConversationStep(null);
     setTyping(false);
     waitlistMetaRef.current = null;
   }, []);
