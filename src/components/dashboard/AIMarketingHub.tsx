@@ -11,8 +11,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Sparkles, Clock, Users, Send, TrendingUp } from "lucide-react";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+
+type AudienceType = "inactive" | "all-students" | "past-attendees";
+
+const AUDIENCE_CONFIG: Record<AudienceType, { label: string; icon: typeof UserX }> = {
+  inactive: { label: "Inactive Clients", icon: UserX },
+  "all-students": { label: "All Students", icon: Users },
+  "past-attendees": { label: "Past Attendees", icon: UserCheck },
+};
 
 interface Opportunity {
   id: string;
@@ -22,6 +31,7 @@ interface Opportunity {
   time: string;
   spotsOpen: number;
   capacity: number;
+  audience: AudienceType;
 }
 
 const INITIAL_OPPORTUNITIES: Opportunity[] = [
@@ -33,6 +43,7 @@ const INITIAL_OPPORTUNITIES: Opportunity[] = [
     time: "6:00 AM",
     spotsOpen: 8,
     capacity: 14,
+    audience: "inactive",
   },
   {
     id: "opp-2",
@@ -42,6 +53,7 @@ const INITIAL_OPPORTUNITIES: Opportunity[] = [
     time: "12:00 PM",
     spotsOpen: 6,
     capacity: 10,
+    audience: "past-attendees",
   },
 ];
 
@@ -105,7 +117,7 @@ export default function AIMarketingHub() {
     setOpportunities((prev) => prev.filter((o) => o.id !== activeOpp.id));
     toast({
       title: "Campaign Sent! Tracking revenue...",
-      description: `Email delivered to ${recipientCount} inactive clients for ${activeOpp.className}.`,
+      description: `Email delivered to ${recipientCount} ${AUDIENCE_CONFIG[activeOpp.audience].label.toLowerCase()} for ${activeOpp.className}.`,
     });
     setActiveOpp(null);
   };
@@ -160,10 +172,22 @@ export default function AIMarketingHub() {
                   </div>
                 )}
                 <CardContent className="p-5 space-y-4">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-foreground">
-                      {opp.day} {opp.time} — {opp.className}
-                    </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-foreground">
+                        {opp.day} {opp.time} — {opp.className}
+                      </p>
+                      {(() => {
+                        const cfg = AUDIENCE_CONFIG[opp.audience];
+                        const AudienceIcon = cfg.icon;
+                        return (
+                          <Badge variant="outline" className="gap-1 text-[10px] font-medium">
+                            <AudienceIcon className="h-3 w-3" />
+                            {cfg.label}
+                          </Badge>
+                        );
+                      })()}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       with {opp.instructor}
                     </p>
@@ -248,7 +272,7 @@ export default function AIMarketingHub() {
             </Button>
             <Button onClick={handleSend} className="gap-2">
               <Send className="h-4 w-4" />
-              Approve &amp; Send to {recipientCount} Inactive Clients
+              Approve &amp; Send to {recipientCount} {activeOpp ? AUDIENCE_CONFIG[activeOpp.audience].label : "Clients"}
             </Button>
           </DialogFooter>
         </DialogContent>
