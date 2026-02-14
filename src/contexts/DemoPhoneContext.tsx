@@ -176,7 +176,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
           setTimeout(() => {
             setTyping(false);
             addMessage(
-              `You're in! We've charged 1 credit. See you there! 💪`,
+              `You're in! We've charged 0.5 credit. See you there! 💪`,
               "system"
             );
             toast({
