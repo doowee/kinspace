@@ -13,6 +13,7 @@ interface StudioBrand {
   brand_secondary: string;
   brand_highlight: string;
   brand_text: string;
+  brand_background: string | null;
 }
 
 interface StudioThemeContextType {
@@ -139,7 +140,7 @@ export default function StudioThemeProvider({ slug: slugProp, children }: Props)
     const studioId = bookings[0].studio_id;
     const { data: studios } = await supabase
       .from("studios")
-      .select("id, name, slug, location, logo_url, brand_primary, brand_secondary, brand_highlight, brand_text")
+      .select("id, name, slug, location, logo_url, brand_primary, brand_secondary, brand_highlight, brand_text, brand_background")
       .eq("id", studioId)
       .limit(1);
 
@@ -179,6 +180,10 @@ export default function StudioThemeProvider({ slug: slugProp, children }: Props)
       if (studio.brand_text) {
         const hsl = hexToHSL(studio.brand_text);
         set("--primary-foreground", hsl);
+      }
+      if (studio.brand_background) {
+        const hsl = hexToHSL(studio.brand_background);
+        set("--background", hsl);
       }
     }
 
