@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,18 +26,21 @@ import {
   UserCheck,
   Clock,
   CheckCircle2,
-  Bell,
   ArrowRightLeft,
 } from "lucide-react";
+import { useViewAsRole } from "@/components/AppLayout";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useViewAsRole, type ViewAsRole } from "@/components/AppLayout";
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 /* ------------------------------------------------------------------ */
-/*  Mock Data                                                          */
+/*  Mock Data with multipliers per filter                              */
 /* ------------------------------------------------------------------ */
 
 const MOCK_INSTRUCTORS = [
@@ -83,7 +86,41 @@ const MOCK_UPCOMING_CLASSES = [
   { name: "Sunset Stretch", time: "7:30 PM", instructor: "Ava Brooks", checkedIn: 0, capacity: 12 },
 ];
 
-const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
+/* Date-range multipliers so filters visibly change KPI numbers */
+const DATE_MULTIPLIER: Record<string, number> = {
+  today: 0.04,
+  week: 0.25,
+  month: 1,
+  ytd: 8.5,
+};
+
+/* Revenue chart data keyed by granularity */
+function generateRevenueChart(
+  granularity: string,
+  dateRange: string,
+  instructorFilter: string
+) {
+  const instScale = instructorFilter === "all" ? 1 : 0.3;
+  const base = (DATE_MULTIPLIER[dateRange] ?? 1) * instScale;
+
+  if (granularity === "day") {
+    return Array.from({ length: 14 }, (_, i) => ({
+      label: `Feb ${i + 1}`,
+      revenue: Math.round((800 + Math.random() * 600) * base),
+    }));
+  }
+  if (granularity === "week") {
+    return ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"].map((w) => ({
+      label: w,
+      revenue: Math.round((3_200 + Math.random() * 1_800) * base),
+    }));
+  }
+  // quarter
+  return ["Q1 '25", "Q2 '25", "Q3 '25", "Q4 '25", "Q1 '26"].map((q) => ({
+    label: q,
+    revenue: Math.round((12_000 + Math.random() * 6_000) * base),
+  }));
+}
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -96,7 +133,7 @@ export default function AnalyticsDashboard() {
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState("month");
   const [instructor, setInstructor] = useState("all");
-  const [activeDays, setActiveDays] = useState<boolean[]>(Array(7).fill(true));
+  const [chartGranularity, setChartGranularity] = useState("week");
 
   const handleAiSearch = () => {
     if (!aiQuery.trim()) return;
@@ -110,10 +147,63 @@ export default function AnalyticsDashboard() {
     }, 1500);
   };
 
-  const toggleDay = (i: number) =>
-    setActiveDays((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
-
   const isOwner = viewAsRole === "owner";
+
+  /* ── Compute filtered data ── */
+  const multiplier = DATE_MULTIPLIER[dateRange] ?? 1;
+  const instScale = instructor === "all" ? 1 : 0.3;
+  const scale = multiplier * instScale;
+
+  const filteredInstructors = useMemo(() => {
+    let list = MOCK_INSTRUCTORS;
+    if (instructor !== "all") {
+      list = list.filter((i) => i.name === instructor);
+    }
+    return list.map((i) => ({
+      ...i,
+      revenue: Math.round(i.revenue * multiplier),
+      classes: Math.max(1, Math.round(i.classes * multiplier)),
+    }));
+  }, [instructor, multiplier]);
+
+  const filteredClasses = useMemo(() => {
+    let list = MOCK_CLASSES;
+    if (instructor !== "all") {
+      list = list.filter((c) => c.instructor === instructor);
+    }
+    return list.map((c) => ({
+      ...c,
+      revenue: Math.round(c.revenue * multiplier),
+    }));
+  }, [instructor, multiplier]);
+
+  const filteredStudents = useMemo(() => {
+    return MOCK_STUDENTS.map((s) => ({
+      ...s,
+      attended: Math.max(1, Math.round(s.attended * multiplier)),
+      ltv: Math.round(s.ltv * multiplier),
+    }));
+  }, [multiplier]);
+
+  const filteredCapacity = useMemo(() => {
+    let list = MOCK_CAPACITY_RISKS;
+    if (instructor !== "all") {
+      list = list.filter((r) => r.instructor === instructor);
+    }
+    return list;
+  }, [instructor]);
+
+  const totalRevenue = Math.round(14_250 * scale);
+  const avgCapacity = instructor === "all" ? 78 : 71;
+  const activeMemberships = Math.round(342 * multiplier);
+  const trendRevenue = instructor === "all" ? 12 : 8;
+  const trendCapacity = instructor === "all" ? 4 : -3;
+  const trendMemberships = instructor === "all" ? -2 : -5;
+
+  const chartData = useMemo(
+    () => generateRevenueChart(chartGranularity, dateRange, instructor),
+    [chartGranularity, dateRange, instructor]
+  );
 
   return (
     <div className="space-y-6">
@@ -195,22 +285,6 @@ export default function AnalyticsDashboard() {
           </SelectContent>
         </Select>
 
-        <div className="flex gap-1">
-          {DAYS.map((d, i) => (
-            <button
-              key={i}
-              onClick={() => toggleDay(i)}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                activeDays[i]
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-
         <Select value={instructor} onValueChange={setInstructor}>
           <SelectTrigger className="w-[180px] bg-card">
             <SelectValue />
@@ -230,9 +304,9 @@ export default function AnalyticsDashboard() {
       <div className="grid gap-4 sm:grid-cols-3 transition-all duration-300 ease-in-out">
         {isOwner ? (
           <>
-            <KPICard label="Total Revenue" value="$14,250" trend={12} icon={<DollarSign className="h-4 w-4" />} />
-            <KPICard label="Avg Class Capacity" value="78%" trend={4} icon={<BarChart3 className="h-4 w-4" />} />
-            <KPICard label="Active Memberships" value="342" trend={-2} icon={<Users className="h-4 w-4" />} />
+            <KPICard label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} trend={trendRevenue} icon={<DollarSign className="h-4 w-4" />} />
+            <KPICard label="Avg Class Capacity" value={`${avgCapacity}%`} trend={trendCapacity} icon={<BarChart3 className="h-4 w-4" />} />
+            <KPICard label="Active Memberships" value={activeMemberships.toLocaleString()} trend={trendMemberships} icon={<Users className="h-4 w-4" />} />
           </>
         ) : (
           <>
@@ -243,15 +317,61 @@ export default function AnalyticsDashboard() {
         )}
       </div>
 
+      {/* ── Revenue Chart (Owner only) ─────────────────────── */}
+      {isOwner && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Revenue</CardTitle>
+              <div className="flex gap-1">
+                {(["day", "week", "quarter"] as const).map((g) => (
+                  <Button
+                    key={g}
+                    size="sm"
+                    variant={chartGranularity === g ? "default" : "outline"}
+                    className="h-7 text-xs capitalize"
+                    onClick={() => setChartGranularity(g)}
+                  >
+                    {g === "day" ? "Daily" : g === "week" ? "Weekly" : "Quarterly"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-[240px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(1)}k`} className="text-muted-foreground" width={55} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#revGradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Leaderboards ────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-3 transition-all duration-300 ease-in-out">
         {/* Top Instructors */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Top 5 Instructors</CardTitle>
+            <CardTitle className="text-base">Top {filteredInstructors.length >= 5 ? 5 : filteredInstructors.length} Instructors</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
-            {MOCK_INSTRUCTORS.map((inst, i) => (
+            {filteredInstructors.slice(0, 5).map((inst, i) => (
               <div key={inst.name} className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
@@ -272,16 +392,19 @@ export default function AnalyticsDashboard() {
                 )}
               </div>
             ))}
+            {filteredInstructors.length === 0 && (
+              <p className="text-sm text-muted-foreground">No data for this filter</p>
+            )}
           </CardContent>
         </Card>
 
         {/* Top Classes */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Top 5 Classes</CardTitle>
+            <CardTitle className="text-base">Top {filteredClasses.length >= 5 ? 5 : filteredClasses.length} Classes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
-            {MOCK_CLASSES.map((cls, i) => (
+            {filteredClasses.slice(0, 5).map((cls, i) => (
               <div key={cls.name} className="flex items-center gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                   {i + 1}
@@ -297,6 +420,9 @@ export default function AnalyticsDashboard() {
                 )}
               </div>
             ))}
+            {filteredClasses.length === 0 && (
+              <p className="text-sm text-muted-foreground">No classes by this instructor</p>
+            )}
           </CardContent>
         </Card>
 
@@ -306,7 +432,7 @@ export default function AnalyticsDashboard() {
             <CardTitle className="text-base">Top 5 Students</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
-            {MOCK_STUDENTS.map((stu, i) => (
+            {filteredStudents.slice(0, 5).map((stu, i) => (
               <div key={stu.name} className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
@@ -342,7 +468,7 @@ export default function AnalyticsDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              {MOCK_CAPACITY_RISKS.map((risk, i) => {
+              {filteredCapacity.map((risk, i) => {
                 const isLowest = i === 0;
                 return (
                   <div
@@ -368,6 +494,9 @@ export default function AnalyticsDashboard() {
                   </div>
                 );
               })}
+              {filteredCapacity.length === 0 && (
+                <p className="text-sm text-muted-foreground">No capacity risks for this instructor</p>
+              )}
             </CardContent>
           </Card>
         ) : (
