@@ -465,7 +465,10 @@ export default function Index() {
         {/* Nav — transparent, layered on top */}
         <header className="relative z-50">
           <div className="container flex h-16 items-center justify-between">
-            <div className="text-xl"><BrandName /></div>
+            <div className="flex items-center gap-2">
+              <img src="/kinspace-logo.png" alt="Kinspace" className="h-8 w-8" />
+              <span className="text-xl"><BrandName /></span>
+            </div>
             <Button variant="outline" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
               <Link to="/auth">Sign In</Link>
             </Button>

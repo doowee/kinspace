@@ -156,7 +156,7 @@ export default function PublicPackagesPage() {
   if (notFound || !studio) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-2">
-        <img src="/kinspace-logo-sage.png" alt="Kinspace" className="h-12 w-12 mb-4 rounded-lg" />
+        <img src="/kinspace-logo.png" alt="Kinspace" className="h-12 w-12 mb-4 rounded-lg" />
         <h1 className="font-display text-2xl font-bold text-foreground">Studio not found</h1>
         <p className="text-muted-foreground">The studio you're looking for doesn't exist.</p>
       </div>
@@ -256,7 +256,7 @@ export default function PublicPackagesPage() {
 
       <footer className="border-t bg-card/50 py-8 mt-12">
         <div className="container flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <img src="/kinspace-logo-sage.png" alt="" className="h-4 w-4 rounded" />
+          <img src="/kinspace-logo.png" alt="" className="h-4 w-4 rounded" />
           <span>Powered by Kinspace.Studio</span>
         </div>
       </footer>
