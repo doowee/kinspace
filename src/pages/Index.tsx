@@ -139,7 +139,7 @@ function WaitlistSMSMockup() {
         <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
           GOOD NEWS: A spot opened in 6pm Reformer! Reply YES to claim it.
         </div>
-        <div className="rounded-xl px-3.5 py-2.5 text-sm ml-auto w-fit font-semibold" style={{ backgroundColor: "#4cd411", color: "#fff" }}>YES</div>
+        <div className="rounded-xl bg-primary text-primary-foreground px-3.5 py-2.5 text-sm ml-auto w-fit">YES</div>
         <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
           You're booked! 🎉 See you at 6pm tonight.
         </div>
@@ -156,7 +156,7 @@ function RefillSMSMockup() {
         <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
           Hey Sarah! You're down to 1 credit. Reply REFILL to grab a 10-class pack for <span className="font-semibold">$199</span>.
         </div>
-        <div className="rounded-xl px-3.5 py-2.5 text-sm ml-auto w-fit font-semibold" style={{ backgroundColor: "#4cd411", color: "#fff" }}>REFILL</div>
+        <div className="rounded-xl bg-primary text-primary-foreground px-3.5 py-2.5 text-sm ml-auto w-fit">REFILL</div>
         <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
           Done! 💳 Your card ending •4821 has been charged <span className="font-semibold">$199</span>. 10 credits added. You're all set!
         </div>
@@ -222,14 +222,14 @@ function BentoSMSVisual() {
         <div className="col-span-2 flex flex-col gap-3">
           <GlassCard className="p-3">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">2:04 AM</div>
-            <div className="rounded-lg px-2.5 py-2 text-xs text-foreground" style={{ backgroundColor: "#ebf7e3" }}>
-              Spot opened in 6pm Reformer! Reply <span className="font-bold" style={{ color: "#4cd411" }}>YES</span> 🎉
+            <div className="rounded-lg bg-muted px-2.5 py-2 text-xs text-foreground">
+              Spot opened in 6pm Reformer! Reply YES 🎉
             </div>
           </GlassCard>
           <GlassCard className="p-3">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Instant</div>
             <div className="text-xs text-foreground font-medium">$199 charged</div>
-            <div className="text-[10px] mt-1 font-semibold" style={{ color: "#4cd411" }}>10-pack activated ✓</div>
+            <div className="text-[10px] text-sage mt-1">10-pack activated ✓</div>
           </GlassCard>
         </div>
       </div>
@@ -246,17 +246,17 @@ function BentoAIVisual() {
         <GlassCard className="col-span-3 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="font-display font-bold text-foreground text-sm">AI Marketing Hub</div>
-            <div className="text-[10px] px-2 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: "#4cd411" }}>Live</div>
+            <div className="text-[10px] px-2 py-0.5 rounded-full bg-sage/20 text-sage font-medium">Live</div>
           </div>
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 mb-2">
             <div className="text-xs font-medium text-foreground">Thu 6 AM · Reformer</div>
             <div className="text-[10px] text-muted-foreground">3 of 12 filled</div>
           </div>
-          <div className="rounded-lg p-2.5 mb-2" style={{ backgroundColor: "#ebf7e3" }}>
+          <div className="rounded-lg bg-muted/60 p-2.5 mb-2">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">AI Draft</div>
             <div className="text-xs text-foreground leading-relaxed">"Hi Sarah, your favorite reformer is waiting..."</div>
           </div>
-          <div className="rounded-lg text-xs font-medium text-center py-2 text-white" style={{ backgroundColor: "#4cd411" }}>
+          <div className="rounded-lg bg-primary text-primary-foreground text-xs font-medium text-center py-2">
             Send to 42 clients
           </div>
         </GlassCard>
@@ -276,11 +276,6 @@ function BentoAIVisual() {
 }
 
 function BentoEmpireVisual() {
-  const locations = [
-    { name: "Downtown", rev: "$8,420", pct: 94, color: "#4cd411" },
-    { name: "Uptown", rev: "$6,180", pct: 87, color: "#E08E79" },
-    { name: "Westside", rev: "$4,320", pct: 72, color: "#2136a1" },
-  ];
   return (
     <div className="relative">
       <AmbientGlow className="w-[380px] h-[380px] -top-10 -right-10" />
@@ -302,17 +297,21 @@ function BentoEmpireVisual() {
             <div className="text-[10px] text-muted-foreground">Overview</div>
           </div>
           <div className="space-y-2 mb-3">
-            {locations.map((loc) => (
+            {[
+              { name: "Downtown", rev: "$8,420", fill: "94%", w: "w-[94%]", color: "bg-sage" },
+              { name: "Uptown", rev: "$6,180", fill: "87%", w: "w-[87%]", color: "bg-primary" },
+              { name: "Westside", rev: "$4,320", fill: "72%", w: "w-[72%]", color: "bg-secondary" },
+            ].map((loc) => (
               <div key={loc.name} className="rounded-lg bg-muted/60 px-2.5 py-2">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5">
-                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: loc.color }} />
+                    <div className={`h-1.5 w-1.5 rounded-full ${loc.color}`} />
                     <span className="text-[11px] font-medium text-foreground">{loc.name}</span>
                   </div>
                   <span className="text-[11px] font-bold text-foreground">{loc.rev}</span>
                 </div>
                 <div className="h-1 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full" style={{ backgroundColor: loc.color, width: `${loc.pct}%` }} />
+                  <div className={`h-full rounded-full ${loc.color} ${loc.w}`} />
                 </div>
               </div>
             ))}
@@ -339,8 +338,8 @@ function HeroMockup() {
       >
         <GlassCard className="p-6 max-w-sm mx-auto shadow-[0_20px_60px_rgb(0,0,0,0.1)]">
           <div className="flex items-center gap-3 mb-5">
-            <div className="h-9 w-9 rounded-lg flex items-center justify-center font-bold text-xs text-white" style={{ backgroundColor: "#4cd411" }}>DP</div>
-            <div className="font-display font-bold text-foreground">Downtown Pilates</div>
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs">K.S</div>
+            <div className="font-display font-bold text-foreground">Kinspace.Studio</div>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
@@ -348,19 +347,19 @@ function HeroMockup() {
               { label: "Bookings", value: "184" },
               { label: "Fill Rate", value: "92%" },
             ].map((s) => (
-              <div key={s.label} className="rounded-lg p-2.5 text-center" style={{ backgroundColor: "#ebf7e3" }}>
+              <div key={s.label} className="rounded-lg bg-muted/60 p-2.5 text-center">
                 <div className="text-sm font-bold text-foreground">{s.value}</div>
                 <div className="text-[10px] text-muted-foreground">{s.label}</div>
               </div>
             ))}
           </div>
           <div className="space-y-2">
-            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#ebf7e3" }}>
-              <div className="h-full w-[92%] rounded-full" style={{ backgroundColor: "#4cd411" }} />
+            <div className="h-2 rounded-full bg-primary/20 overflow-hidden">
+              <div className="h-full w-[92%] rounded-full bg-primary" />
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>Monthly Goal</span>
-              <span className="font-medium" style={{ color: "#4cd411" }}>92%</span>
+              <span className="text-primary font-medium">92%</span>
             </div>
           </div>
         </GlassCard>
