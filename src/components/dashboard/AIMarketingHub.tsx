@@ -68,7 +68,7 @@ Because we'd love to see you, book this class for just 0.5 pts instead of the us
 
 Tap here to claim your reformer. See you in the morning!
 
-- The Team at Kinspace`,
+- The Team at Kinspace.Studio`,
     recipientCount: 42,
   },
   "opp-2": {
@@ -81,7 +81,7 @@ Reply to this email or tap below to book instantly. Your body will thank you.
 
 See you on the mat!
 
-- The Team at Kinspace`,
+- The Team at Kinspace.Studio`,
     recipientCount: 31,
   },
 };

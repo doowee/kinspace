@@ -146,7 +146,7 @@ export default function StudentLayout() {
           <div className="container flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
             <span>Powered by</span>
             <a href="https://kinspace.studio" target="_blank" rel="noopener noreferrer" className="font-medium hover:text-muted-foreground transition-colors">
-              Kinspace.studio
+              Kinspace.Studio
             </a>
           </div>
         </footer>

@@ -497,7 +497,7 @@ export default function BookingPage() {
             rel="noopener noreferrer"
             className="font-medium hover:text-muted-foreground transition-colors"
           >
-            Kinspace.studio
+            Kinspace.Studio
           </a>
         </div>
       </footer>

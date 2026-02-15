@@ -73,7 +73,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
   const triggerScenario = useCallback(
     (type: ScenarioType, studioName?: string) => {
       setIsOpen(true);
-      const studio = studioName || "Kinspace Studio";
+      const studio = studioName || "Kinspace.Studio";
 
       setTimeout(() => {
         switch (type) {
@@ -97,7 +97,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
             );
             setTimeout(() => {
               addMessage(
-                `Tap here to view packages: kinspace.app/packs`,
+                `Tap here to view packages: kinspace.studio/packs`,
                 "system"
               );
             }, 1200);
@@ -225,7 +225,7 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => {
           setTyping(false);
           addMessage(
-            `We'll tell Sarah! Mind tapping this link to drop that on Google? kinspace.app/review 🌟`,
+            `We'll tell Sarah! Mind tapping this link to drop that on Google? kinspace.studio/review 🌟`,
             "system"
           );
         }, 1800);
