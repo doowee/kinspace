@@ -204,6 +204,15 @@ function StackedSMSMockups() {
 
 /* ─── Bento Feature Mockups ─── */
 
+function SMSCard({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <GlassCard className={`p-3 space-y-1.5 w-[200px] ${className}`}>
+      <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">{label}</div>
+      {children}
+    </GlassCard>
+  );
+}
+
 function BentoSMSVisual() {
   return (
     <div className="relative">
@@ -215,51 +224,76 @@ function BentoSMSVisual() {
             src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=800&fit=crop&crop=center"
             alt="Pilates studio"
             className="rounded-2xl object-cover w-full h-full shadow-[0_12px_40px_rgb(0,0,0,0.1)]"
-            style={{ minHeight: 340 }}
+            style={{ minHeight: 300 }}
             loading="lazy"
           />
         </div>
-        {/* SMS conversations */}
-        <div className="col-span-2 flex flex-col gap-2.5">
-          {/* Waitlist SMS */}
-          <GlassCard className="p-3 space-y-1.5">
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Smart Waitlist</div>
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-              Spot opened in 6pm Reformer! Reply YES 🎉
-            </div>
-            <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
-              YES
-            </div>
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-              You're booked! See you at 6pm ✓
-            </div>
-          </GlassCard>
-          {/* Refill SMS */}
-          <GlassCard className="p-3 space-y-1.5">
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">1-Tap Refill</div>
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-              1 credit left! Reply REFILL for a 10-pack ($199)
-            </div>
-            <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
-              REFILL
-            </div>
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-              💳 $199 charged · 10 credits added ✓
-            </div>
-          </GlassCard>
-          {/* Flash Deal SMS */}
-          <GlassCard className="p-3 space-y-1.5">
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Flash Deal</div>
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-              🔥 50% off 2pm Reformer today! Reply CLAIM
-            </div>
-            <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
-              CLAIM
-            </div>
-            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-              Booked for $7.50! See you at 2pm 🧘‍♀️
-            </div>
-          </GlassCard>
+        {/* Stacked SMS cards */}
+        <div className="col-span-2 relative" style={{ minHeight: 260 }}>
+          {/* Card 1 — front */}
+          <motion.div
+            initial={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" as any }}
+            className="absolute top-0 left-0 z-30"
+            style={{ filter: "none" }}
+          >
+            <SMSCard label="Smart Waitlist">
+              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+                Spot opened in 6pm Reformer! Reply YES 🎉
+              </div>
+              <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+                YES
+              </div>
+              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+                You're booked! See you at 6pm ✓
+              </div>
+            </SMSCard>
+          </motion.div>
+
+          {/* Card 2 — peeking, reveals on scroll */}
+          <motion.div
+            initial={{ opacity: 0.5, y: 15, scale: 0.97 }}
+            whileInView={{ opacity: 1, y: 15, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: EASE }}
+            viewport={{ once: true, margin: "-100px" as any }}
+            className="absolute top-0 left-2 z-20"
+            style={{ filter: "brightness(0.95)" }}
+          >
+            <SMSCard label="1-Tap Refill">
+              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+                1 credit left! Reply REFILL for a 10-pack ($199)
+              </div>
+              <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+                REFILL
+              </div>
+              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+                💳 $199 charged · 10 credits added ✓
+              </div>
+            </SMSCard>
+          </motion.div>
+
+          {/* Card 3 — deepest, reveals last */}
+          <motion.div
+            initial={{ opacity: 0.3, y: 30, scale: 0.94 }}
+            whileInView={{ opacity: 1, y: 30, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
+            viewport={{ once: true, margin: "-150px" as any }}
+            className="absolute top-0 left-4 z-10"
+            style={{ filter: "brightness(0.9)" }}
+          >
+            <SMSCard label="Flash Deal">
+              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+                🔥 50% off 2pm Reformer! Reply CLAIM
+              </div>
+              <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+                CLAIM
+              </div>
+              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+                Booked for $7.50! See you at 2pm 🧘‍♀️
+              </div>
+            </SMSCard>
+          </motion.div>
         </div>
       </div>
     </div>
