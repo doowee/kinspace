@@ -14,8 +14,8 @@ const PHONE_REGEX = /^\+?[\d\s\-().]{7,20}$/;
 export default function Auth() {
   const { user, loading: authLoading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("founder@kinspace.studio");
+  const [password, setPassword] = useState("123456");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -23,7 +23,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  if (!authLoading && user) return <Navigate to="/" replace />;
+  if (!authLoading && user) return <Navigate to="/admin" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

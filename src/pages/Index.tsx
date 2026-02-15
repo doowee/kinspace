@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence, type Variants, type Easing } from "framer-motion";
 import { ArrowRight, Check, Zap, Brain, Shield, Globe, Users, Lock, Sparkles, RefreshCw, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -422,7 +423,7 @@ export default function Index() {
         <div className="container flex h-16 items-center justify-between">
           <div className="text-xl"><BrandName /></div>
           <Button variant="outline" size="sm" asChild>
-            <a href="/auth">Sign In</a>
+            <Link to="/auth">Sign In</Link>
           </Button>
         </div>
       </header>
