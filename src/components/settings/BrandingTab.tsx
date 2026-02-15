@@ -63,7 +63,7 @@ export default function BrandingTab() {
 
   const handleDemoUpload = () => {
     // Simulate upload with a placeholder logo
-    setLogoUrl("/kinspace-logo-sage.png");
+    setLogoUrl("/kinspace-logo.png");
     toast.success("Logo uploaded (demo)");
   };
 
