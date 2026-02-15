@@ -77,7 +77,7 @@ function WaitlistForm({ buttonText = "Join the US Beta Waitlist" }: { buttonText
 
 /* ─── Mockup Cards ─── */
 
-function SMSMockup() {
+function WaitlistSMSMockup() {
   return (
     <div className="rounded-2xl bg-card border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-5 max-w-xs mx-auto">
       <div className="text-xs text-muted-foreground mb-3 font-medium tracking-wide uppercase">SMS · Today 2:04 AM</div>
@@ -87,7 +87,24 @@ function SMSMockup() {
         </div>
         <div className="rounded-xl bg-primary text-primary-foreground px-3.5 py-2.5 text-sm ml-auto w-fit">YES</div>
         <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
-          You're in! 🎉 Your card ending •4821 has been charged <span className="font-semibold">$199</span> for a 10-class pack. See you tonight!
+          You're booked! 🎉 See you at 6pm tonight.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RefillSMSMockup() {
+  return (
+    <div className="rounded-2xl bg-card border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-5 max-w-xs mx-auto">
+      <div className="text-xs text-muted-foreground mb-3 font-medium tracking-wide uppercase">SMS · Today 8:15 AM</div>
+      <div className="space-y-2.5">
+        <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
+          Hey Sarah! You're down to 1 credit. Reply REFILL to grab a 10-class pack for <span className="font-semibold">$199</span>.
+        </div>
+        <div className="rounded-xl bg-primary text-primary-foreground px-3.5 py-2.5 text-sm ml-auto w-fit">REFILL</div>
+        <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
+          Done! 💳 Your card ending •4821 has been charged <span className="font-semibold">$199</span>. 10 credits added. You're all set!
         </div>
       </div>
     </div>
@@ -300,7 +317,12 @@ export default function Index() {
             { icon: <MessageSquare className="h-3.5 w-3.5" />, text: "Smart Waitlist: 2 AM cancellations instantly trigger SMS offers to your waitlist." },
             { icon: <ArrowRight className="h-3.5 w-3.5" />, text: "1-Tap SMS Refills: Clients buy class packs via text. Zero friction." },
           ]}
-          mockup={<SMSMockup />}
+          mockup={
+            <div className="space-y-6">
+              <WaitlistSMSMockup />
+              <RefillSMSMockup />
+            </div>
+          }
         />
         <FeatureBlock
           title="Your Studio. Your Brand."
