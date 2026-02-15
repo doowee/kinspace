@@ -116,40 +116,49 @@ function StackedSMSMockups() {
 
   return (
     <div
-      className="relative w-full max-w-xs mx-auto cursor-pointer select-none pb-16 pt-2"
+      className="relative mx-auto cursor-pointer select-none flex items-center justify-center"
+      style={{ width: 380, height: 320 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => setHovered((h) => !h)}
     >
-      {/* Back card — always visible, offset 50px right & 50px down */}
+      {/* Back card */}
       <motion.div
         animate={{
-          x: hovered ? 0 : 100,
-          y: hovered ? 0 : 40,
+          x: hovered ? -50 : 50,
+          y: hovered ? -20 : 20,
           scale: hovered ? 1 : 0.97,
           zIndex: hovered ? 10 : 0,
+          opacity: hovered ? 1 : 0.7,
         }}
         transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-        className="absolute top-0 left-0 right-0"
+        className="absolute"
+        style={{ filter: hovered ? 'none' : 'brightness(0.96)' }}
       >
-        <RefillSMSMockup />
+        <div className="shadow-[0_12px_40px_rgb(0,0,0,0.12)] rounded-2xl">
+          <RefillSMSMockup />
+        </div>
       </motion.div>
 
       {/* Front card */}
       <motion.div
         animate={{
-          x: hovered ? 100 : 0,
-          y: hovered ? 40 : 0,
+          x: hovered ? 50 : -50,
+          y: hovered ? 20 : -20,
           scale: hovered ? 0.97 : 1,
           zIndex: hovered ? 0 : 10,
+          opacity: hovered ? 0.7 : 1,
         }}
         transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-        className="relative"
+        className="absolute"
+        style={{ filter: hovered ? 'brightness(0.96)' : 'none' }}
       >
-        <WaitlistSMSMockup />
+        <div className="shadow-[0_12px_40px_rgb(0,0,0,0.12)] rounded-2xl">
+          <WaitlistSMSMockup />
+        </div>
       </motion.div>
 
-      <div className="absolute -bottom-1 inset-x-0 text-center text-[11px] text-muted-foreground/60">
+      <div className="absolute -bottom-2 inset-x-0 text-center text-[11px] text-muted-foreground/60">
         Hover to swap
       </div>
     </div>
