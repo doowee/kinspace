@@ -200,7 +200,7 @@ function NewUserWelcome() {
       <div className="animate-fade-in max-w-lg w-full space-y-8 text-center">
         <div>
           <h1 className="font-display text-4xl font-bold text-foreground">
-            Welcome to KinSpace
+            Welcome to Kinspace.Studio
           </h1>
           <p className="mt-3 text-muted-foreground text-lg">
             What brings you here today?
@@ -232,7 +232,7 @@ function NewUserWelcome() {
               <div>
                 <p className="font-display font-bold text-lg">I Own a Studio</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Set up and manage your studio on KinSpace.
+                  Set up and manage your studio on Kinspace.Studio.
                 </p>
               </div>
             </CardContent>

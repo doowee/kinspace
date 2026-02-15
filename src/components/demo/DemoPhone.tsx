@@ -191,7 +191,7 @@ export default function DemoPhone() {
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: "#000" }}>
-                Kinspace Studio
+                Kinspace.Studio
               </div>
               <div style={{ fontSize: 11, color: "#8e8e93" }}>SMS</div>
             </div>

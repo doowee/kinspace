@@ -78,7 +78,7 @@ export default function Auth() {
           <div className="flex justify-center mb-3">
             <DynamicLogo size={64} className="rounded-xl" />
           </div>
-          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Kinspace.Studio</h1>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground"><span className="font-bold">Kinspace</span><span className="font-normal opacity-70">.Studio</span></h1>
           <p className="mt-2 text-muted-foreground">Studio management, simplified</p>
         </div>
 

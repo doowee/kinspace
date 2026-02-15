@@ -257,7 +257,7 @@ export default function PublicPackagesPage() {
       <footer className="border-t bg-card/50 py-8 mt-12">
         <div className="container flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <img src="/kinspace-logo-sage.png" alt="" className="h-4 w-4 rounded" />
-          <span>Powered by Kinspace</span>
+          <span>Powered by Kinspace.Studio</span>
         </div>
       </footer>
 

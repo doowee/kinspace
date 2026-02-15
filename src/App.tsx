@@ -25,6 +25,7 @@ import BookClass from "./pages/BookClass";
 import NotFound from "./pages/NotFound";
 import CreateStudio from "./pages/CreateStudio";
 import InstructorPortal from "./pages/InstructorPortal";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route index element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route
               path="/onboarding"
@@ -110,7 +112,7 @@ const App = () => (
                 </AuthGate>
               }
             >
-              <Route index element={<Dashboard />} />
+              <Route path="/admin" element={<Dashboard />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/students" element={<Students />} />
               <Route path="/org-revenue" element={<OrgRevenue />} />
