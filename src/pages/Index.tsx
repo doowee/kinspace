@@ -124,8 +124,8 @@ function StackedSMSMockups() {
       {/* Back card — always visible, offset 50px right & 50px down */}
       <motion.div
         animate={{
-          x: hovered ? 0 : 50,
-          y: hovered ? 0 : 50,
+          x: hovered ? 0 : 100,
+          y: hovered ? 0 : 40,
           scale: hovered ? 1 : 0.97,
           zIndex: hovered ? 10 : 0,
         }}
@@ -138,8 +138,8 @@ function StackedSMSMockups() {
       {/* Front card */}
       <motion.div
         animate={{
-          x: hovered ? 50 : 0,
-          y: hovered ? 50 : 0,
+          x: hovered ? 100 : 0,
+          y: hovered ? 40 : 0,
           scale: hovered ? 0.97 : 1,
           zIndex: hovered ? 0 : 10,
         }}
