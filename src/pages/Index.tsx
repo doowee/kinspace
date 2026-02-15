@@ -112,51 +112,44 @@ function RefillSMSMockup() {
 }
 
 function StackedSMSMockups() {
-  const [showRefill, setShowRefill] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div
-      className="relative w-full max-w-xs mx-auto cursor-pointer select-none"
-      onMouseEnter={() => setShowRefill(true)}
-      onMouseLeave={() => setShowRefill(false)}
-      onClick={() => setShowRefill((f) => !f)}
+      className="relative w-full max-w-xs mx-auto cursor-pointer select-none pb-16 pt-2"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => setHovered((h) => !h)}
     >
-      {/* Shadow card peeking behind */}
-      <div className="absolute inset-x-3 top-3 bottom-0 rounded-2xl bg-card border border-border/40 shadow-sm opacity-40 pointer-events-none" />
-
-      {/* Animated card */}
+      {/* Back card — always visible, offset 50px right & 50px down */}
       <motion.div
-        key="front"
-        initial={false}
-        animate={{ opacity: 1 }}
-        className="relative z-10"
+        animate={{
+          x: hovered ? 0 : 50,
+          y: hovered ? 0 : 50,
+          scale: hovered ? 1 : 0.97,
+          zIndex: hovered ? 10 : 0,
+        }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+        className="absolute top-0 left-0 right-0"
       >
-        <AnimatePresence mode="wait">
-          {showRefill ? (
-            <motion.div
-              key="refill"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              <RefillSMSMockup />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="waitlist"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              <WaitlistSMSMockup />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <RefillSMSMockup />
       </motion.div>
 
-      <div className="mt-3 text-center text-[11px] text-muted-foreground/60">
+      {/* Front card */}
+      <motion.div
+        animate={{
+          x: hovered ? 50 : 0,
+          y: hovered ? 50 : 0,
+          scale: hovered ? 0.97 : 1,
+          zIndex: hovered ? 0 : 10,
+        }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+        className="relative"
+      >
+        <WaitlistSMSMockup />
+      </motion.div>
+
+      <div className="absolute -bottom-1 inset-x-0 text-center text-[11px] text-muted-foreground/60">
         Hover to swap
       </div>
     </div>
