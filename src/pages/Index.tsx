@@ -214,86 +214,57 @@ function SMSCard({ label, children, className = "" }: { label: string; children:
 }
 
 function BentoSMSVisual() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-
   return (
     <div className="relative">
       <AmbientGlow className="w-[400px] h-[400px] -top-8 -right-8" />
-      <div className="relative grid grid-cols-5 gap-3 max-w-md mx-auto">
+      <div className="relative grid grid-cols-2 gap-3 max-w-md mx-auto">
+        {/* SMS Card 1 */}
+        <SMSCard label="Smart Waitlist">
+          <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+            Spot opened in 6pm Reformer! Reply YES 🎉
+          </div>
+          <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+            YES
+          </div>
+          <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+            You're booked! See you at 6pm ✓
+          </div>
+        </SMSCard>
+
+        {/* SMS Card 2 */}
+        <SMSCard label="1-Tap Refill">
+          <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+            1 credit left! Reply REFILL for a 10-pack ($199)
+          </div>
+          <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+            REFILL
+          </div>
+          <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+            💳 $199 charged · 10 credits added ✓
+          </div>
+        </SMSCard>
+
+        {/* SMS Card 3 */}
+        <SMSCard label="Flash Deal">
+          <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+            🔥 50% off 2pm Reformer! Reply CLAIM
+          </div>
+          <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+            CLAIM
+          </div>
+          <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+            Booked for $7.50! See you at 2pm 🧘‍♀️
+          </div>
+        </SMSCard>
+
         {/* Photo */}
-        <div className="col-span-3 row-span-2">
+        <div className="rounded-2xl overflow-hidden shadow-[0_12px_40px_rgb(0,0,0,0.1)]">
           <img
-            src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=800&fit=crop&crop=center"
+            src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=600&fit=crop&crop=center"
             alt="Pilates studio"
-            className="rounded-2xl object-cover w-full h-full shadow-[0_12px_40px_rgb(0,0,0,0.1)]"
-            style={{ minHeight: 300 }}
+            className="object-cover w-full h-full"
             loading="lazy"
           />
-        </div>
-        {/* Stacked SMS cards */}
-        <div ref={ref} className="col-span-2 relative" style={{ minHeight: 280 }}>
-          {/* Card 1 — front */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, ease: EASE }}
-            className="absolute top-0 left-0 right-0 z-30"
-          >
-            <SMSCard label="Smart Waitlist">
-              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-                Spot opened in 6pm Reformer! Reply YES 🎉
-              </div>
-              <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
-                YES
-              </div>
-              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-                You're booked! See you at 6pm ✓
-              </div>
-            </SMSCard>
-          </motion.div>
-
-          {/* Card 2 — starts hidden behind card 1, slides down */}
-          <motion.div
-            initial={{ opacity: 0, y: 0 }}
-            animate={inView ? { opacity: 1, y: 25 } : {}}
-            transition={{ duration: 0.6, delay: 0.8, ease: EASE }}
-            className="absolute top-0 left-0 right-0 z-20"
-            style={{ filter: "brightness(0.93)" }}
-          >
-            <SMSCard label="1-Tap Refill">
-              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-                1 credit left! Reply REFILL for a 10-pack ($199)
-              </div>
-              <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
-                REFILL
-              </div>
-              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-                💳 $199 charged · 10 credits added ✓
-              </div>
-            </SMSCard>
-          </motion.div>
-
-          {/* Card 3 — starts hidden behind card 1, slides down last */}
-          <motion.div
-            initial={{ opacity: 0, y: 0 }}
-            animate={inView ? { opacity: 1, y: 50 } : {}}
-            transition={{ duration: 0.6, delay: 1.4, ease: EASE }}
-            className="absolute top-0 left-0 right-0 z-10"
-            style={{ filter: "brightness(0.86)" }}
-          >
-            <SMSCard label="Flash Deal">
-              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-                🔥 50% off 2pm Reformer! Reply CLAIM
-              </div>
-              <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
-                CLAIM
-              </div>
-              <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
-                Booked for $7.50! See you at 2pm 🧘‍♀️
-              </div>
-            </SMSCard>
-          </motion.div>
         </div>
       </div>
     </div>
