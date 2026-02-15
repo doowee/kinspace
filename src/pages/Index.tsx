@@ -207,30 +207,58 @@ function StackedSMSMockups() {
 function BentoSMSVisual() {
   return (
     <div className="relative">
-      <AmbientGlow className="w-[350px] h-[350px] -top-8 -right-8" />
-      <div className="relative grid grid-cols-5 gap-3 max-w-sm mx-auto">
+      <AmbientGlow className="w-[400px] h-[400px] -top-8 -right-8" />
+      <div className="relative grid grid-cols-5 gap-3 max-w-md mx-auto">
         {/* Photo */}
         <div className="col-span-3 row-span-2">
           <img
             src="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=800&fit=crop&crop=center"
             alt="Pilates studio"
             className="rounded-2xl object-cover w-full h-full shadow-[0_12px_40px_rgb(0,0,0,0.1)]"
-            style={{ minHeight: 260 }}
+            style={{ minHeight: 340 }}
             loading="lazy"
           />
         </div>
-        {/* SMS card overlay */}
-        <div className="col-span-2 flex flex-col gap-3">
-          <GlassCard className="p-3">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">2:04 AM</div>
-            <div className="rounded-lg bg-muted px-2.5 py-2 text-xs text-foreground">
+        {/* SMS conversations */}
+        <div className="col-span-2 flex flex-col gap-2.5">
+          {/* Waitlist SMS */}
+          <GlassCard className="p-3 space-y-1.5">
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Smart Waitlist</div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
               Spot opened in 6pm Reformer! Reply YES 🎉
             </div>
+            <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+              YES
+            </div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+              You're booked! See you at 6pm ✓
+            </div>
           </GlassCard>
-          <GlassCard className="p-3">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Instant</div>
-            <div className="text-xs text-foreground font-medium">$199 charged</div>
-            <div className="text-[10px] text-sage mt-1">10-pack activated ✓</div>
+          {/* Refill SMS */}
+          <GlassCard className="p-3 space-y-1.5">
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">1-Tap Refill</div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+              1 credit left! Reply REFILL for a 10-pack ($199)
+            </div>
+            <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+              REFILL
+            </div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+              💳 $199 charged · 10 credits added ✓
+            </div>
+          </GlassCard>
+          {/* Flash Deal SMS */}
+          <GlassCard className="p-3 space-y-1.5">
+            <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Flash Deal</div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+              🔥 50% off 2pm Reformer today! Reply CLAIM
+            </div>
+            <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-2.5 py-1.5 text-[11px] ml-auto w-fit font-medium">
+              CLAIM
+            </div>
+            <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
+              Booked for $7.50! See you at 2pm 🧘‍♀️
+            </div>
           </GlassCard>
         </div>
       </div>
