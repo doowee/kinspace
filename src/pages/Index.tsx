@@ -572,10 +572,10 @@ export default function Index() {
         <div className="container relative py-20 lg:py-28">
           <GlassCard className="mx-auto max-w-2xl p-8 sm:p-12 text-center space-y-5 shadow-[0_20px_60px_rgb(0,0,0,0.06)]">
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground">
-              The era of clunky fitness software is over.
+              Boutique studios deserve boutique software.
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              We are onboarding a strictly limited cohort of premium US studios for our Q3 Beta launch. Secure your spot.
+              We are onboarding a strictly limited cohort of premium US studios for our Q2 Beta launch. Secure your spot.
             </p>
             <div className="flex justify-center">
               <WaitlistForm buttonText="Request Beta Access" />
