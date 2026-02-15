@@ -229,14 +229,13 @@ function BentoSMSVisual() {
           />
         </div>
         {/* Stacked SMS cards */}
-        <div className="col-span-2 relative" style={{ minHeight: 260 }}>
+        <div className="col-span-2 relative" style={{ minHeight: 280 }}>
           {/* Card 1 — front */}
           <motion.div
-            initial={{ opacity: 1, y: 0 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-50px" as any }}
-            className="absolute top-0 left-0 z-30"
-            style={{ filter: "none" }}
+            initial={{ opacity: 1 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="absolute top-0 left-0 right-0 z-30"
           >
             <SMSCard label="Smart Waitlist">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
@@ -253,12 +252,12 @@ function BentoSMSVisual() {
 
           {/* Card 2 — peeking, reveals on scroll */}
           <motion.div
-            initial={{ opacity: 0.5, y: 15, scale: 0.97 }}
-            whileInView={{ opacity: 1, y: 15, scale: 1 }}
+            initial={{ opacity: 0.4 }}
+            whileInView={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3, ease: EASE }}
-            viewport={{ once: true, margin: "-100px" as any }}
-            className="absolute top-0 left-2 z-20"
-            style={{ filter: "brightness(0.95)" }}
+            viewport={{ once: true, margin: "-80px" as any }}
+            className="absolute left-0 right-0 z-20"
+            style={{ top: 25, filter: "brightness(0.93)" }}
           >
             <SMSCard label="1-Tap Refill">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
@@ -275,12 +274,12 @@ function BentoSMSVisual() {
 
           {/* Card 3 — deepest, reveals last */}
           <motion.div
-            initial={{ opacity: 0.3, y: 30, scale: 0.94 }}
-            whileInView={{ opacity: 1, y: 30, scale: 1 }}
+            initial={{ opacity: 0.3 }}
+            whileInView={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-            viewport={{ once: true, margin: "-150px" as any }}
-            className="absolute top-0 left-4 z-10"
-            style={{ filter: "brightness(0.9)" }}
+            viewport={{ once: true, margin: "-120px" as any }}
+            className="absolute left-0 right-0 z-10"
+            style={{ top: 50, filter: "brightness(0.86)" }}
           >
             <SMSCard label="Flash Deal">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
