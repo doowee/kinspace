@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useInView, type Variants, type Easing } from "framer-motion";
 import { ArrowRight, Check, Zap, Brain, Shield, Globe, Users, Lock, Sparkles, RefreshCw, HelpCircle } from "lucide-react";
+import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -452,22 +453,28 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-lg">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="text-xl"><BrandName /></div>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/auth">Sign In</Link>
-          </Button>
+      {/* Hero with background image */}
+      <section className="relative overflow-hidden min-h-[90vh] flex flex-col">
+        {/* Background image with overlay */}
+        <div className="absolute inset-0">
+          <img src={heroBg} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/75 to-background/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
         </div>
-      </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <DotGrid />
-        <AmbientGlow className="w-[800px] h-[800px] -top-40 -left-40 opacity-60" />
-        <AmbientGlow className="w-[600px] h-[600px] -bottom-32 -right-32 opacity-40" />
-        <div className="container relative py-20 lg:py-32">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+        {/* Nav — transparent, layered on top */}
+        <header className="relative z-50">
+          <div className="container flex h-16 items-center justify-between">
+            <div className="text-xl"><BrandName /></div>
+            <Button variant="outline" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
+              <Link to="/auth">Sign In</Link>
+            </Button>
+          </div>
+        </header>
+
+        {/* Hero content */}
+        <div className="container relative flex-1 flex items-center py-16 lg:py-24">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20 w-full">
             <motion.div initial="hidden" animate="visible" variants={stagger} className="flex-1 space-y-6">
               <motion.p variants={fadeLeft} className="text-xs font-medium tracking-[0.2em] uppercase text-muted-foreground">
                 The Modern Studio Operating System
