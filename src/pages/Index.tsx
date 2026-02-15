@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence, type Variants, type Easing } from "framer-motion";
-import { ArrowRight, MessageSquare, Palette, BarChart3, Check } from "lucide-react";
+import { ArrowRight, MessageSquare, Check, Zap, Brain, Shield, Globe, Users, Lock, Sparkles, RefreshCw, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -165,50 +165,74 @@ function StackedSMSMockups() {
   );
 }
 
-function BrandingMockup() {
+function AIMarketingMockup() {
   return (
     <div className="rounded-2xl bg-card border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-5 max-w-xs mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">UP</div>
-        <div>
-          <div className="font-display font-bold text-foreground text-sm">Uptown Pilates</div>
-          <div className="text-xs text-muted-foreground">Book a class</div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-display font-bold text-foreground text-sm">AI Marketing Hub</div>
+        <div className="text-[10px] px-2 py-0.5 rounded-full bg-sage/20 text-sage font-medium">Live</div>
+      </div>
+      <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 mb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-medium text-foreground">Thu 6 AM · Reformer Flow</div>
+            <div className="text-[10px] text-muted-foreground">Only 3 of 12 spots filled</div>
+          </div>
+          <div className="text-xs text-destructive font-semibold">25%</div>
         </div>
       </div>
-      <div className="space-y-2">
-        {["6:00 AM · Reformer Flow", "9:30 AM · Mat Sculpt", "12:00 PM · Power Reform"].map((c) => (
-          <div key={c} className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2.5">
-            <span className="text-sm text-foreground">{c}</span>
-            <span className="text-xs text-primary font-medium">Book</span>
-          </div>
-        ))}
+      <div className="rounded-lg bg-muted/60 p-3 mb-3 space-y-2">
+        <div className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">AI-Generated Email</div>
+        <div className="text-xs text-foreground leading-relaxed">
+          "Hi [First Name], Sarah's Thursday morning Reformer is calling your name — and we saved your favorite reformer..."
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <div className="flex-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium text-center py-2">Send to 42 clients</div>
+        <div className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">Edit</div>
+      </div>
+      <div className="mt-3 rounded-lg bg-muted/40 px-3 py-2.5 flex items-center gap-2">
+        <HelpCircle className="h-3 w-3 text-sage shrink-0" />
+        <span className="text-[11px] text-muted-foreground italic">"Who were my top 3 instructors last month?"</span>
       </div>
     </div>
   );
 }
 
-function DashboardMockup() {
+function EmpireMockup() {
   return (
     <div className="rounded-2xl bg-card border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-5 max-w-xs mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <div className="font-display font-bold text-foreground text-sm">This Week</div>
-        <div className="text-xs text-muted-foreground">Analytics</div>
+        <div className="font-display font-bold text-foreground text-sm">Multi-Studio Overview</div>
+        <div className="text-[10px] text-muted-foreground">3 Locations</div>
       </div>
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="space-y-2 mb-4">
         {[
-          { label: "Revenue", value: "$4,280" },
-          { label: "Classes", value: "32" },
-          { label: "Fill Rate", value: "87%" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-lg bg-muted/60 p-2.5 text-center">
-            <div className="text-sm font-bold text-foreground">{s.value}</div>
-            <div className="text-[10px] text-muted-foreground">{s.label}</div>
+          { name: "Downtown", revenue: "$8,420", fill: "94%", color: "bg-sage" },
+          { name: "Uptown", revenue: "$6,180", fill: "87%", color: "bg-primary" },
+          { name: "Westside", revenue: "$4,320", fill: "72%", color: "bg-secondary" },
+        ].map((loc) => (
+          <div key={loc.name} className="rounded-lg bg-muted/60 px-3 py-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${loc.color}`} />
+                <span className="text-xs font-medium text-foreground">{loc.name}</span>
+              </div>
+              <span className="text-xs font-bold text-foreground">{loc.revenue}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className={`h-full rounded-full ${loc.color}`} style={{ width: loc.fill }} />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[10px] text-muted-foreground">Fill Rate</span>
+              <span className="text-[10px] text-foreground font-medium">{loc.fill}</span>
+            </div>
           </div>
         ))}
       </div>
-      <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2.5 flex items-center justify-between">
-        <span className="text-xs text-foreground">Wednesday 12pm is 40% empty</span>
-        <span className="text-xs text-primary font-semibold">Send AI Promo</span>
+      <div className="rounded-lg border border-border px-3 py-2 flex items-center justify-between">
+        <span className="text-xs text-foreground font-medium">Total Revenue</span>
+        <span className="text-sm font-bold text-foreground">$18,920</span>
       </div>
     </div>
   );
@@ -255,13 +279,17 @@ function HeroMockup() {
 
 /* ─── Feature Block ─── */
 function FeatureBlock({
+  eyebrow,
   title,
+  body,
   bullets,
   mockup,
   reverse,
 }: {
+  eyebrow?: string;
   title: string;
-  bullets: { icon: React.ReactNode; text: string }[];
+  body?: string;
+  bullets: { icon: React.ReactNode; label: string; text: string }[];
   mockup: React.ReactNode;
   reverse?: boolean;
 }) {
@@ -273,15 +301,23 @@ function FeatureBlock({
       variants={stagger}
       className={`flex flex-col ${reverse ? "lg:flex-row-reverse" : "lg:flex-row"} items-center gap-12 lg:gap-20`}
     >
-      <motion.div variants={fadeUp} className="flex-1 space-y-6">
+      <motion.div variants={fadeUp} className="flex-1 space-y-5">
+        {eyebrow && (
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-sage">{eyebrow}</p>
+        )}
         <h3 className="font-display text-3xl lg:text-4xl font-bold text-foreground">{title}</h3>
-        <motion.ul variants={stagger} className="space-y-4">
+        {body && (
+          <p className="text-muted-foreground leading-relaxed">{body}</p>
+        )}
+        <motion.ul variants={stagger} className="space-y-4 pt-1">
           {bullets.map((b, i) => (
             <motion.li key={i} variants={fadeUp} className="flex items-start gap-3">
-              <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sage/15 text-sage">
                 {b.icon}
               </span>
-              <span className="text-muted-foreground leading-relaxed">{b.text}</span>
+              <span className="text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">{b.label}</span> {b.text}
+              </span>
             </motion.li>
           ))}
         </motion.ul>
@@ -366,29 +402,38 @@ export default function Index() {
       {/* Features */}
       <section className="container py-20 lg:py-28 space-y-24 lg:space-y-32">
         <FeatureBlock
-          title="Make money while you sleep."
+          eyebrow="MAKE MONEY WHILE YOU SLEEP"
+          title="Frictionless Commerce."
+          body="Don't rely on your clients remembering their passwords. We turn 2 AM cancellations into revenue and empty reformers into flash sales automatically."
           bullets={[
-            { icon: <MessageSquare className="h-3.5 w-3.5" />, text: "Smart Waitlist: 2 AM cancellations instantly trigger SMS offers to your waitlist." },
-            { icon: <ArrowRight className="h-3.5 w-3.5" />, text: "1-Tap SMS Refills: Clients buy class packs via text. Zero friction." },
+            { icon: <Zap className="h-3.5 w-3.5" />, label: "The Smart Waitlist:", text: "Spot opens up? We text the waitlist and charge the card instantly." },
+            { icon: <RefreshCw className="h-3.5 w-3.5" />, label: "1-Tap Refills:", text: 'Clients reply "REFILL" at a red light to buy a 10-pack. Zero logins.' },
+            { icon: <Sparkles className="h-3.5 w-3.5" />, label: "Flash Deals:", text: "Monetize dead space by texting drop-in clients 50% off last-minute empty spots." },
           ]}
           mockup={<StackedSMSMockups />}
         />
         <FeatureBlock
-          title="Your Studio. Your Brand."
+          eyebrow="YOUR INVISIBLE OPERATIONS MANAGER"
+          title="The AI Auto-Marketer."
+          body="Stop staring at a blank screen trying to figure out how to fill your Thursday morning classes. Kinspace.Studio's AI actively monitors your schedule and does the heavy lifting for you."
           bullets={[
-            { icon: <Palette className="h-3.5 w-3.5" />, text: "The Chameleon Engine repaints the app to match your exact hex codes and logo." },
-            { icon: <Check className="h-3.5 w-3.5" />, text: "You own the customer relationship from the first click." },
+            { icon: <Brain className="h-3.5 w-3.5" />, label: "Automated Copywriting:", text: "The AI identifies low-attendance classes and instantly drafts highly-targeted promotional emails." },
+            { icon: <Shield className="h-3.5 w-3.5" />, label: "SmartCover:", text: "Instructors request shift coverage, and the system automatically manages the swapping and updates the schedule." },
+            { icon: <HelpCircle className="h-3.5 w-3.5" />, label: "Ask Your Data:", text: 'Type questions into your dashboard like "Who were my top 3 instructors last month?" for instant, plain-English answers.' },
           ]}
-          mockup={<BrandingMockup />}
+          mockup={<AIMarketingMockup />}
           reverse
         />
         <FeatureBlock
-          title="Put your operations on autopilot."
+          eyebrow="BUILT FOR FRANCHISES & AMBITIOUS OWNERS"
+          title="Run your Mini-Empire."
+          body="Whether you are opening your second studio or your tenth, Kinspace scales flawlessly without the administrative nightmare."
           bullets={[
-            { icon: <BarChart3 className="h-3.5 w-3.5" />, text: "AI Auto-Marketer: Automatically draft emails to fill low-attendance classes." },
-            { icon: <ArrowRight className="h-3.5 w-3.5" />, text: "SmartCover: Instructors request shift coverage and the system manages it automatically." },
+            { icon: <Globe className="h-3.5 w-3.5" />, label: "One Global Login:", text: "No more logging in and out to manage different locations." },
+            { icon: <Users className="h-3.5 w-3.5" />, label: "Unified Client Profiles:", text: "A client buys a pack downtown, they can use it uptown seamlessly." },
+            { icon: <Lock className="h-3.5 w-3.5" />, label: "Role-Based Access:", text: "Instant privacy toggles so your front desk only sees what they need to see, while you see the global revenue." },
           ]}
-          mockup={<DashboardMockup />}
+          mockup={<EmpireMockup />}
         />
       </section>
 
