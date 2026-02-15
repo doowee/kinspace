@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence, type Variants, type Easing } from "framer-motion";
+import { motion, AnimatePresence, useInView, type Variants, type Easing } from "framer-motion";
 import { ArrowRight, Check, Zap, Brain, Shield, Globe, Users, Lock, Sparkles, RefreshCw, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,6 +214,9 @@ function SMSCard({ label, children, className = "" }: { label: string; children:
 }
 
 function BentoSMSVisual() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+
   return (
     <div className="relative">
       <AmbientGlow className="w-[400px] h-[400px] -top-8 -right-8" />
@@ -229,12 +232,11 @@ function BentoSMSVisual() {
           />
         </div>
         {/* Stacked SMS cards */}
-        <div className="col-span-2 relative" style={{ minHeight: 280 }}>
+        <div ref={ref} className="col-span-2 relative" style={{ minHeight: 280 }}>
           {/* Card 1 — front */}
           <motion.div
-            initial={{ opacity: 1 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            animate={inView ? { opacity: 1 } : { opacity: 0.6 }}
+            transition={{ duration: 0.4, ease: EASE }}
             className="absolute top-0 left-0 right-0 z-30"
           >
             <SMSCard label="Smart Waitlist">
@@ -250,14 +252,13 @@ function BentoSMSVisual() {
             </SMSCard>
           </motion.div>
 
-          {/* Card 2 — peeking, reveals on scroll */}
+          {/* Card 2 — reveals after delay */}
           <motion.div
-            initial={{ opacity: 0.4 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: EASE }}
-            viewport={{ once: true, margin: "-80px" as any }}
+            initial={{ opacity: 0.35 }}
+            animate={inView ? { opacity: 1, filter: "brightness(1)" } : { opacity: 0.35, filter: "brightness(0.93)" }}
+            transition={{ duration: 0.5, delay: 0.5, ease: EASE }}
             className="absolute left-0 right-0 z-20"
-            style={{ top: 25, filter: "brightness(0.93)" }}
+            style={{ top: 25 }}
           >
             <SMSCard label="1-Tap Refill">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
@@ -272,14 +273,13 @@ function BentoSMSVisual() {
             </SMSCard>
           </motion.div>
 
-          {/* Card 3 — deepest, reveals last */}
+          {/* Card 3 — reveals last */}
           <motion.div
-            initial={{ opacity: 0.3 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-            viewport={{ once: true, margin: "-120px" as any }}
+            initial={{ opacity: 0.25 }}
+            animate={inView ? { opacity: 1, filter: "brightness(1)" } : { opacity: 0.25, filter: "brightness(0.86)" }}
+            transition={{ duration: 0.5, delay: 1.0, ease: EASE }}
             className="absolute left-0 right-0 z-10"
-            style={{ top: 50, filter: "brightness(0.86)" }}
+            style={{ top: 50 }}
           >
             <SMSCard label="Flash Deal">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
