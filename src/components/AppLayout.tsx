@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { DemoPhoneProvider } from "@/contexts/DemoPhoneContext";
 import StudioSwitcher from "./StudioSwitcher";
-import CreditsBadge from "./CreditsBadge";
+
 import DynamicLogo from "./DynamicLogo";
 import DemoPhone from "./demo/DemoPhone";
 import DemoTriggers from "./demo/DemoTriggers";
@@ -120,10 +120,6 @@ export default function AppLayout() {
                   <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
                     {user.email}
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5">
-                    <CreditsBadge />
-                  </div>
                   <DropdownMenuSeparator />
                   {activeRole !== "student" && (
                     <>
