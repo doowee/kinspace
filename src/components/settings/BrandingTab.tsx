@@ -14,6 +14,7 @@ export default function BrandingTab() {
   const [secondary, setSecondary] = useState("#F3D2C1");
   const [highlight, setHighlight] = useState("#F0FDF4");
   const [brandText, setBrandText] = useState("#FFFFFF");
+  const [brandBackground, setBrandBackground] = useState("#F9F9F8");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function BrandingTab() {
     const load = async () => {
       const { data } = await supabase
         .from("studios")
-        .select("brand_primary, brand_secondary, brand_highlight, brand_text")
+        .select("brand_primary, brand_secondary, brand_highlight, brand_text, brand_background")
         .eq("id", activeStudio.id)
         .single();
       if (data) {
@@ -29,6 +30,7 @@ export default function BrandingTab() {
         setSecondary(data.brand_secondary ?? "#F3D2C1");
         setHighlight(data.brand_highlight ?? "#F0FDF4");
         setBrandText((data as any).brand_text ?? "#FFFFFF");
+        setBrandBackground((data as any).brand_background ?? "#F9F9F8");
       }
     };
     load();
@@ -39,7 +41,7 @@ export default function BrandingTab() {
     setSaving(true);
     const { error } = await supabase
       .from("studios")
-      .update({ brand_primary: primary, brand_secondary: secondary, brand_highlight: highlight, brand_text: brandText } as any)
+      .update({ brand_primary: primary, brand_secondary: secondary, brand_highlight: highlight, brand_text: brandText, brand_background: brandBackground } as any)
       .eq("id", activeStudio.id);
     setSaving(false);
     if (error) {
@@ -65,6 +67,7 @@ export default function BrandingTab() {
           <ColorField label="Secondary / Accent Color" description="Tags, badges, and secondary buttons" value={secondary} onChange={setSecondary} />
           <ColorField label="Background Highlight" description="Soft background for cards and sections" value={highlight} onChange={setHighlight} />
           <ColorField label="Button Text Color" description="Text color on primary-colored buttons and headers" value={brandText} onChange={setBrandText} />
+          <ColorField label="App Background Color" description="Main background color for the entire site" value={brandBackground} onChange={setBrandBackground} />
         </CardContent>
       </Card>
 
@@ -77,7 +80,7 @@ export default function BrandingTab() {
         <CardContent>
           <div
             className="rounded-lg border p-5 space-y-3 transition-colors"
-            style={{ backgroundColor: highlight }}
+            style={{ backgroundColor: brandBackground }}
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold" style={{ color: primary }}>Morning Flow Yoga</h3>

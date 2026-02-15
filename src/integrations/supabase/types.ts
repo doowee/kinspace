@@ -564,6 +564,7 @@ export type Database = {
       get_public_studio_by_slug: {
         Args: { _slug: string }
         Returns: {
+          brand_background: string
           brand_highlight: string
           brand_primary: string
           brand_secondary: string
