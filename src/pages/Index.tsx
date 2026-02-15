@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { motion, type Variants, type Easing } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence, type Variants, type Easing } from "framer-motion";
 import { ArrowRight, MessageSquare, Palette, BarChart3, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,43 +112,51 @@ function RefillSMSMockup() {
 }
 
 function StackedSMSMockups() {
-  const [flipped, setFlipped] = useState(false);
-  const toggle = useCallback(() => setFlipped((f) => !f), []);
+  const [showRefill, setShowRefill] = useState(false);
 
   return (
     <div
-      className="relative h-[260px] w-full max-w-xs mx-auto cursor-pointer select-none"
-      onMouseEnter={toggle}
-      onMouseLeave={toggle}
-      onClick={toggle}
+      className="relative w-full max-w-xs mx-auto cursor-pointer select-none"
+      onMouseEnter={() => setShowRefill(true)}
+      onMouseLeave={() => setShowRefill(false)}
+      onClick={() => setShowRefill((f) => !f)}
     >
-      {/* Back card (peek) */}
+      {/* Shadow card peeking behind */}
+      <div className="absolute inset-x-3 top-3 bottom-0 rounded-2xl bg-card border border-border/40 shadow-sm opacity-40 pointer-events-none" />
+
+      {/* Animated card */}
       <motion.div
-        animate={{
-          scale: flipped ? 1 : 0.92,
-          y: flipped ? 0 : 14,
-          opacity: flipped ? 1 : 0.5,
-          zIndex: flipped ? 10 : 0,
-        }}
-        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-        className="absolute inset-0"
+        key="front"
+        initial={false}
+        animate={{ opacity: 1 }}
+        className="relative z-10"
       >
-        <RefillSMSMockup />
+        <AnimatePresence mode="wait">
+          {showRefill ? (
+            <motion.div
+              key="refill"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              <RefillSMSMockup />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="waitlist"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              <WaitlistSMSMockup />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
-      {/* Front card */}
-      <motion.div
-        animate={{
-          scale: flipped ? 0.92 : 1,
-          y: flipped ? 14 : 0,
-          opacity: flipped ? 0.5 : 1,
-          zIndex: flipped ? 0 : 10,
-        }}
-        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-        className="absolute inset-0"
-      >
-        <WaitlistSMSMockup />
-      </motion.div>
-      <div className="absolute -bottom-7 inset-x-0 text-center text-[11px] text-muted-foreground/60">
+
+      <div className="mt-3 text-center text-[11px] text-muted-foreground/60">
         Hover to swap
       </div>
     </div>
