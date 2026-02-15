@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, type Variants, type Easing } from "framer-motion";
 import { ArrowRight, MessageSquare, Palette, BarChart3, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,50 @@ function RefillSMSMockup() {
         <div className="rounded-xl bg-muted px-3.5 py-2.5 text-sm text-foreground">
           Done! 💳 Your card ending •4821 has been charged <span className="font-semibold">$199</span>. 10 credits added. You're all set!
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StackedSMSMockups() {
+  const [flipped, setFlipped] = useState(false);
+  const toggle = useCallback(() => setFlipped((f) => !f), []);
+
+  return (
+    <div
+      className="relative h-[260px] w-full max-w-xs mx-auto cursor-pointer select-none"
+      onMouseEnter={toggle}
+      onMouseLeave={toggle}
+      onClick={toggle}
+    >
+      {/* Back card (peek) */}
+      <motion.div
+        animate={{
+          scale: flipped ? 1 : 0.92,
+          y: flipped ? 0 : 14,
+          opacity: flipped ? 1 : 0.5,
+          zIndex: flipped ? 10 : 0,
+        }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+        className="absolute inset-0"
+      >
+        <RefillSMSMockup />
+      </motion.div>
+      {/* Front card */}
+      <motion.div
+        animate={{
+          scale: flipped ? 0.92 : 1,
+          y: flipped ? 14 : 0,
+          opacity: flipped ? 0.5 : 1,
+          zIndex: flipped ? 0 : 10,
+        }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+        className="absolute inset-0"
+      >
+        <WaitlistSMSMockup />
+      </motion.div>
+      <div className="absolute -bottom-7 inset-x-0 text-center text-[11px] text-muted-foreground/60">
+        Hover to swap
       </div>
     </div>
   );
@@ -317,12 +361,7 @@ export default function Index() {
             { icon: <MessageSquare className="h-3.5 w-3.5" />, text: "Smart Waitlist: 2 AM cancellations instantly trigger SMS offers to your waitlist." },
             { icon: <ArrowRight className="h-3.5 w-3.5" />, text: "1-Tap SMS Refills: Clients buy class packs via text. Zero friction." },
           ]}
-          mockup={
-            <div className="space-y-6">
-              <WaitlistSMSMockup />
-              <RefillSMSMockup />
-            </div>
-          }
+          mockup={<StackedSMSMockups />}
         />
         <FeatureBlock
           title="Your Studio. Your Brand."
