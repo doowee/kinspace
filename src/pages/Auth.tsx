@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import DynamicLogo from "@/components/DynamicLogo";
 
 const PHONE_REGEX = /^\+?[\d\s\-().]{7,20}$/;
 
@@ -71,11 +72,13 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 bg-[#f8f6e8]">
+    <div className="flex min-h-screen items-center justify-center px-4 bg-background">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
-          <img alt="Kinspace logo" className="h-20 w-20 mx-auto mb-3 rounded-xl" src="/kinspace-logo-sage.png" />
-          <h1 className="font-display text-4xl font-bold tracking-tight">Kinspace.Studio</h1>
+          <div className="flex justify-center mb-3">
+            <DynamicLogo size={64} className="rounded-xl" />
+          </div>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground">Kinspace.Studio</h1>
           <p className="mt-2 text-muted-foreground">Studio management, simplified</p>
         </div>
 

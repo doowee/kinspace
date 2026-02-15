@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Palette, Save } from "lucide-react";
+import { Palette, Save, Upload, X, ImageIcon } from "lucide-react";
+import DynamicLogo from "@/components/DynamicLogo";
 
 export default function BrandingTab() {
   const { activeStudio } = useStudio();
@@ -15,6 +16,7 @@ export default function BrandingTab() {
   const [highlight, setHighlight] = useState("#F0FDF4");
   const [brandText, setBrandText] = useState("#FFFFFF");
   const [brandBackground, setBrandBackground] = useState("#F9F9F8");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export default function BrandingTab() {
     const load = async () => {
       const { data } = await supabase
         .from("studios")
-        .select("brand_primary, brand_secondary, brand_highlight, brand_text, brand_background")
+        .select("brand_primary, brand_secondary, brand_highlight, brand_text, brand_background, logo_url")
         .eq("id", activeStudio.id)
         .single();
       if (data) {
@@ -31,6 +33,7 @@ export default function BrandingTab() {
         setHighlight(data.brand_highlight ?? "#F0FDF4");
         setBrandText((data as any).brand_text ?? "#FFFFFF");
         setBrandBackground((data as any).brand_background ?? "#F9F9F8");
+        setLogoUrl(data.logo_url ?? null);
       }
     };
     load();
@@ -41,7 +44,14 @@ export default function BrandingTab() {
     setSaving(true);
     const { error } = await supabase
       .from("studios")
-      .update({ brand_primary: primary, brand_secondary: secondary, brand_highlight: highlight, brand_text: brandText, brand_background: brandBackground } as any)
+      .update({
+        brand_primary: primary,
+        brand_secondary: secondary,
+        brand_highlight: highlight,
+        brand_text: brandText,
+        brand_background: brandBackground,
+        logo_url: logoUrl,
+      } as any)
       .eq("id", activeStudio.id);
     setSaving(false);
     if (error) {
@@ -51,8 +61,61 @@ export default function BrandingTab() {
     }
   };
 
+  const handleDemoUpload = () => {
+    // Simulate upload with a placeholder logo
+    setLogoUrl("/kinspace-logo-sage.png");
+    toast.success("Logo uploaded (demo)");
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+    toast.info("Logo removed — monogram fallback active");
+  };
+
   return (
     <div className="space-y-6">
+      {/* Logo Uploader */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" /> Studio Logo
+          </CardTitle>
+          <CardDescription>
+            Upload your studio logo. If none is set, a monogram will be auto-generated from your studio name.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-6">
+            {/* Preview */}
+            <div className="flex items-center justify-center w-20 h-20 rounded-xl border-2 border-dashed border-border bg-muted/30">
+              <DynamicLogo
+                logoUrl={logoUrl}
+                studioName={activeStudio?.name}
+                size={56}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              {logoUrl ? (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-foreground font-medium">Logo uploaded</p>
+                  <Button variant="ghost" size="sm" className="text-destructive gap-1" onClick={handleRemoveLogo}>
+                    <X className="h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No logo set — using auto-generated monogram</p>
+              )}
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDemoUpload}>
+                <Upload className="h-3.5 w-3.5" />
+                {logoUrl ? "Replace Logo" : "Upload Logo"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Brand Colors */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -82,8 +145,12 @@ export default function BrandingTab() {
             className="rounded-lg border p-5 space-y-3 transition-colors"
             style={{ backgroundColor: brandBackground }}
           >
+            <div className="flex items-center gap-3">
+              <DynamicLogo logoUrl={logoUrl} studioName={activeStudio?.name} size={36} />
+              <h3 className="text-lg font-bold" style={{ color: primary }}>{activeStudio?.name ?? "Your Studio"}</h3>
+            </div>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold" style={{ color: primary }}>Morning Flow Yoga</h3>
+              <p className="font-medium" style={{ color: primary }}>Morning Flow Yoga</p>
               <span
                 className="rounded-full px-3 py-0.5 text-xs font-medium"
                 style={{ backgroundColor: secondary, color: primary }}

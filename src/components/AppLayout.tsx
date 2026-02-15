@@ -3,8 +3,10 @@ import { useStudio } from "@/contexts/StudioContext";
 import { DemoPhoneProvider } from "@/contexts/DemoPhoneContext";
 import StudioSwitcher from "./StudioSwitcher";
 import CreditsBadge from "./CreditsBadge";
+import DynamicLogo from "./DynamicLogo";
 import DemoPhone from "./demo/DemoPhone";
 import DemoTriggers from "./demo/DemoTriggers";
+import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -37,6 +39,9 @@ export default function AppLayout() {
   }
 
   const initials = user.email?.slice(0, 2).toUpperCase() ?? "U";
+  const studioLogoUrl = (activeStudio as any)?.logo_url ?? null;
+
+  useDynamicFavicon(studioLogoUrl);
 
   return (
     <DemoPhoneProvider>
@@ -45,7 +50,7 @@ export default function AppLayout() {
           <div className="container flex h-14 items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <img src="/kinspace-logo-sage.png" alt="Kinspace logo" className="h-8 w-auto object-contain" />
+                <DynamicLogo logoUrl={studioLogoUrl} studioName={activeStudio?.name} size={32} />
               </div>
               <div className="h-5 w-px bg-border" />
               <StudioSwitcher />
