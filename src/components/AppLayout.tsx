@@ -30,6 +30,9 @@ export default function AppLayout() {
   const { memberships, loading, activeStudio, activeRole } = useStudio();
   const [viewAsRole, setViewAsRole] = useState<ViewAsRole>("owner");
 
+  const studioLogoUrl = (activeStudio as any)?.logo_url ?? null;
+  useDynamicFavicon(studioLogoUrl);
+
   if (!user) return <Navigate to="/auth" replace />;
   if (loading) {
     return (
@@ -39,9 +42,6 @@ export default function AppLayout() {
   }
 
   const initials = user.email?.slice(0, 2).toUpperCase() ?? "U";
-  const studioLogoUrl = (activeStudio as any)?.logo_url ?? null;
-
-  useDynamicFavicon(studioLogoUrl);
 
   return (
     <DemoPhoneProvider>
