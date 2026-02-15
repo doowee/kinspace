@@ -235,8 +235,9 @@ function BentoSMSVisual() {
         <div ref={ref} className="col-span-2 relative" style={{ minHeight: 280 }}>
           {/* Card 1 — front */}
           <motion.div
-            animate={inView ? { opacity: 1 } : { opacity: 0.6 }}
-            transition={{ duration: 0.4, ease: EASE }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5, ease: EASE }}
             className="absolute top-0 left-0 right-0 z-30"
           >
             <SMSCard label="Smart Waitlist">
@@ -252,13 +253,13 @@ function BentoSMSVisual() {
             </SMSCard>
           </motion.div>
 
-          {/* Card 2 — reveals after delay */}
+          {/* Card 2 — starts hidden behind card 1, slides down */}
           <motion.div
-            initial={{ opacity: 0.35 }}
-            animate={inView ? { opacity: 1, filter: "brightness(1)" } : { opacity: 0.35, filter: "brightness(0.93)" }}
-            transition={{ duration: 0.5, delay: 0.5, ease: EASE }}
-            className="absolute left-0 right-0 z-20"
-            style={{ top: 25 }}
+            initial={{ opacity: 0, y: 0 }}
+            animate={inView ? { opacity: 1, y: 25 } : {}}
+            transition={{ duration: 0.6, delay: 0.8, ease: EASE }}
+            className="absolute top-0 left-0 right-0 z-20"
+            style={{ filter: "brightness(0.93)" }}
           >
             <SMSCard label="1-Tap Refill">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
@@ -273,13 +274,13 @@ function BentoSMSVisual() {
             </SMSCard>
           </motion.div>
 
-          {/* Card 3 — reveals last */}
+          {/* Card 3 — starts hidden behind card 1, slides down last */}
           <motion.div
-            initial={{ opacity: 0.25 }}
-            animate={inView ? { opacity: 1, filter: "brightness(1)" } : { opacity: 0.25, filter: "brightness(0.86)" }}
-            transition={{ duration: 0.5, delay: 1.0, ease: EASE }}
-            className="absolute left-0 right-0 z-10"
-            style={{ top: 50 }}
+            initial={{ opacity: 0, y: 0 }}
+            animate={inView ? { opacity: 1, y: 50 } : {}}
+            transition={{ duration: 0.6, delay: 1.4, ease: EASE }}
+            className="absolute top-0 left-0 right-0 z-10"
+            style={{ filter: "brightness(0.86)" }}
           >
             <SMSCard label="Flash Deal">
               <div className="rounded-2xl rounded-tl-sm bg-muted px-2.5 py-1.5 text-[11px] text-foreground leading-snug">
