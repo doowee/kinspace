@@ -502,7 +502,7 @@ export default function AnalyticsDashboard() {
               </CardHeader>
               <CardContent className="space-y-3 pt-0">
                 {filteredRisks.map((risk) => {
-                  const isDanger = risk.capacity === 0;
+                  const isDanger = risk.capacity < 50;
                   return (
                     <div
                       key={risk.className + risk.day}
