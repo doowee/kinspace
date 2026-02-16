@@ -501,29 +501,40 @@ export default function AnalyticsDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 pt-0">
-                {filteredRisks.map((risk, i) => (
-                  <div
-                    key={risk.className + risk.day}
-                    className={`flex items-center gap-4 rounded-lg border p-3 ${
-                      i === 0 ? "border-destructive/40 bg-destructive/5" : "bg-card"
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {risk.instructor} — {risk.day} {risk.time} {risk.className}
-                      </p>
+                {filteredRisks.map((risk) => {
+                  const isDanger = risk.capacity === 0;
+                  return (
+                    <div
+                      key={risk.className + risk.day}
+                      className={`flex items-center gap-4 rounded-lg border p-3 ${
+                        isDanger ? "border-destructive/40 bg-destructive/5" : "bg-card"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {risk.instructor} — {risk.day} {risk.time} {risk.className}
+                        </p>
+                      </div>
+                      <Badge variant={isDanger ? "destructive" : "outline"} className="shrink-0">
+                        {risk.capacity}%
+                      </Badge>
+                      {isDanger && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 gap-1.5 text-xs"
+                          onClick={() => {
+                            const tabEl = document.querySelector('[data-value="marketing"]') as HTMLElement | null;
+                            tabEl?.click();
+                          }}
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          Send AI Promo
+                        </Button>
+                      )}
                     </div>
-                    <Badge variant={i === 0 ? "destructive" : "outline"} className="shrink-0">
-                      {risk.capacity}%
-                    </Badge>
-                    {i === 0 && (
-                      <Button size="sm" variant="outline" className="shrink-0 gap-1.5 text-xs">
-                        <Sparkles className="h-3 w-3" />
-                        Send AI Promo
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
           )
