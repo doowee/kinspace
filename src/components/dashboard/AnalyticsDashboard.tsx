@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, createContext, useContext } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   Clock,
   CheckCircle2,
   ArrowRightLeft,
+  Activity,
 } from "lucide-react";
 import { useViewAsRole } from "@/components/AppLayout";
 import {
@@ -40,18 +41,72 @@ import {
 } from "recharts";
 
 /* ------------------------------------------------------------------ */
-/*  Mock Data with multipliers per filter                              */
+/*  Finance Demo Context – allows DemoTriggers to seed data            */
 /* ------------------------------------------------------------------ */
 
-const MOCK_INSTRUCTORS = [
-  { name: "Sarah Kim", initials: "SK", revenue: 4_820, classes: 38 },
-  { name: "Elena Voss", initials: "EV", revenue: 3_950, classes: 31 },
-  { name: "Mike Chen", initials: "MC", revenue: 2_780, classes: 24 },
-  { name: "Ava Brooks", initials: "AB", revenue: 1_540, classes: 14 },
-  { name: "Liam Torres", initials: "LT", revenue: 1_160, classes: 11 },
+interface FinanceDemoState {
+  seeded: boolean;
+  loading: boolean;
+}
+
+const FinanceDemoContext = createContext<{
+  state: FinanceDemoState;
+  seed: () => void;
+}>({
+  state: { seeded: false, loading: false },
+  seed: () => {},
+});
+
+export function useFinanceDemo() {
+  return useContext(FinanceDemoContext);
+}
+
+export function FinanceDemoProvider({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<FinanceDemoState>({ seeded: false, loading: false });
+
+  const seed = () => {
+    setState({ seeded: false, loading: true });
+    setTimeout(() => {
+      setState({ seeded: true, loading: false });
+    }, 1000);
+  };
+
+  return (
+    <FinanceDemoContext.Provider value={{ state, seed }}>
+      {children}
+    </FinanceDemoContext.Provider>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Premium Demo Data                                                  */
+/* ------------------------------------------------------------------ */
+
+const PREMIUM_INSTRUCTORS = [
+  { name: "Sarah Jenkins", initials: "SJ", revenue: 12_400, classes: 64, capacity: 82 },
+  { name: "Mike Ross", initials: "MR", revenue: 9_800, classes: 52, capacity: 76 },
+  { name: "Emma Stone", initials: "ES", revenue: 8_100, classes: 44, capacity: 91 },
+  { name: "Ava Brooks", initials: "AB", revenue: 6_400, classes: 38, capacity: 84 },
+  { name: "Liam Torres", initials: "LT", revenue: 5_800, classes: 32, capacity: 79 },
 ];
 
-const MOCK_CLASSES = [
+const DEFAULT_INSTRUCTORS = [
+  { name: "Sarah Kim", initials: "SK", revenue: 4_820, classes: 38, capacity: 78 },
+  { name: "Elena Voss", initials: "EV", revenue: 3_950, classes: 31, capacity: 74 },
+  { name: "Mike Chen", initials: "MC", revenue: 2_780, classes: 24, capacity: 68 },
+  { name: "Ava Brooks", initials: "AB", revenue: 1_540, classes: 14, capacity: 72 },
+  { name: "Liam Torres", initials: "LT", revenue: 1_160, classes: 11, capacity: 65 },
+];
+
+const PREMIUM_CLASSES = [
+  { name: "Morning Reformer Flow", instructor: "Sarah Jenkins", revenue: 5_200 },
+  { name: "Power Tower Sculpt", instructor: "Mike Ross", revenue: 4_100 },
+  { name: "Advanced Reformer", instructor: "Emma Stone", revenue: 3_800 },
+  { name: "Barre Fusion", instructor: "Ava Brooks", revenue: 3_200 },
+  { name: "Core Blast Express", instructor: "Liam Torres", revenue: 2_900 },
+];
+
+const DEFAULT_CLASSES = [
   { name: "Morning Reformer Flow", instructor: "Sarah Kim", revenue: 3_200 },
   { name: "Mat Pilates Sculpt", instructor: "Elena Voss", revenue: 2_640 },
   { name: "Power Reformer", instructor: "Sarah Kim", revenue: 1_980 },
@@ -86,6 +141,14 @@ const MOCK_UPCOMING_CLASSES = [
   { name: "Sunset Stretch", time: "7:30 PM", instructor: "Ava Brooks", checkedIn: 0, capacity: 12 },
 ];
 
+const LIVE_TRANSACTIONS = [
+  { label: "10-Class Pack Refill (SMS)", student: "Jessica T.", amount: "$199.00", time: "Just now" },
+  { label: "Drop-in Rate (Waitlist Auto-Charge)", student: "Mark S.", amount: "$35.00", time: "10 mins ago" },
+  { label: "Unlimited Monthly VIP", student: "Amanda R.", amount: "$249.00", time: "1 hour ago" },
+  { label: "5-Class Intro Pack", student: "David K.", amount: "$125.00", time: "2 hours ago" },
+  { label: "Private Session (1-on-1)", student: "Sophia L.", amount: "$95.00", time: "3 hours ago" },
+];
+
 /* Date-range multipliers so filters visibly change KPI numbers */
 const DATE_MULTIPLIER: Record<string, number> = {
   today: 0.04,
@@ -98,27 +161,29 @@ const DATE_MULTIPLIER: Record<string, number> = {
 function generateRevenueChart(
   granularity: string,
   dateRange: string,
-  instructorFilter: string
+  instructorFilter: string,
+  premium: boolean
 ) {
   const instScale = instructorFilter === "all" ? 1 : 0.3;
   const base = (DATE_MULTIPLIER[dateRange] ?? 1) * instScale;
+  const premiumBoost = premium ? 3 : 1;
 
   if (granularity === "day") {
     return Array.from({ length: 14 }, (_, i) => ({
       label: `Feb ${i + 1}`,
-      revenue: Math.round((800 + Math.random() * 600) * base),
+      revenue: Math.round((800 + Math.random() * 600) * base * premiumBoost),
     }));
   }
   if (granularity === "week") {
     return ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"].map((w) => ({
       label: w,
-      revenue: Math.round((3_200 + Math.random() * 1_800) * base),
+      revenue: Math.round((3_200 + Math.random() * 1_800) * base * premiumBoost),
     }));
   }
   // quarter
   return ["Q1 '25", "Q2 '25", "Q3 '25", "Q4 '25", "Q1 '26"].map((q) => ({
     label: q,
-    revenue: Math.round((12_000 + Math.random() * 6_000) * base),
+    revenue: Math.round((12_000 + Math.random() * 6_000) * base * premiumBoost),
   }));
 }
 
@@ -128,12 +193,19 @@ function generateRevenueChart(
 
 export default function AnalyticsDashboard() {
   const viewAsRole = useViewAsRole();
+  const { state: demoState } = useFinanceDemo();
   const [aiQuery, setAiQuery] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState("month");
   const [instructor, setInstructor] = useState("all");
   const [chartGranularity, setChartGranularity] = useState("week");
+
+  const isPremium = demoState.seeded;
+  const isSeeding = demoState.loading;
+
+  const ACTIVE_INSTRUCTORS = isPremium ? PREMIUM_INSTRUCTORS : DEFAULT_INSTRUCTORS;
+  const ACTIVE_CLASSES = isPremium ? PREMIUM_CLASSES : DEFAULT_CLASSES;
 
   const handleAiSearch = () => {
     if (!aiQuery.trim()) return;
@@ -142,7 +214,9 @@ export default function AnalyticsDashboard() {
     setTimeout(() => {
       setAiLoading(false);
       setAiResponse(
-        "Your total revenue for Q3 and Q4 was $84,500, up 12% from the first half of the year. Sarah Kim was your top-performing instructor during this period, generating $18,200 across 142 classes with an average capacity of 89%."
+        isPremium
+          ? "Your total revenue this month is $42,500, up 12.4% from last month. Sarah Jenkins is your top-performing instructor, generating $12,400 across 64 classes with an average capacity of 82%. Your ARPU is $198."
+          : "Your total revenue for Q3 and Q4 was $84,500, up 12% from the first half of the year. Sarah Kim was your top-performing instructor during this period, generating $18,200 across 142 classes with an average capacity of 89%."
       );
     }, 1500);
   };
@@ -155,7 +229,7 @@ export default function AnalyticsDashboard() {
   const scale = multiplier * instScale;
 
   const filteredInstructors = useMemo(() => {
-    let list = MOCK_INSTRUCTORS;
+    let list = ACTIVE_INSTRUCTORS;
     if (instructor !== "all") {
       list = list.filter((i) => i.name === instructor);
     }
@@ -164,10 +238,10 @@ export default function AnalyticsDashboard() {
       revenue: Math.round(i.revenue * multiplier),
       classes: Math.max(1, Math.round(i.classes * multiplier)),
     }));
-  }, [instructor, multiplier]);
+  }, [instructor, multiplier, ACTIVE_INSTRUCTORS]);
 
   const filteredClasses = useMemo(() => {
-    let list = MOCK_CLASSES;
+    let list = ACTIVE_CLASSES;
     if (instructor !== "all") {
       list = list.filter((c) => c.instructor === instructor);
     }
@@ -175,7 +249,7 @@ export default function AnalyticsDashboard() {
       ...c,
       revenue: Math.round(c.revenue * multiplier),
     }));
-  }, [instructor, multiplier]);
+  }, [instructor, multiplier, ACTIVE_CLASSES]);
 
   const filteredStudents = useMemo(() => {
     return MOCK_STUDENTS.map((s) => ({
@@ -193,17 +267,36 @@ export default function AnalyticsDashboard() {
     return list;
   }, [instructor]);
 
-  const totalRevenue = Math.round(14_250 * scale);
-  const avgCapacity = instructor === "all" ? 78 : 71;
-  const activeMemberships = Math.round(342 * multiplier);
-  const trendRevenue = instructor === "all" ? 12 : 8;
+  const totalRevenue = isPremium ? Math.round(42_500 * scale) : Math.round(14_250 * scale);
+  const avgCapacity = instructor === "all" ? (isPremium ? 84 : 78) : 71;
+  const activeMemberships = isPremium ? Math.round(214 * multiplier) : Math.round(342 * multiplier);
+  const trendRevenue = isPremium ? 12.4 : (instructor === "all" ? 12 : 8);
   const trendCapacity = instructor === "all" ? 4 : -3;
-  const trendMemberships = instructor === "all" ? -2 : -5;
+  const trendMemberships = instructor === "all" ? (isPremium ? 6 : -2) : -5;
+  const arpu = isPremium ? "$198" : "$142";
+  const ytdRevenue = isPremium ? "$184,200" : "$98,400";
 
   const chartData = useMemo(
-    () => generateRevenueChart(chartGranularity, dateRange, instructor),
-    [chartGranularity, dateRange, instructor]
+    () => generateRevenueChart(chartGranularity, dateRange, instructor, isPremium),
+    [chartGranularity, dateRange, instructor, isPremium]
   );
+
+  if (isSeeding) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 p-8 justify-center">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Initializing demo environment…</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}><CardContent className="p-5"><Skeleton className="h-16 w-full" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="p-5"><Skeleton className="h-[240px] w-full" /></CardContent></Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -291,7 +384,7 @@ export default function AnalyticsDashboard() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Instructors</SelectItem>
-            {MOCK_INSTRUCTORS.map((inst) => (
+            {ACTIVE_INSTRUCTORS.map((inst) => (
               <SelectItem key={inst.name} value={inst.name}>
                 {inst.name}
               </SelectItem>
@@ -301,12 +394,13 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* ── Topline KPIs ────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-3 transition-all duration-300 ease-in-out">
+      <div className={`grid gap-4 transition-all duration-300 ease-in-out ${isOwner ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
         {isOwner ? (
           <>
-            <KPICard label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} trend={trendRevenue} icon={<DollarSign className="h-4 w-4" />} />
-            <KPICard label="Avg Class Capacity" value={`${avgCapacity}%`} trend={trendCapacity} icon={<BarChart3 className="h-4 w-4" />} />
+            <KPICard label="Monthly Revenue" value={`$${totalRevenue.toLocaleString()}`} trend={trendRevenue} icon={<DollarSign className="h-4 w-4" />} />
+            <KPICard label="YTD Revenue" value={ytdRevenue} trend={0} icon={<BarChart3 className="h-4 w-4" />} hideTrend />
             <KPICard label="Active Memberships" value={activeMemberships.toLocaleString()} trend={trendMemberships} icon={<Users className="h-4 w-4" />} />
+            <KPICard label="ARPU" value={arpu} trend={isPremium ? 4.2 : 1.8} icon={<Activity className="h-4 w-4" />} />
           </>
         ) : (
           <>
@@ -363,6 +457,44 @@ export default function AnalyticsDashboard() {
         </Card>
       )}
 
+      {/* ── Recent Transactions Feed (Owner only, when seeded) ── */}
+      {isOwner && isPremium && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Recent Transactions</CardTitle>
+              <div className="ml-auto flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                </span>
+                <span className="text-xs text-muted-foreground">Live</span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="divide-y divide-border">
+              {LIVE_TRANSACTIONS.map((tx, i) => (
+                <div key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/10">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{tx.label}</p>
+                    <p className="text-xs text-muted-foreground">{tx.student}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-foreground">{tx.amount}</p>
+                    <p className="text-xs text-muted-foreground">{tx.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Leaderboards ────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-3 transition-all duration-300 ease-in-out">
         {/* Top Instructors */}
@@ -383,7 +515,10 @@ export default function AnalyticsDashboard() {
                     {i === 0 && <Crown className="mr-1 inline h-3.5 w-3.5 text-highlight" />}
                     {inst.name}
                   </p>
-                  <p className="text-xs text-muted-foreground">{inst.classes} classes</p>
+                  <p className="text-xs text-muted-foreground">
+                    {inst.classes} classes
+                    {"capacity" in inst && ` · ${inst.capacity}% capacity`}
+                  </p>
                 </div>
                 {isOwner && (
                   <span className="text-sm font-semibold text-foreground">

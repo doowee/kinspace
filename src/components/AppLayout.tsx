@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { DemoPhoneProvider } from "@/contexts/DemoPhoneContext";
+import { FinanceDemoProvider } from "@/components/dashboard/AnalyticsDashboard";
 import StudioSwitcher from "./StudioSwitcher";
 
 import DynamicLogo from "./DynamicLogo";
@@ -45,6 +46,7 @@ export default function AppLayout() {
 
   return (
     <DemoPhoneProvider>
+      <FinanceDemoProvider>
       <div className="min-h-screen bg-background">
         <header className="border-b bg-card">
           <div className="container flex h-14 items-center justify-between">
@@ -176,6 +178,7 @@ export default function AppLayout() {
         </main>
         <DemoPhone />
       </div>
+      </FinanceDemoProvider>
     </DemoPhoneProvider>
   );
 }
