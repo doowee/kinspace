@@ -59,7 +59,7 @@ export default function AppLayout() {
               <div className="h-5 w-px bg-border" />
               <nav className="flex items-center gap-1">
                 <NavLink
-                  to="/"
+                  to="/admin"
                   end
                   className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   activeClassName="bg-accent text-accent-foreground font-medium"
