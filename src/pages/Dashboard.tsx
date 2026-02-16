@@ -168,28 +168,35 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="analytics" className="w-full">
-        <TabsList>
-          <TabsTrigger value="analytics" className="gap-1.5">
-            <BarChart3 className="h-3.5 w-3.5" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="marketing" className="gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" />
-            AI Marketing
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="analytics" className="mt-4">
-          <AnalyticsDashboard />
-        </TabsContent>
-        <TabsContent value="marketing" className="mt-4">
-          <AIMarketingHub />
-        </TabsContent>
-      </Tabs>
+      <DashboardTabs demoMode={demoMode} />
     </div>
   );
 }
 
+function DashboardTabs({ demoMode }: { demoMode: DemoMode }) {
+  const [activeTab, setActiveTab] = useState("analytics");
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList>
+        <TabsTrigger value="analytics" className="gap-1.5">
+          <BarChart3 className="h-3.5 w-3.5" />
+          Analytics
+        </TabsTrigger>
+        <TabsTrigger value="marketing" className="gap-1.5">
+          <Sparkles className="h-3.5 w-3.5" />
+          AI Marketing
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="analytics" className="mt-4">
+        <AnalyticsDashboard onNavigateToMarketing={() => setActiveTab("marketing")} />
+      </TabsContent>
+      <TabsContent value="marketing" className="mt-4">
+        <AIMarketingHub />
+      </TabsContent>
+    </Tabs>
+  );
+}
 
 
 function NewUserWelcome() {

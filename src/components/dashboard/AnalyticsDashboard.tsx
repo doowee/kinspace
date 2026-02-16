@@ -59,7 +59,7 @@ const DATE_RANGE_DAYS: Record<string, number> = {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function AnalyticsDashboard() {
+export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNavigateToMarketing?: () => void }) {
   const { activeStudio } = useStudio();
   const viewAsRole = useViewAsRole();
   const [dateRange, setDateRange] = useState("month");
@@ -523,10 +523,7 @@ export default function AnalyticsDashboard() {
                           size="sm"
                           variant="outline"
                           className="shrink-0 gap-1.5 text-xs"
-                          onClick={() => {
-                            const tabEl = document.querySelector('button[value="marketing"]') as HTMLElement | null;
-                            tabEl?.click();
-                          }}
+                          onClick={() => onNavigateToMarketing?.()}
                         >
                           <Sparkles className="h-3 w-3" />
                           Send AI Promo
