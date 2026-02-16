@@ -524,7 +524,7 @@ export default function AnalyticsDashboard() {
                           variant="outline"
                           className="shrink-0 gap-1.5 text-xs"
                           onClick={() => {
-                            const tabEl = document.querySelector('[data-value="marketing"]') as HTMLElement | null;
+                            const tabEl = document.querySelector('button[value="marketing"]') as HTMLElement | null;
                             tabEl?.click();
                           }}
                         >
