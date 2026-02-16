@@ -92,7 +92,7 @@ export default function Dashboard() {
   // Owner at /dashboard → redirect into AppLayout at /
   useEffect(() => {
     if (view === "owner" && !demoMode && location.pathname === "/dashboard") {
-      navigate("/", { replace: true });
+      navigate("/admin", { replace: true });
     }
   }, [view, demoMode, location.pathname, navigate]);
 
@@ -112,7 +112,7 @@ export default function Dashboard() {
     const exitDemo = () => {
       setDemoMode(false);
       if (location.pathname === "/dashboard") {
-        navigate("/", { replace: true });
+        navigate("/admin", { replace: true });
       }
     };
 
