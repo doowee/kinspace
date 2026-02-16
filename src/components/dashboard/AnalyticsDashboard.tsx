@@ -501,27 +501,31 @@ export default function AnalyticsDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 pt-0">
-                {filteredRisks.map((risk, i) => (
+                {filteredRisks.map((risk) => (
                   <div
                     key={risk.className + risk.day}
-                    className={`flex items-center gap-4 rounded-lg border p-3 ${
-                      i === 0 ? "border-destructive/40 bg-destructive/5" : "bg-card"
-                    }`}
+                    className="flex items-center gap-4 rounded-lg border border-destructive/40 bg-destructive/5 p-3"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground">
                         {risk.instructor} — {risk.day} {risk.time} {risk.className}
                       </p>
                     </div>
-                    <Badge variant={i === 0 ? "destructive" : "outline"} className="shrink-0">
+                    <Badge variant="destructive" className="shrink-0">
                       {risk.capacity}%
                     </Badge>
-                    {i === 0 && (
-                      <Button size="sm" variant="outline" className="shrink-0 gap-1.5 text-xs">
-                        <Sparkles className="h-3 w-3" />
-                        Send AI Promo
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 gap-1.5 text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        const aiTab = document.querySelector('[value="ai-marketing"]') as HTMLElement;
+                        aiTab?.click();
+                      }}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Send AI Promo
+                    </Button>
                   </div>
                 ))}
               </CardContent>
@@ -570,15 +574,16 @@ export default function AnalyticsDashboard() {
 /* ------------------------------------------------------------------ */
 
 function KPICard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  const isDanger = value === "$0" || value === "0%" || value === "0";
   return (
-    <Card>
+    <Card className={isDanger ? "border-destructive/40" : ""}>
       <CardContent className="flex items-center gap-4 p-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${isDanger ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
           {icon}
         </div>
         <div className="flex-1">
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <p className={`text-2xl font-bold ${isDanger ? "text-destructive" : "text-foreground"}`}>{value}</p>
         </div>
       </CardContent>
     </Card>
