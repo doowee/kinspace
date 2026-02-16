@@ -2,8 +2,9 @@ import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw, Database, MessageSquare, CreditCard, Flame } from "lucide-react";
+import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw, Database, MessageSquare, CreditCard, Flame, Banknote } from "lucide-react";
 import { seedDemoData } from "@/lib/seed-demo-data";
+import { useFinanceDemo } from "@/components/dashboard/AnalyticsDashboard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 export default function DemoTriggers() {
   const { activeRole, activeStudio } = useStudio();
   const { triggerScenario, triggerWaitlistPromotion, onWaitlistPromoted, clearMessages } = useDemoPhone();
+  const { seed: seedFinance } = useFinanceDemo();
 
   const studioName = activeStudio?.name || "Your Studio";
 
@@ -268,6 +270,21 @@ export default function DemoTriggers() {
         >
           <Database className="h-4 w-4" />
           ⚡ Seed Realistic Demo Data
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            seedFinance();
+            setTimeout(() => {
+              toast({
+                title: "Demo Environment Initialized",
+                description: "Finance Data Seeded. Dashboard now shows premium studio metrics.",
+              });
+            }, 1100);
+          }}
+          className="gap-2 cursor-pointer text-muted-foreground"
+        >
+          <Banknote className="h-4 w-4" />
+          💰 Seed Finance Data
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
