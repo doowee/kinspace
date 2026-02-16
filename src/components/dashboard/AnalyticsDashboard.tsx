@@ -62,7 +62,7 @@ export function useFinanceDemo() {
 }
 
 export function FinanceDemoProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<FinanceDemoState>({ seeded: false, loading: false });
+  const [state, setState] = useState<FinanceDemoState>({ seeded: true, loading: false });
 
   const seed = () => {
     setState({ seeded: false, loading: true });
