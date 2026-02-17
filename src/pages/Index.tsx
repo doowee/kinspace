@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useInView, type Variants, type Easing } from "framer-motion";
-import { ArrowRight, Check, X, Zap, Brain, Shield, Globe, Users, Lock, Sparkles, RefreshCw, HelpCircle, AlertTriangle, Star } from "lucide-react";
+import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, AlertTriangle, Star } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -272,42 +272,79 @@ function BentoSMSVisual() {
 
 }
 
-function BentoAIVisual() {
+const AGENTS = [
+  {
+    icon: "DollarSign" as const,
+    title: "The Revenue Agent",
+    emoji: "💰",
+    body: "Automatically texts your waitlist, processes 1-tap SMS class pack refills, and monetizes empty reformers with flash sales.",
+  },
+  {
+    icon: "PenLine" as const,
+    title: "The Marketing Agent",
+    emoji: "✍️",
+    body: "Scans your schedule for low-attendance classes and automatically drafts highly-targeted, brand-perfect promotional emails.",
+  },
+  {
+    icon: "BarChart3" as const,
+    title: "The Business Agent",
+    emoji: "📊",
+    body: "Stop staring at spreadsheets. Ask plain-English questions about your financial trends, top-performing instructors, and client retention to get instant insights.",
+  },
+  {
+    icon: "Handshake" as const,
+    title: "The Support Agent",
+    emoji: "🤝",
+    body: "(Coming Soon) An automated concierge to handle client FAQs, policy questions, and instructor shift-coverage without your front desk lifting a finger.",
+    comingSoon: true,
+  },
+];
+
+const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  DollarSign: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  PenLine: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.855z"/></svg>,
+  BarChart3: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16h8"/><path d="M7 11h12"/><path d="M7 6h3"/></svg>,
+  Handshake: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>,
+};
+
+function AgentGridVisual() {
   return (
-    <div className="relative">
-      <AmbientGlow className="w-[380px] h-[380px] -top-10 -left-10" />
-      <div className="relative grid grid-cols-5 gap-3 max-w-sm mx-auto">
-        {/* AI Dashboard */}
-        <GlassCard className="col-span-3 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-display font-bold text-foreground text-sm">AI Marketing Hub</div>
-            <div className="text-[10px] px-2 py-0.5 rounded-full bg-sage/20 text-sage font-medium">Live</div>
-          </div>
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 mb-2">
-            <div className="text-xs font-medium text-foreground">Thu 6 AM · Reformer</div>
-            <div className="text-[10px] text-muted-foreground">3 of 12 filled</div>
-          </div>
-          <div className="rounded-lg bg-muted/60 p-2.5 mb-2">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">AI Draft</div>
-            <div className="text-xs text-foreground leading-relaxed">"Hi Sarah, your favorite reformer is waiting..."</div>
-          </div>
-          <div className="rounded-lg bg-primary text-primary-foreground text-xs font-medium text-center py-2">
-            Send to 42 clients
-          </div>
-        </GlassCard>
-        {/* Photo */}
-        <div className="col-span-2">
-          <img
-            src="https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=500&fit=crop&crop=center"
-            alt="Instructor teaching"
-            className="rounded-2xl object-cover w-full h-full shadow-[0_12px_40px_rgb(0,0,0,0.1)]"
-            style={{ minHeight: 240 }}
-            loading="lazy" />
-
-        </div>
+    <div className="relative w-full max-w-lg mx-auto">
+      <AmbientGlow className="w-[500px] h-[500px] -top-16 left-1/2 -translate-x-1/2" />
+      <div className="relative grid grid-cols-2 gap-3">
+        {AGENTS.map((agent, i) => {
+          const IconComp = AGENT_ICONS[agent.icon];
+          return (
+            <motion.div
+              key={agent.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" as any }}
+              transition={{ delay: i * 0.1, duration: 0.5, ease: EASE }}
+            >
+              <div className={`rounded-2xl bg-card/60 backdrop-blur-md border border-border/40 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-5 h-full space-y-3 ${agent.comingSoon ? "opacity-75" : ""}`}>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <IconComp className="h-4.5 w-4.5" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{agent.emoji}</span>
+                    <span className="font-display text-sm font-bold text-foreground">{agent.title}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{agent.body}</p>
+                {agent.comingSoon && (
+                  <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-sage bg-sage/10 rounded-full px-2 py-0.5">
+                    Coming Soon
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
-    </div>);
-
+    </div>
+  );
 }
 
 function BentoEmpireVisual() {
@@ -769,17 +806,25 @@ export default function Index() {
           }
           mockup={<BentoSMSVisual />} />
 
-        <FeatureBlock
-          eyebrow="YOUR INVISIBLE OPERATIONS MANAGER"
-          title="The AI Auto-Marketer."
-          body="Stop staring at a blank screen trying to figure out how to fill your Thursday morning classes. Kinspace.Studio's AI actively monitors your schedule and does the heavy lifting for you."
-          bullets={[
-          { icon: <Brain className="h-3.5 w-3.5" />, label: "Automated Copywriting:", text: "The AI identifies low-attendance classes and instantly drafts highly-targeted promotional emails." },
-          { icon: <Shield className="h-3.5 w-3.5" />, label: "SmartCover:", text: "Instructors request shift coverage, and the system automatically manages the swapping and updates the schedule." },
-          { icon: <HelpCircle className="h-3.5 w-3.5" />, label: "Ask Your Data:", text: 'Type questions into your dashboard like "Who were my top 3 instructors last month?" for instant, plain-English answers.' }]
-          }
-          mockup={<BentoAIVisual />}
-          reverse />
+        {/* Agent Suite Section */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={VP}
+          variants={stagger}
+          className="space-y-8"
+        >
+          <motion.div variants={fadeUp} className="text-center max-w-2xl mx-auto space-y-4">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-sage">YOUR DIGITAL WORKFORCE</p>
+            <h3 className="font-display text-3xl lg:text-4xl font-bold text-foreground">
+              Don't just buy software. Hire a team of specialized agents.
+            </h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Kinspace.Studio isn't just a calendar. It's powered by four distinct, intelligent agents working in the background to grow your revenue, analyze your data, and run your marketing.
+            </p>
+          </motion.div>
+          <AgentGridVisual />
+        </motion.div>
 
         <FeatureBlock
           eyebrow="BUILT FOR FRANCHISES & AMBITIOUS OWNERS"
