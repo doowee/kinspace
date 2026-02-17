@@ -74,6 +74,7 @@ export default function Students() {
   };
 
   const [dmStudent, setDmStudent] = useState<OrgStudent | null>(null);
+  const { activeRole } = useStudio();
 
   if (!activeStudio) return null;
 
@@ -172,6 +173,7 @@ export default function Students() {
           onOpenChange={(open) => { if (!open) setDmStudent(null); }}
           studentName={displayName(dmStudent)}
           studentEmail={dmStudent.email}
+          role={activeRole}
         />
       )}
     </div>
