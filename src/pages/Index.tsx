@@ -276,26 +276,22 @@ const AGENTS = [
   {
     icon: "DollarSign" as const,
     title: "The Revenue Agent",
-    emoji: "💰",
     body: "Automatically texts your waitlist, processes 1-tap SMS class pack refills, and monetizes empty reformers with flash sales.",
   },
   {
     icon: "PenLine" as const,
     title: "The Marketing Agent",
-    emoji: "✍️",
     body: "Scans your schedule for low-attendance classes and automatically drafts highly-targeted, brand-perfect promotional emails.",
   },
   {
     icon: "BarChart3" as const,
     title: "The Business Agent",
-    emoji: "📊",
     body: "Stop staring at spreadsheets. Ask plain-English questions about your financial trends, top-performing instructors, and client retention to get instant insights.",
   },
   {
     icon: "Handshake" as const,
     title: "The Support Agent",
-    emoji: "🤝",
-    body: "(Coming Soon) An automated concierge to handle client FAQs, policy questions, and instructor shift-coverage without your front desk lifting a finger.",
+    body: "An automated concierge to handle client FAQs, policy questions, and instructor shift-coverage without your front desk lifting a finger.",
     comingSoon: true,
   },
 ];
@@ -327,10 +323,7 @@ function AgentGridVisual() {
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <IconComp className="h-4.5 w-4.5" />
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">{agent.emoji}</span>
-                    <span className="font-display text-sm font-bold text-foreground">{agent.title}</span>
-                  </div>
+                  <span className="font-display text-sm font-bold text-foreground">{agent.title}</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{agent.body}</p>
                 {agent.comingSoon && (
