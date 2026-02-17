@@ -218,7 +218,7 @@ export default function AIMarketingHub() {
                     disabled={isGenerating}
                   >
                     <Sparkles className="h-4 w-4" />
-                    Auto-Draft Promo
+                    ✨ Deploy Marketing Agent
                   </Button>
                 </CardContent>
               </Card>
