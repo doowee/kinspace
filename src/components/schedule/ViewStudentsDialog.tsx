@@ -6,7 +6,8 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Zap } from "lucide-react";
+import { Users, Zap, Megaphone } from "lucide-react";
+import MessageClassDrawer from "@/components/communication/MessageClassDrawer";
 
 interface Booking {
   id: string;
@@ -31,6 +32,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [chainRunning, setChainRunning] = useState(false);
+  const [msgDrawerOpen, setMsgDrawerOpen] = useState(false);
   const { triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
   const { activeRole } = useStudio();
 
@@ -114,8 +116,10 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
   };
 
   const showChainButton = activeRole === "owner" && confirmed.length > 0 && waitlisted.length > 0;
+  const totalStudents = confirmed.length + waitlisted.length;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -124,6 +128,14 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
             {className}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Message Class button */}
+        {totalStudents > 0 && (
+          <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => setMsgDrawerOpen(true)}>
+            <Megaphone className="h-3.5 w-3.5" />
+            📢 Message Class
+          </Button>
+        )}
 
         {loading ? (
           <p className="text-sm text-muted-foreground animate-pulse">Loading…</p>
@@ -178,5 +190,12 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
         )}
       </DialogContent>
     </Dialog>
+    <MessageClassDrawer
+      open={msgDrawerOpen}
+      onOpenChange={setMsgDrawerOpen}
+      className={className}
+      studentCount={totalStudents}
+    />
+    </>
   );
 }

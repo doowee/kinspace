@@ -3,6 +3,7 @@ import PackagesTab from "@/components/settings/PackagesTab";
 import BrandingTab from "@/components/settings/BrandingTab";
 import PoliciesTab from "@/components/settings/PoliciesTab";
 import InstructorsTab from "@/components/settings/InstructorsTab";
+import CommunicationLog from "@/components/communication/CommunicationLog";
 
 export default function Settings() {
   return (
@@ -18,6 +19,7 @@ export default function Settings() {
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="instructors">Instructors</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
+          <TabsTrigger value="comms">Communication Log</TabsTrigger>
         </TabsList>
         <TabsContent value="branding" className="mt-4">
           <BrandingTab />
@@ -30,6 +32,9 @@ export default function Settings() {
         </TabsContent>
         <TabsContent value="policies" className="mt-4">
           <PoliciesTab />
+        </TabsContent>
+        <TabsContent value="comms" className="mt-4">
+          <CommunicationLog />
         </TabsContent>
       </Tabs>
     </div>
