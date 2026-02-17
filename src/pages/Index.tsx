@@ -487,6 +487,8 @@ const COMPARE_COLUMNS = [
     name: "Kinspace.Studio",
     sub: "The Standard",
     featured: true,
+    price: "$129/mo",
+    priceSub: "Flat rate. All features.",
     items: [
       { icon: "check" as const, text: "100% White-Labeled Ecosystem" },
       { icon: "check" as const, text: "Frictionless SMS Commerce Included" },
@@ -498,6 +500,8 @@ const COMPARE_COLUMNS = [
     name: "Mindbody",
     sub: "The Legacy Option",
     featured: false,
+    price: "$349+/mo",
+    priceSub: "Requires Ultimate tier for similar features.",
     items: [
       { icon: "x" as const, text: "Rents your brand to their marketplace" },
       { icon: "x" as const, text: "Clunky, multi-step app downloads" },
@@ -509,6 +513,8 @@ const COMPARE_COLUMNS = [
     name: "Momence",
     sub: "The Modern Alternative",
     featured: false,
+    price: "$199+/mo",
+    priceSub: "Advanced features behind paywalls.",
     items: [
       { icon: "x" as const, text: "High transaction & processing fees" },
       { icon: "x" as const, text: "Confusing feature upsells" },
@@ -566,6 +572,8 @@ function CompareSection() {
                 )}
                 <div className={`text-base font-bold ${col.featured ? "text-foreground" : "text-foreground/80"}`}>{col.name}</div>
                 <div className="text-xs text-muted-foreground">{col.sub}</div>
+                <div className={`text-4xl font-bold mt-3 ${col.featured ? "text-foreground" : "text-foreground/70"}`}>{col.price}</div>
+                <div className="text-xs text-muted-foreground">{col.priceSub}</div>
               </div>
               <ul className="space-y-3">
                 {col.items.map((item) => (
@@ -596,19 +604,10 @@ function CompareSection() {
                 <Sparkles className="h-3.5 w-3.5" /> Pro Engine
               </div>
               <p className="text-foreground leading-relaxed">
-                Upgrade to the <span className="font-bold">Pro Engine ($169/mo)</span> to unlock the AI Auto-Marketer and SMS Revenue Recovery. Most studios see a full ROI in their first <span className="font-bold">48 hours</span>.
+                Upgrade to the <span className="font-bold">Pro Engine ($169/mo)</span> to unlock The Agent Suite and SMS Revenue Recovery. Most studios see a full ROI in their first <span className="font-bold">48 hours</span>.
               </p>
             </div>
           </GlassCard>
-        </motion.div>
-
-        {/* Final CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.9, duration: 0.5, ease: EASE }}
-          className="flex justify-center pt-4">
-          <WaitlistForm buttonText="Join the US Beta Waitlist" />
         </motion.div>
       </div>
     </section>
