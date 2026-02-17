@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Lock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
@@ -16,6 +16,12 @@ interface Message {
   from: "studio" | "system";
   timestamp: Date;
 }
+
+const DM_TEMPLATES = [
+  { emoji: "📋", label: "Class reminder", text: "Just a reminder — your class is coming up soon. See you there!" },
+  { emoji: "🔄", label: "Schedule change", text: "Heads up! There's been a change to your upcoming class schedule. Please check the app for details." },
+  { emoji: "⭐", label: "Great job today!", text: "Great job in class today! Keep up the amazing work. 💪" },
+];
 
 // Mock conversation history
 const mockHistory = (name: string): Message[] => [
@@ -30,24 +36,32 @@ interface DirectMessageDrawerProps {
   onOpenChange: (open: boolean) => void;
   studentName: string;
   studentEmail: string;
+  role?: string | null;
 }
 
-export default function DirectMessageDrawer({ open, onOpenChange, studentName, studentEmail }: DirectMessageDrawerProps) {
+export default function DirectMessageDrawer({ open, onOpenChange, studentName, studentEmail, role }: DirectMessageDrawerProps) {
+  const isInstructor = role === "instructor";
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>(() => mockHistory(studentName));
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
+  const handleSend = (text?: string) => {
+    const msgText = text || newMessage;
+    if (!msgText.trim()) return;
+    setSending(true);
     const msg: Message = {
       id: Date.now().toString(),
-      text: newMessage,
+      text: msgText,
       channel: "sms",
       from: "studio",
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, msg]);
-    setNewMessage("");
-    toast({ title: "SMS sent", description: `Message delivered to ${studentName}.` });
+    setTimeout(() => {
+      setMessages((prev) => [...prev, msg]);
+      setNewMessage("");
+      setSending(false);
+      toast({ title: "SMS sent", description: `Message delivered to ${studentName}.` });
+    }, 500);
   };
 
   const initials = studentName
@@ -112,25 +126,49 @@ export default function DirectMessageDrawer({ open, onOpenChange, studentName, s
           </div>
         </ScrollArea>
 
-        {/* Input bar */}
-        <div className="border-t px-4 py-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center gap-2"
-          >
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type an SMS…"
-              className="flex-1"
-            />
-            <Button type="submit" size="icon" disabled={!newMessage.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+        {/* Input area — RBAC enforced */}
+        <div className="border-t px-4 py-3 space-y-2">
+          {isInstructor ? (
+            <>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-1">
+                <Lock className="h-3 w-3" />
+                <span>For security, instructors may only send pre-approved messages.</span>
+              </div>
+              <div className="grid gap-1.5">
+                {DM_TEMPLATES.map((t) => (
+                  <Button
+                    key={t.label}
+                    variant="outline"
+                    size="sm"
+                    className="justify-start gap-2 text-xs h-auto py-2"
+                    onClick={() => handleSend(t.text)}
+                    disabled={sending}
+                  >
+                    <span>{t.emoji}</span>
+                    <span>{t.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type an SMS…"
+                className="flex-1"
+              />
+              <Button type="submit" size="icon" disabled={!newMessage.trim() || sending}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          )}
         </div>
       </SheetContent>
     </Sheet>

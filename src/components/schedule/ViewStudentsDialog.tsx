@@ -195,6 +195,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
       onOpenChange={setMsgDrawerOpen}
       className={className}
       studentCount={totalStudents}
+      role={activeRole}
     />
     </>
   );
