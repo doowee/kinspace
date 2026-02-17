@@ -4,6 +4,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Search, MapPin } from "lucide-react";
+import { Users, Search, MapPin, MessageCircle } from "lucide-react";
+import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { format } from "date-fns";
 
 interface OrgStudent {
@@ -70,6 +72,8 @@ export default function Students() {
       return [s.first_name, s.last_name].filter(Boolean).join(" ");
     return s.email;
   };
+
+  const [dmStudent, setDmStudent] = useState<OrgStudent | null>(null);
 
   if (!activeStudio) return null;
 
@@ -129,7 +133,14 @@ export default function Students() {
                 <TableBody>
                   {filtered.map((s) => (
                     <TableRow key={s.user_id}>
-                      <TableCell className="font-medium">{displayName(s)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{displayName(s)}</span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setDmStudent(s)}>
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{s.email}</TableCell>
                       <TableCell>
                         <Badge
@@ -155,6 +166,14 @@ export default function Students() {
           )}
         </CardContent>
       </Card>
+      {dmStudent && (
+        <DirectMessageDrawer
+          open={!!dmStudent}
+          onOpenChange={(open) => { if (!open) setDmStudent(null); }}
+          studentName={displayName(dmStudent)}
+          studentEmail={dmStudent.email}
+        />
+      )}
     </div>
   );
 }
