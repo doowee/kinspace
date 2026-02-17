@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useInView, type Variants, type Easing } from "framer-motion";
-import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, AlertTriangle, Star } from "lucide-react";
+import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -480,74 +480,46 @@ function FeatureBlock({
 
 /* ─── Compare the Engine ─── */
 
-type CompareMode = "features" | "savings";
-
-const COMPARE_ROWS = [
-{
-  label: "Base Monthly Price",
-  mindbody: { features: "$159/mo", savings: "$1,908/yr" },
-  mariana: { features: "$600/mo", savings: "$7,200/yr" },
-  kinspace: { features: "$99/mo", savings: "$1,188/yr" }
-},
-{
-  label: "AI Auto-Marketer",
-  mindbody: { features: "no", savings: "$0 value" },
-  mariana: { features: "no", savings: "$0 value" },
-  kinspace: { features: "pro", savings: "Included in Pro" }
-},
-{
-  label: "SMS Waitlist & 1-Tap Refills",
-  mindbody: { features: "addon", savings: "Add-on $$$" },
-  mariana: { features: "yes", savings: "Included" },
-  kinspace: { features: "pro", savings: "Included in Pro" }
-},
-{
-  label: "Brand White-Labeling",
-  mindbody: { features: "partial", savings: "Partial" },
-  mariana: { features: "yes", savings: "Included" },
-  kinspace: { features: "yes", savings: "Full (Included)" }
-},
-{
-  label: 'Marketplace "Success Tax"',
-  mindbody: { features: "warn", warnText: "15–20%", savings: "15–20% lost" },
-  mariana: { features: "yes", savings: "0%" },
-  kinspace: { features: "yes", savings: "0% Always" }
-},
-{
-  label: "Mini-Empire Management",
-  mindbody: { features: "warn", warnText: "Extra Fee", savings: "Extra Fee" },
-  mariana: { features: "yes", savings: "Included" },
-  kinspace: { features: "yes", savings: "Included" }
-}];
 
 
-function CellIcon({ value, warnText }: {value: string;warnText?: string;}) {
-  if (value === "yes") return <Check className="h-4 w-4 text-sage mx-auto" />;
-  if (value === "no") return <X className="h-4 w-4 text-destructive mx-auto" />;
-  if (value === "partial" || value === "warn")
-  return (
-    <span className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-        <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />
-        {warnText || "Partial"}
-      </span>);
+const COMPARE_COLUMNS = [
+  {
+    name: "Kinspace.Studio",
+    sub: "The Standard",
+    featured: true,
+    items: [
+      { icon: "check" as const, text: "100% White-Labeled Ecosystem" },
+      { icon: "check" as const, text: "Frictionless SMS Commerce Included" },
+      { icon: "check" as const, text: "The Full AI Agent Suite Included" },
+      { icon: "check" as const, text: "Flat Pricing. Zero Success Tax." },
+    ],
+  },
+  {
+    name: "Mindbody",
+    sub: "The Legacy Option",
+    featured: false,
+    items: [
+      { icon: "x" as const, text: "Rents your brand to their marketplace" },
+      { icon: "x" as const, text: "Clunky, multi-step app downloads" },
+      { icon: "x" as const, text: "Basic automations (No true AI)" },
+      { icon: "x" as const, text: "Expensive add-ons for everything" },
+    ],
+  },
+  {
+    name: "Momence",
+    sub: "The Modern Alternative",
+    featured: false,
+    items: [
+      { icon: "x" as const, text: "High transaction & processing fees" },
+      { icon: "x" as const, text: "Confusing feature upsells" },
+      { icon: "x" as const, text: "Requires client logins/passwords" },
+      { icon: "x" as const, text: "No autonomous Agent Suite" },
+    ],
+  },
+];
 
-  if (value === "pro")
-  return (
-    <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-sage">
-        <Sparkles className="h-3.5 w-3.5" /> Pro
-      </span>);
-
-  if (value === "addon")
-  return (
-    <span className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-        <X className="h-3.5 w-3.5 text-destructive" /> Add-on $$$
-      </span>);
-
-  return <span className="text-sm font-medium text-foreground">{value}</span>;
-}
 
 function CompareSection() {
-  const [mode, setMode] = useState<CompareMode>("features");
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
 
@@ -561,118 +533,54 @@ function CompareSection() {
           animate={inView ? "visible" : "hidden"}
           variants={stagger}
           className="text-center max-w-2xl mx-auto space-y-4">
-
-          <motion.h2 variants={fadeUp} className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">Software that actually builds your business.
-
+          <motion.h2 variants={fadeUp} className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
+            Software that actually builds your business.
           </motion.h2>
           <motion.p variants={fadeUp} className="text-lg text-muted-foreground leading-relaxed">
             Choose the engine that scales with you. Transparent pricing. Zero success tax.
           </motion.p>
         </motion.div>
 
-        {/* Toggle */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.3, duration: 0.5, ease: EASE }}
-          className="flex justify-center">
-
-          <div className="inline-flex items-center rounded-full bg-card border border-border p-1 shadow-sm">
-            {(["features", "savings"] as const).map((m) =>
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`relative px-5 py-2 text-sm font-medium rounded-full transition-colors ${
-              mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`
-              }>
-
-                {m === "features" ? "View Features" : "View Yearly Savings"}
-              </button>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Comparison Grid */}
+        {/* Comparison Cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.4, duration: 0.6, ease: EASE }}
-          className="overflow-x-auto">
-
-          <div className="min-w-[640px]">
-            {/* Column Headers */}
-            <div className="grid grid-cols-4 gap-3 mb-2">
-              <div />
-              {[
-              { name: "Mindbody", sub: "Starter Plan" },
-              { name: "Mariana Tek", sub: "Standard" },
-              { name: "Kinspace.Studio", sub: "Core / Pro", featured: true }].
-              map((col) =>
-              <div
-                key={col.name}
-                className={`rounded-t-xl p-4 text-center ${
-                col.featured ?
-                "bg-card border-2 border-accent shadow-[0_0_30px_hsl(var(--accent)/0.15)]" :
-                "bg-card/60 border border-border/50"}`
-                }>
-
-                  {col.featured &&
-                <div className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sage bg-sage/10 rounded-full px-2.5 py-0.5 mb-2">
-                      <Star className="h-3 w-3" /> Recommended
-                    </div>
-                }
-                  <div className={`text-sm font-bold ${col.featured ? "text-foreground" : "text-foreground/80"}`}>{col.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{col.sub}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Rows */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={mode}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-1.5">
-
-                {COMPARE_ROWS.map((row, i) =>
-                <motion.div
-                  key={row.label}
-                  initial={{ opacity: 0, x: -15 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.06, duration: 0.35, ease: EASE }}
-                  className="grid grid-cols-4 gap-3 items-center">
-
-                    <div className="text-sm font-medium text-foreground py-3 px-2">{row.label}</div>
-                    {(["mindbody", "mariana", "kinspace"] as const).map((vendor) => {
-                    const cell = row[vendor];
-                    const isFeatured = vendor === "kinspace";
-                    return (
-                      <div
-                        key={vendor}
-                        className={`py-3 text-center rounded-lg ${
-                        isFeatured ?
-                        "bg-card border-x-2 border-accent/40" :
-                        "bg-card/40"}`
-                        }>
-
-                          {mode === "features" ?
-                        <CellIcon value={cell.features} warnText={"warnText" in cell ? (cell as any).warnText : undefined} /> :
-
-                        <span className={`text-sm font-medium ${isFeatured ? "text-foreground font-bold" : "text-muted-foreground"}`}>
-                              {cell.savings}
-                            </span>
-                        }
-                        </div>);
-
-                  })}
-                  </motion.div>
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+          {COMPARE_COLUMNS.map((col, ci) => (
+            <motion.div
+              key={col.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.3 + ci * 0.1, duration: 0.5, ease: EASE }}
+              className={`rounded-2xl p-6 space-y-5 ${
+                col.featured
+                  ? "bg-card border-2 border-accent shadow-[0_0_30px_hsl(var(--accent)/0.15)]"
+                  : "bg-card/60 border border-border/50"
+              }`}>
+              <div className="text-center space-y-1">
+                {col.featured && (
+                  <div className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-sage bg-sage/10 rounded-full px-2.5 py-0.5 mb-2">
+                    <Star className="h-3 w-3" /> Recommended
+                  </div>
                 )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+                <div className={`text-base font-bold ${col.featured ? "text-foreground" : "text-foreground/80"}`}>{col.name}</div>
+                <div className="text-xs text-muted-foreground">{col.sub}</div>
+              </div>
+              <ul className="space-y-3">
+                {col.items.map((item) => (
+                  <li key={item.text} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                    {item.icon === "check" ? (
+                      <Check className="h-4 w-4 mt-0.5 shrink-0 text-sage" />
+                    ) : (
+                      <X className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                    )}
+                    <span>{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          ))}
         </motion.div>
 
         {/* Pro Engine Nudge */}
@@ -681,7 +589,6 @@ function CompareSection() {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.7, duration: 0.6, ease: EASE }}
           className="max-w-xl mx-auto">
-
           <GlassCard className="relative overflow-hidden p-6 sm:p-8 text-center border-accent/40 shadow-[0_12px_40px_hsl(var(--accent)/0.1)]">
             <AmbientGlow className="w-[300px] h-[300px] -top-20 left-1/2 -translate-x-1/2" />
             <div className="relative space-y-3">
@@ -701,12 +608,11 @@ function CompareSection() {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.9, duration: 0.5, ease: EASE }}
           className="flex justify-center pt-4">
-
           <WaitlistForm buttonText="Join the US Beta Waitlist" />
         </motion.div>
       </div>
-    </section>);
-
+    </section>
+  );
 }
 
 /* ─── Page ─── */
