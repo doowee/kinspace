@@ -437,7 +437,7 @@ export default function BookingPage() {
                                 </span>
                               </div>
 
-                              <div className="flex flex-1 items-center justify-between gap-3 p-4">
+                              <div className="flex flex-1 items-center justify-between gap-3 p-4 overflow-hidden">
                                 <div className="space-y-1 min-w-0">
                                   <p className="font-display font-bold text-foreground truncate">
                                     {cls.name}
