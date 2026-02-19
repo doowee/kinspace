@@ -236,7 +236,7 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
       {/* ── Topline KPIs ────────────────────────────────────── */}
       <div
         className={`grid gap-4 transition-all duration-300 ease-in-out ${
-          isOwner ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"
+          isOwner ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" : "sm:grid-cols-3"
         }`}
       >
         {isOwner ? (
@@ -245,6 +245,17 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
               label="Total Revenue"
               value={`$${d.totalRevenue.toLocaleString()}`}
               icon={<DollarSign className="h-4 w-4" />}
+            />
+            <KPICard
+              label="MRR"
+              value="$28,450"
+              icon={<TrendingUp className="h-4 w-4" />}
+              badge="+4.2%"
+            />
+            <KPICard
+              label="Active Memberships"
+              value="142"
+              icon={<UserCheck className="h-4 w-4" />}
             />
             <KPICard
               label="Avg Capacity"
@@ -577,7 +588,7 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
 /*  Sub-components                                                     */
 /* ------------------------------------------------------------------ */
 
-function KPICard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function KPICard({ label, value, icon, badge }: { label: string; value: string; icon: React.ReactNode; badge?: string }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-5">
@@ -586,7 +597,14 @@ function KPICard({ label, value, icon }: { label: string; value: string; icon: R
         </div>
         <div className="flex-1">
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+            {badge && (
+              <Badge className="bg-success/10 text-success border-success/20 text-[10px] font-semibold px-1.5 py-0.5">
+                {badge}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

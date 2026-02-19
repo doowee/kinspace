@@ -137,6 +137,15 @@ export default function Students() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{displayName(s)}</span>
+                          {s.total_bookings >= 30 ? (
+                            <Badge className="bg-[hsl(80,40%,92%)] text-[hsl(80,50%,30%)] border-[hsl(80,40%,80%)] text-[10px] font-semibold px-2 py-0.5">
+                              VIP Unlimited (Auto-Renew)
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] font-medium px-2 py-0.5">
+                              10-Class Pack ({Math.max(0, 10 - (s.total_bookings % 10))} Remaining)
+                            </Badge>
+                          )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setDmStudent(s)}>
                             <MessageCircle className="h-3.5 w-3.5" />
                           </Button>
