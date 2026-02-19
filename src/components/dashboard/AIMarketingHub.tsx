@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck } from "lucide-react";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,6 +56,14 @@ const INITIAL_OPPORTUNITIES: Opportunity[] = [
     audience: "past-attendees",
   },
 ];
+
+/* Conversion Agent upsell card data */
+const UPSELL_OPPORTUNITY = {
+  id: "opp-upsell",
+  clientCount: 12,
+  insight:
+    "12 clients have purchased three consecutive 10-class packs. The Conversion Agent can offer them a first-month discount to upgrade to an Unlimited Monthly Membership.",
+};
 
 const GENERATED_EMAILS: Record<string, { subject: string; body: string; recipientCount: number }> = {
   "opp-1": {
@@ -226,6 +234,36 @@ export default function AIMarketingHub() {
           })}
         </div>
       )}
+
+      {/* ── Conversion Agent Upsell Card ─────────────────── */}
+      <Card className="border-primary/20 bg-primary/[0.03]">
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Repeat className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Membership Upsell Opportunity</p>
+              <p className="text-xs text-muted-foreground">The Conversion Agent</p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {UPSELL_OPPORTUNITY.insight}
+          </p>
+          <Button
+            className="w-full gap-2"
+            onClick={() => {
+              toast({
+                title: "Conversion Agent Deployed",
+                description: `Personalized upgrade offers are being sent to ${UPSELL_OPPORTUNITY.clientCount} clients.`,
+              });
+            }}
+          >
+            <Sparkles className="h-4 w-4" />
+            ✨ Deploy Conversion Agent
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Approval Editor Modal */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
