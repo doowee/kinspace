@@ -68,10 +68,12 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
   const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "checked_in");
   const waitlisted = bookings.filter((b) => b.status === "waitlist");
 
+  const canSeeEmail = activeRole === "owner";
+
   const studentName = (b: Booking) => {
     const p = b.profiles;
     if (p?.first_name || p?.last_name) return [p.first_name, p.last_name].filter(Boolean).join(" ");
-    return p?.email || "Unknown";
+    return canSeeEmail ? (p?.email || "Unknown") : "Unknown";
   };
 
   const handleChainReaction = async () => {
