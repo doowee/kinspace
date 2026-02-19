@@ -17,6 +17,10 @@ import { Users, Search, MapPin, MessageCircle } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { format } from "date-fns";
 
+/** Roles that can see full email addresses */
+const EMAIL_VISIBLE_ROLES = ["owner"];
+
+
 interface OrgStudent {
   user_id: string;
   email: string;
@@ -120,7 +124,7 @@ export default function Students() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
+                    {EMAIL_VISIBLE_ROLES.includes(activeRole ?? "") && <TableHead>Email</TableHead>}
                     <TableHead>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3.5 w-3.5" />
@@ -151,14 +155,21 @@ export default function Students() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{s.email}</TableCell>
+                      {EMAIL_VISIBLE_ROLES.includes(activeRole ?? "") && (
+                        <TableCell className="text-muted-foreground">{s.email}</TableCell>
+                      )}
                       <TableCell>
-                        <Badge
-                          variant={s.home_studio_name === "No bookings yet" ? "outline" : "secondary"}
-                          className="text-xs"
-                        >
-                          {s.home_studio_name}
-                        </Badge>
+                        {s.home_studio_name === "No bookings yet" ? (
+                          <Badge variant="outline" className="text-xs">No bookings yet</Badge>
+                        ) : s.home_studio_name === activeStudio?.name ? (
+                          <Badge className="bg-[hsl(80,40%,92%)] text-[hsl(80,50%,30%)] border-[hsl(80,40%,80%)] text-xs border">
+                            {s.home_studio_name}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            {s.home_studio_name}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {s.total_bookings}
