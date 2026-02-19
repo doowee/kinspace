@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
+import { useViewAsRole } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,8 @@ export default function Students() {
 
   const [dmStudent, setDmStudent] = useState<OrgStudent | null>(null);
   const { activeRole } = useStudio();
+  const viewAsRole = useViewAsRole();
+  const canSeeEmail = viewAsRole === "owner";
 
   if (!activeStudio) return null;
 
@@ -163,7 +166,7 @@ export default function Students() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {EMAIL_VISIBLE_ROLES.includes(activeRole ?? "") ? (
+                        {canSeeEmail ? (
                           s.email
                         ) : (
                           <span className="inline-flex items-center gap-1.5 select-none text-muted-foreground/60 text-xs">
