@@ -70,10 +70,17 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
 
   const canSeeEmail = activeRole === "owner";
 
+  const maskEmail = (email: string) => {
+    const [local, domain] = email.split("@");
+    if (!domain) return "***@***";
+    return `${local.charAt(0)}***@${domain}`;
+  };
+
   const studentName = (b: Booking) => {
     const p = b.profiles;
     if (p?.first_name || p?.last_name) return [p.first_name, p.last_name].filter(Boolean).join(" ");
-    return canSeeEmail ? (p?.email || "Unknown") : "Unknown";
+    if (canSeeEmail) return p?.email || "Unknown";
+    return p?.email ? maskEmail(p.email) : "Unknown";
   };
 
   const handleChainReaction = async () => {

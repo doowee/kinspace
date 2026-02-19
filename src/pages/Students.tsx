@@ -13,12 +13,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Search, MapPin, MessageCircle } from "lucide-react";
+import { Users, Search, MapPin, MessageCircle, Lock } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { format } from "date-fns";
 
 /** Roles that can see full email addresses */
 const EMAIL_VISIBLE_ROLES = ["owner"];
+
+/** Mask email so DOM never contains the real address */
+const maskEmail = (email: string) => {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***@***";
+  return `${local.charAt(0)}***@${domain}`;
+};
 
 
 interface OrgStudent {
@@ -124,7 +131,7 @@ export default function Students() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    {EMAIL_VISIBLE_ROLES.includes(activeRole ?? "") && <TableHead>Email</TableHead>}
+                    <TableHead>Email</TableHead>
                     <TableHead>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3.5 w-3.5" />
@@ -155,9 +162,16 @@ export default function Students() {
                           </Button>
                         </div>
                       </TableCell>
-                      {EMAIL_VISIBLE_ROLES.includes(activeRole ?? "") && (
-                        <TableCell className="text-muted-foreground">{s.email}</TableCell>
-                      )}
+                      <TableCell className="text-muted-foreground">
+                        {EMAIL_VISIBLE_ROLES.includes(activeRole ?? "") ? (
+                          s.email
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 select-none text-muted-foreground/60 text-xs">
+                            <Lock className="h-3 w-3" />
+                            {maskEmail(s.email)}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {s.home_studio_name === "No bookings yet" ? (
                           <Badge variant="outline" className="text-xs">No bookings yet</Badge>
