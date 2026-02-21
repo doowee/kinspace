@@ -15,15 +15,35 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck, Copy, Check } from "lucide-react";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Outlet, Navigate } from "react-router-dom";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 
 export type ViewAsRole = "owner" | "front-desk";
 const ViewAsContext = createContext<ViewAsRole>("owner");
 export const useViewAsRole = () => useContext(ViewAsContext);
 import { NavLink } from "./NavLink";
+
+const PUBLISHED_DOMAIN = "https://kinspace.studio";
+
+function CopyBookingLinkItem({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    const url = `${PUBLISHED_DOMAIN}/book/${slug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [slug]);
+
+  return (
+    <DropdownMenuItem onClick={handleCopy}>
+      {copied ? <Check className="h-4 w-4 mr-2 text-primary" /> : <Copy className="h-4 w-4 mr-2" />}
+      {copied ? "Link Copied!" : "Copy Booking Link"}
+    </DropdownMenuItem>
+  );
+}
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
@@ -159,10 +179,13 @@ export default function AppLayout() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {activeStudio?.slug && (
-                        <DropdownMenuItem onClick={() => window.open(`/book/${activeStudio.slug}`, '_blank')}>
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          View Client App
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem onClick={() => window.open(`/book/${activeStudio.slug}`, '_blank')}>
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View Client App
+                          </DropdownMenuItem>
+                          <CopyBookingLinkItem slug={activeStudio.slug} />
+                        </>
                       )}
                     </>
                   )}
