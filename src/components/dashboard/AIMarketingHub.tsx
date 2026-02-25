@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat } from "lucide-react";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,6 +56,14 @@ const INITIAL_OPPORTUNITIES: Opportunity[] = [
     audience: "past-attendees",
   },
 ];
+
+/* Flash Deal / Yield Management card */
+const FLASH_DEAL = {
+  id: "opp-flash",
+  title: "⚡ Yield Management: Monetize Dead Space",
+  insight:
+    "Sarah's 5 PM Flow starts in 1 hour and has 3 empty spots. The Revenue Agent can blast a 50% off 'Flash Drop' to your waitlist and local regulars.",
+};
 
 /* Conversion Agent upsell card data */
 const UPSELL_OPPORTUNITY = {
@@ -234,6 +242,37 @@ export default function AIMarketingHub() {
           })}
         </div>
       )}
+
+      {/* ── Flash Deal / Yield Management Card ─────────── */}
+      <Card className="border-amber-400/30 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-950/10">
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <Zap className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">{FLASH_DEAL.title}</p>
+              <p className="text-xs text-muted-foreground">The Revenue Agent</p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {FLASH_DEAL.insight}
+          </p>
+          <Button
+            className="w-full gap-2"
+            onClick={() => {
+              toast({
+                title: "Flash Drop successful! $35 recovered.",
+                description: "1 discounted spot sold. The class roster has been updated.",
+              });
+              window.dispatchEvent(new CustomEvent("flash-deal-sold"));
+            }}
+          >
+            <Sparkles className="h-4 w-4" />
+            ✨ Deploy Flash Drop
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* ── Conversion Agent Upsell Card ─────────────────── */}
       <Card className="border-primary/20 bg-primary/[0.03]">

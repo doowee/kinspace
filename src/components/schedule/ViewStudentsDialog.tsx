@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Users, Zap, Megaphone } from "lucide-react";
 import MessageClassDrawer from "@/components/communication/MessageClassDrawer";
 
+interface FlashSaleStudent {
+  name: string;
+  id: string;
+}
+
 interface Booking {
   id: string;
   status: string;
@@ -16,6 +21,7 @@ interface Booking {
   created_at: string;
   studio_id: string;
   profiles: { first_name: string | null; last_name: string | null; email: string } | null;
+  isFlashSale?: boolean;
 }
 
 interface ViewStudentsDialogProps {
@@ -33,8 +39,22 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
   const [loading, setLoading] = useState(false);
   const [chainRunning, setChainRunning] = useState(false);
   const [msgDrawerOpen, setMsgDrawerOpen] = useState(false);
+  const [flashSaleStudents, setFlashSaleStudents] = useState<FlashSaleStudent[]>([]);
   const { triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
   const { activeRole } = useStudio();
+
+  // Listen for flash-deal-sold events from the AI Marketing Hub
+  useEffect(() => {
+    const handleFlashDeal = () => {
+      const newStudent: FlashSaleStudent = {
+        name: "Jessica M.",
+        id: `flash-${Date.now()}`,
+      };
+      setFlashSaleStudents((prev) => [...prev, newStudent]);
+    };
+    window.addEventListener("flash-deal-sold", handleFlashDeal);
+    return () => window.removeEventListener("flash-deal-sold", handleFlashDeal);
+  }, []);
 
   const fetchBookings = useCallback(async () => {
     if (!classId) return;
@@ -154,7 +174,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
           <div className="space-y-4">
             <div>
               <p className="text-sm font-medium mb-2">
-                Confirmed ({confirmed.length}/{capacity})
+                Confirmed ({confirmed.length + flashSaleStudents.length}/{capacity})
               </p>
               <div className="space-y-1">
                 {confirmed.map((b) => (
@@ -165,7 +185,15 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
                     </Badge>
                   </div>
                 ))}
-                {confirmed.length === 0 && <p className="text-xs text-muted-foreground">None</p>}
+                {flashSaleStudents.map((fs) => (
+                  <div key={fs.id} className="flex items-center justify-between rounded-md border border-emerald-300/60 bg-emerald-50/40 dark:border-emerald-500/20 dark:bg-emerald-950/10 px-3 py-2 text-sm">
+                    <span className="text-foreground font-medium">{fs.name}</span>
+                    <Badge className="text-[10px] gap-1 bg-emerald-500 text-white animate-pulse border-0">
+                      ⚡ Flash Sale
+                    </Badge>
+                  </div>
+                ))}
+                {confirmed.length === 0 && flashSaleStudents.length === 0 && <p className="text-xs text-muted-foreground">None</p>}
               </div>
             </div>
 
