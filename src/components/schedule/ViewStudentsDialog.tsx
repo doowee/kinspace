@@ -162,7 +162,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
         {totalStudents > 0 && (
           <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => setMsgDrawerOpen(true)}>
             <Megaphone className="h-3.5 w-3.5" />
-            📢 Message Class
+            Message Class
           </Button>
         )}
 
@@ -220,7 +220,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
                 disabled={chainRunning}
               >
                 <Zap className="h-4 w-4" />
-                {chainRunning ? "Running…" : "⚡ Simulate Waitlist Chain Reaction"}
+                {chainRunning ? "Running…" : "Simulate Waitlist Chain Reaction"}
               </Button>
             )}
           </div>

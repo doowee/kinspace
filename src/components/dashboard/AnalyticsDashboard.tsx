@@ -537,7 +537,7 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
                           onClick={() => onNavigateToMarketing?.()}
                         >
                           <Sparkles className="h-3 w-3" />
-                          ✨ Deploy Marketing Agent
+                          Deploy Marketing Agent
                         </Button>
                       )}
                     </div>
