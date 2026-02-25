@@ -60,7 +60,7 @@ const INITIAL_OPPORTUNITIES: Opportunity[] = [
 /* Flash Deal / Yield Management card */
 const FLASH_DEAL = {
   id: "opp-flash",
-  title: "⚡ Yield Management: Monetize Dead Space",
+  title: "Yield Management: Monetize Dead Space",
   insight:
     "Sarah's 5 PM Flow starts in 1 hour and has 3 empty spots. The Revenue Agent can blast a 50% off 'Flash Drop' to your waitlist and local regulars.",
 };
