@@ -2,7 +2,7 @@ import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Bell, Users, AlertTriangle, Star, RotateCcw, Database, MessageSquare, CreditCard, Flame } from "lucide-react";
+import { Zap, Bell, Users, AlertTriangle, RotateCcw, Database, MessageSquare, CreditCard, Flame } from "lucide-react";
 import { seedDemoData } from "@/lib/seed-demo-data";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -151,9 +151,6 @@ export default function DemoTriggers() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => triggerScenario("low-balance", studioName)} className="gap-2 cursor-pointer">
           <AlertTriangle className="h-4 w-4 text-orange-500" /> Trigger: Low Balance Warning
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => triggerScenario("review", studioName)} className="gap-2 cursor-pointer">
-          <Star className="h-4 w-4 text-purple-500" /> Trigger: Review Request
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Frictionless Commerce</DropdownMenuLabel>
