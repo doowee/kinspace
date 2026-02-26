@@ -7,7 +7,6 @@ interface Studio {
   name: string;
   slug: string;
   owner_id: string;
-  organization_id: string | null;
   created_at: string;
 }
 

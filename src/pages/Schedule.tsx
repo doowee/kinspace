@@ -43,7 +43,7 @@ interface ClassRow {
   name: string;
   description: string | null;
   start_time: string;
-  capacity: number;
+  capacity_total: number;
   instructor_id: string | null;
   studio_id: string;
   instructors: { name: string } | null;
@@ -97,11 +97,7 @@ export default function Schedule() {
       .select("id, name")
       .order("display_order");
 
-    if (activeStudio.organization_id) {
-      query = query.eq("organization_id", activeStudio.organization_id);
-    } else {
-      query = query.eq("studio_id", activeStudio.id);
-    }
+    query = query.eq("studio_id", activeStudio.id);
 
     const { data } = await query;
     setInstructors(data ?? []);
@@ -252,7 +248,7 @@ export default function Schedule() {
       name: className,
       description: classDescription || null,
       start_time: dt.toISOString(),
-      capacity: parseInt(capacity) || 10,
+      capacity_total: parseInt(capacity) || 10,
       studio_id: activeStudio.id,
       instructor_id: selectedInstructorId === "none" ? null : selectedInstructorId,
     });

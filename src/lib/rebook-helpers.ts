@@ -31,7 +31,7 @@ export async function findNextClassInstance(
   // Fetch upcoming classes with the same name at this studio
   const { data: classes, error } = await supabase
     .from("classes")
-    .select("id, name, start_time, capacity, instructors:instructor_id(name)")
+    .select("id, name, start_time, capacity_total, instructors:instructor_id(name)")
     .eq("studio_id", studioId)
     .eq("name", className)
     .gt("start_time", after)
@@ -51,13 +51,13 @@ export async function findNextClassInstance(
       .in("status", ["confirmed", "waitlist"]);
 
     const currentBookings = count ?? 0;
-    if (currentBookings >= c.capacity) continue; // full – skip
+    if (currentBookings >= c.capacity_total) continue; // full – skip
 
     candidates.push({
       id: c.id,
       name: c.name,
       start_time: c.start_time,
-      capacity: c.capacity,
+      capacity: c.capacity_total,
       instructor_name: (c.instructors as any)?.name ?? null,
       current_bookings: currentBookings,
       hourOfDay: new Date(c.start_time).getHours(),
