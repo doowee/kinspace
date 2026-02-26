@@ -169,6 +169,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          owner_id: string | null
           stripe_account_id: string | null
           updated_at: string
         }
@@ -176,6 +177,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          owner_id?: string | null
           stripe_account_id?: string | null
           updated_at?: string
         }
@@ -183,10 +185,19 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          owner_id?: string | null
           stripe_account_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
