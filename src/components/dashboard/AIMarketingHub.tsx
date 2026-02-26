@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap, MessageSquare } from "lucide-react";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap, MessageSquare, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -125,6 +125,8 @@ export default function AIMarketingHub() {
   const [flashDropSms, setFlashDropSms] = useState("");
   const [flashDropModalOpen, setFlashDropModalOpen] = useState(false);
   const [flashDropTone, setFlashDropTone] = useState("Urgent");
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingSms, setSendingSms] = useState(false);
 
   const handleAutoDraft = (opp: Opportunity) => {
     setGeneratingId(opp.id);
@@ -170,13 +172,29 @@ export default function AIMarketingHub() {
     }
   };
 
-  const handleFlashDropSend = () => {
-    setFlashDropModalOpen(false);
-    toast({
-      title: "Flash Drop successful! $35 recovered.",
-      description: "1 discounted spot sold. The class roster has been updated.",
-    });
-    window.dispatchEvent(new CustomEvent("flash-deal-sold"));
+  const handleFlashDropSend = async () => {
+    if (!testPhone.trim()) {
+      toast({ title: "Enter a phone number", description: "A test phone number is required to send.", variant: "destructive" });
+      return;
+    }
+    setSendingSms(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-twilio-sms", {
+        body: { targetPhoneNumber: testPhone.trim(), messageBody: flashDropSms },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setFlashDropModalOpen(false);
+      setFlashDropSms("");
+      setTestPhone("");
+      toast({ title: "SMS Delivered Successfully", description: "Revenue Agent Deployed." });
+      window.dispatchEvent(new CustomEvent("flash-deal-sold"));
+    } catch (err: any) {
+      toast({ title: "SMS Failed", description: err.message || "Twilio error", variant: "destructive" });
+    } finally {
+      setSendingSms(false);
+    }
   };
 
   const handleSend = () => {
@@ -448,13 +466,26 @@ export default function AIMarketingHub() {
             </p>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5" />
+              Test Phone Number
+            </label>
+            <input
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              placeholder="+1 555 123 4567"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+            />
+          </div>
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setFlashDropModalOpen(false)}>
+            <Button variant="ghost" onClick={() => setFlashDropModalOpen(false)} disabled={sendingSms}>
               Cancel
             </Button>
-            <Button onClick={handleFlashDropSend} className="gap-2">
+            <Button onClick={handleFlashDropSend} className="gap-2" disabled={sendingSms}>
               <Send className="h-4 w-4" />
-              Approve &amp; Send SMS
+              {sendingSms ? "Sending…" : "Send SMS"}
             </Button>
           </DialogFooter>
         </DialogContent>
