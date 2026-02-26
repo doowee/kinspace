@@ -310,19 +310,35 @@ export default function AIMarketingHub() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               {FLASH_DEAL.insight}
             </p>
-            <Button
-              className="w-full gap-2"
-              onClick={() => {
-                toast({
-                  title: "Flash Drop successful! $35 recovered.",
-                  description: "1 discounted spot sold. The class roster has been updated.",
-                });
-                window.dispatchEvent(new CustomEvent("flash-deal-sold"));
-              }}
-            >
-              <Sparkles className="h-4 w-4" />
-              Deploy Flash Drop
-            </Button>
+            <div className="space-y-2">
+              <Select value={flashDropTone} onValueChange={setFlashDropTone}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Tone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Urgent">⚡ Urgent</SelectItem>
+                  <SelectItem value="Gentle">🤍 Gentle</SelectItem>
+                  <SelectItem value="VIP">👑 VIP</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                className="w-full gap-2"
+                onClick={handleFlashDrop}
+                disabled={flashDropLoading}
+              >
+                {flashDropLoading ? (
+                  <>
+                    <Sparkles className="h-4 w-4 animate-pulse" />
+                    Revenue Agent thinking…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    ✨ Deploy Flash Drop
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
