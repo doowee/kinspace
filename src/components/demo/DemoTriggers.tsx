@@ -114,17 +114,6 @@ export default function DemoTriggers() {
 
     if (promotedBooking) {
       await supabase.from("bookings").update({ status: "waitlist" as any }).eq("id", promotedBooking.id);
-      const { data: pass } = await supabase
-        .from("student_passes")
-        .select("id, credits_remaining")
-        .eq("user_id", promotedBooking.user_id)
-        .eq("studio_id", activeStudio?.id ?? "")
-        .order("expires_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (pass) {
-        await supabase.from("student_passes").update({ credits_remaining: pass.credits_remaining + 1 }).eq("id", pass.id);
-      }
     }
 
     clearMessages();
