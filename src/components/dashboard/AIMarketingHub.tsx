@@ -11,9 +11,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type AudienceType = "inactive" | "all-students" | "past-attendees";
 
