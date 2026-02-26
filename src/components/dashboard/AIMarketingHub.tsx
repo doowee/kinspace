@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap, MessageSquare } from "lucide-react";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap, MessageSquare, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -172,13 +172,29 @@ export default function AIMarketingHub() {
     }
   };
 
-  const handleFlashDropSend = () => {
-    setFlashDropModalOpen(false);
-    toast({
-      title: "Flash Drop successful! $35 recovered.",
-      description: "1 discounted spot sold. The class roster has been updated.",
-    });
-    window.dispatchEvent(new CustomEvent("flash-deal-sold"));
+  const handleFlashDropSend = async () => {
+    if (!testPhone.trim()) {
+      toast({ title: "Enter a phone number", description: "A test phone number is required to send.", variant: "destructive" });
+      return;
+    }
+    setSendingSms(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-twilio-sms", {
+        body: { targetPhoneNumber: testPhone.trim(), messageBody: flashDropSms },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setFlashDropModalOpen(false);
+      setFlashDropSms("");
+      setTestPhone("");
+      toast({ title: "SMS Delivered Successfully", description: "Revenue Agent Deployed." });
+      window.dispatchEvent(new CustomEvent("flash-deal-sold"));
+    } catch (err: any) {
+      toast({ title: "SMS Failed", description: err.message || "Twilio error", variant: "destructive" });
+    } finally {
+      setSendingSms(false);
+    }
   };
 
   const handleSend = () => {
