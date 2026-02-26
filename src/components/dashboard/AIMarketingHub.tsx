@@ -422,6 +422,42 @@ export default function AIMarketingHub() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* SMS Preview Modal — Revenue Agent */}
+      <Dialog open={flashDropModalOpen} onOpenChange={setFlashDropModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              SMS Preview — Revenue Agent
+            </DialogTitle>
+            <DialogDescription>
+              Review the AI-generated text before sending to your waitlist.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <Textarea
+              className="min-h-[100px] text-sm leading-relaxed bg-transparent border-0 p-0 focus-visible:ring-0 resize-none"
+              value={flashDropSms}
+              onChange={(e) => setFlashDropSms(e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground mt-2 text-right">
+              {flashDropSms.length}/160 characters
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setFlashDropModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleFlashDropSend} className="gap-2">
+              <Send className="h-4 w-4" />
+              Approve &amp; Send SMS
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
