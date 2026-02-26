@@ -466,13 +466,26 @@ export default function AIMarketingHub() {
             </p>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5" />
+              Test Phone Number
+            </label>
+            <input
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              placeholder="+1 555 123 4567"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+            />
+          </div>
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setFlashDropModalOpen(false)}>
+            <Button variant="ghost" onClick={() => setFlashDropModalOpen(false)} disabled={sendingSms}>
               Cancel
             </Button>
-            <Button onClick={handleFlashDropSend} className="gap-2">
+            <Button onClick={handleFlashDropSend} className="gap-2" disabled={sendingSms}>
               <Send className="h-4 w-4" />
-              Approve &amp; Send SMS
+              {sendingSms ? "Sending…" : "Send SMS"}
             </Button>
           </DialogFooter>
         </DialogContent>
