@@ -19,6 +19,7 @@ import PublicPackagesPage from "./pages/PublicPackagesPage";
 import OrgRevenue from "./pages/OrgRevenue";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 import Wallet from "./pages/Wallet";
 import Profile from "./pages/Profile";
 import BookClass from "./pages/BookClass";
