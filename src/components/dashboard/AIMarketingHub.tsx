@@ -125,6 +125,8 @@ export default function AIMarketingHub() {
   const [flashDropSms, setFlashDropSms] = useState("");
   const [flashDropModalOpen, setFlashDropModalOpen] = useState(false);
   const [flashDropTone, setFlashDropTone] = useState("Urgent");
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingSms, setSendingSms] = useState(false);
 
   const handleAutoDraft = (opp: Opportunity) => {
     setGeneratingId(opp.id);
