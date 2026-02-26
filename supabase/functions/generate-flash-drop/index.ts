@@ -14,7 +14,7 @@ Rules:
 
 1. It must read like a text message (under 160 characters). Do NOT write an email.
 2. It must be energetic but maintain a premium brand voice. 
-3. You must include a clear Call-To-Action telling the client to reply with a specific word (e.g., 'Reply CLAIM' or 'Reply YES') to buy the spot at a discounted rate.
+3. You MUST end with exactly 'Reply CLAIM' as the call-to-action. Do NOT use any other keyword — only CLAIM.
 4. Do not use cringe-worthy hashtags. One or two emojis max.`;
 
 serve(async (req) => {
