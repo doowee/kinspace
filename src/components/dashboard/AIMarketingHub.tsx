@@ -11,9 +11,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Sparkles, Clock, Users, Send, TrendingUp, UserX, UserCheck, Repeat, Zap, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type AudienceType = "inactive" | "all-students" | "past-attendees";
 
@@ -112,6 +120,12 @@ export default function AIMarketingHub() {
   const [editBody, setEditBody] = useState("");
   const [recipientCount, setRecipientCount] = useState(0);
 
+  // Flash Drop / Revenue Agent state
+  const [flashDropLoading, setFlashDropLoading] = useState(false);
+  const [flashDropSms, setFlashDropSms] = useState("");
+  const [flashDropModalOpen, setFlashDropModalOpen] = useState(false);
+  const [flashDropTone, setFlashDropTone] = useState("Urgent");
+
   const handleAutoDraft = (opp: Opportunity) => {
     setGeneratingId(opp.id);
     setTimeout(() => {
@@ -125,6 +139,44 @@ export default function AIMarketingHub() {
         setEditorOpen(true);
       }
     }, 2500);
+  };
+
+  const handleFlashDrop = async () => {
+    setFlashDropLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-flash-drop", {
+        body: {
+          className: "Reformer Flow",
+          instructorName: "Sarah",
+          spotsAvailable: 3,
+          timeUntilClass: "1 hour",
+          tonePreference: flashDropTone,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setFlashDropSms(data.sms || "");
+      setFlashDropModalOpen(true);
+    } catch (err: any) {
+      toast({
+        title: "Revenue Agent Error",
+        description: err.message || "Failed to generate SMS copy.",
+        variant: "destructive",
+      });
+    } finally {
+      setFlashDropLoading(false);
+    }
+  };
+
+  const handleFlashDropSend = () => {
+    setFlashDropModalOpen(false);
+    toast({
+      title: "Flash Drop successful! $35 recovered.",
+      description: "1 discounted spot sold. The class roster has been updated.",
+    });
+    window.dispatchEvent(new CustomEvent("flash-deal-sold"));
   };
 
   const handleSend = () => {
@@ -259,19 +311,35 @@ export default function AIMarketingHub() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               {FLASH_DEAL.insight}
             </p>
-            <Button
-              className="w-full gap-2"
-              onClick={() => {
-                toast({
-                  title: "Flash Drop successful! $35 recovered.",
-                  description: "1 discounted spot sold. The class roster has been updated.",
-                });
-                window.dispatchEvent(new CustomEvent("flash-deal-sold"));
-              }}
-            >
-              <Sparkles className="h-4 w-4" />
-              Deploy Flash Drop
-            </Button>
+            <div className="space-y-2">
+              <Select value={flashDropTone} onValueChange={setFlashDropTone}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Tone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Urgent">⚡ Urgent</SelectItem>
+                  <SelectItem value="Gentle">🤍 Gentle</SelectItem>
+                  <SelectItem value="VIP">👑 VIP</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                className="w-full gap-2"
+                onClick={handleFlashDrop}
+                disabled={flashDropLoading}
+              >
+                {flashDropLoading ? (
+                  <>
+                    <Sparkles className="h-4 w-4 animate-pulse" />
+                    Revenue Agent thinking…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    ✨ Deploy Flash Drop
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -351,6 +419,42 @@ export default function AIMarketingHub() {
             <Button onClick={handleSend} className="gap-2">
               <Send className="h-4 w-4" />
               Approve &amp; Send to {recipientCount} {activeOpp ? AUDIENCE_CONFIG[activeOpp.audience].label : "Clients"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS Preview Modal — Revenue Agent */}
+      <Dialog open={flashDropModalOpen} onOpenChange={setFlashDropModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              SMS Preview — Revenue Agent
+            </DialogTitle>
+            <DialogDescription>
+              Review the AI-generated text before sending to your waitlist.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <Textarea
+              className="min-h-[100px] text-sm leading-relaxed bg-transparent border-0 p-0 focus-visible:ring-0 resize-none"
+              value={flashDropSms}
+              onChange={(e) => setFlashDropSms(e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground mt-2 text-right">
+              {flashDropSms.length}/160 characters
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setFlashDropModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleFlashDropSend} className="gap-2">
+              <Send className="h-4 w-4" />
+              Approve &amp; Send SMS
             </Button>
           </DialogFooter>
         </DialogContent>
