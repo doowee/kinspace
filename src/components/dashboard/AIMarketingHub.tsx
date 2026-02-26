@@ -177,7 +177,8 @@ export default function AIMarketingHub() {
       description: "1 discounted spot sold. The class roster has been updated.",
     });
     window.dispatchEvent(new CustomEvent("flash-deal-sold"));
-  };
+
+  const handleSend = () => {
     if (!activeOpp) return;
     setEditorOpen(false);
     setOpportunities((prev) => prev.filter((o) => o.id !== activeOpp.id));
