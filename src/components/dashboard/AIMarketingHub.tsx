@@ -141,7 +141,43 @@ export default function AIMarketingHub() {
     }, 2500);
   };
 
-  const handleSend = () => {
+  const handleFlashDrop = async () => {
+    setFlashDropLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-flash-drop", {
+        body: {
+          className: "Reformer Flow",
+          instructorName: "Sarah",
+          spotsAvailable: 3,
+          timeUntilClass: "1 hour",
+          tonePreference: flashDropTone,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setFlashDropSms(data.sms || "");
+      setFlashDropModalOpen(true);
+    } catch (err: any) {
+      toast({
+        title: "Revenue Agent Error",
+        description: err.message || "Failed to generate SMS copy.",
+        variant: "destructive",
+      });
+    } finally {
+      setFlashDropLoading(false);
+    }
+  };
+
+  const handleFlashDropSend = () => {
+    setFlashDropModalOpen(false);
+    toast({
+      title: "Flash Drop successful! $35 recovered.",
+      description: "1 discounted spot sold. The class roster has been updated.",
+    });
+    window.dispatchEvent(new CustomEvent("flash-deal-sold"));
+  };
     if (!activeOpp) return;
     setEditorOpen(false);
     setOpportunities((prev) => prev.filter((o) => o.id !== activeOpp.id));
