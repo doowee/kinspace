@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Clock, Users, MapPin, ChevronLeft, ChevronRight, CheckCircle2, ShoppingBag, PartyPopper, LayoutDashboard, User as UserIcon, CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import CheckoutModal from "@/components/booking/CheckoutModal";
 import {
   format,
   addDays,
@@ -77,6 +78,7 @@ export default function BookingPage() {
   const [userBookedClassIds, setUserBookedClassIds] = useState<Map<string, string>>(new Map());
   const [pendingBookClass, setPendingBookClass] = useState<PublicClass | null>(null);
   const [successClass, setSuccessClass] = useState<PublicClass | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [detailClass, setDetailClass] = useState<PublicClass | null>(null);
 
   // Listen to auth changes
@@ -575,15 +577,27 @@ export default function BookingPage() {
           <p className="text-sm text-muted-foreground">
             You need a class pass to book this session. Browse available packages and grab some credits.
           </p>
-          <Button
-            className="w-full mt-2 gap-2"
-            onClick={() => {
-              setNoCreditsOpen(false);
-              navigate(`/book/${studio_slug}/packages?return_url=/book/${studio_slug}`);
-            }}
-          >
-            View Packages
-          </Button>
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              className="w-full gap-2"
+              onClick={() => {
+                setNoCreditsOpen(false);
+                setCheckoutOpen(true);
+              }}
+            >
+              Buy 10-Class Pack — $199
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => {
+                setNoCreditsOpen(false);
+                navigate(`/book/${studio_slug}/packages?return_url=/book/${studio_slug}`);
+              }}
+            >
+              View All Packages
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -615,6 +629,15 @@ export default function BookingPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        itemName="10-Class Pack"
+        itemPrice="$199.00"
+        studioName={studio?.name ?? ""}
+      />
     </div>
   );
 }

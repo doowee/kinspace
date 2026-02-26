@@ -22,7 +22,8 @@ export async function getUserStudios() {
         name,
         slug,
         owner_id,
-        created_at
+        created_at,
+        organization_id
       )
     `);
 
