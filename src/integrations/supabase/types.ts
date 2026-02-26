@@ -164,6 +164,30 @@ export type Database = {
           },
         ]
       }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          stripe_account_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          stripe_account_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          stripe_account_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -176,6 +200,7 @@ export type Database = {
           last_name: string | null
           membership_tier: string | null
           notification_preferences: Json
+          organization_id: string | null
           phone: string | null
           stripe_customer_id: string | null
           updated_at: string
@@ -191,6 +216,7 @@ export type Database = {
           last_name?: string | null
           membership_tier?: string | null
           notification_preferences?: Json
+          organization_id?: string | null
           phone?: string | null
           stripe_customer_id?: string | null
           updated_at?: string
@@ -206,6 +232,7 @@ export type Database = {
           last_name?: string | null
           membership_tier?: string | null
           notification_preferences?: Json
+          organization_id?: string | null
           phone?: string | null
           stripe_customer_id?: string | null
           updated_at?: string
@@ -216,6 +243,13 @@ export type Database = {
             columns: ["home_studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -277,6 +311,7 @@ export type Database = {
           location: string | null
           logo_url: string | null
           name: string
+          organization_id: string | null
           owner_id: string
           primary_color: string | null
           slug: string
@@ -297,6 +332,7 @@ export type Database = {
           location?: string | null
           logo_url?: string | null
           name: string
+          organization_id?: string | null
           owner_id: string
           primary_color?: string | null
           slug: string
@@ -317,6 +353,7 @@ export type Database = {
           location?: string | null
           logo_url?: string | null
           name?: string
+          organization_id?: string | null
           owner_id?: string
           primary_color?: string | null
           slug?: string
@@ -324,6 +361,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "studios_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "studios_owner_id_fkey"
             columns: ["owner_id"]
@@ -428,6 +472,14 @@ export type Database = {
       get_studio_role: {
         Args: { _studio_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["studio_role"]
+      }
+      is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_owner: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
       }
       is_studio_member: {
         Args: { _studio_id: string; _user_id: string }
