@@ -39,26 +39,49 @@ export default function Students() {
       if (!activeStudio) { setLoading(false); return; }
       setLoading(true);
 
-      // Get student members of this studio
+      // Determine if studio belongs to an org — if so, fetch all org studio members
+      const { data: studioRow } = await supabase
+        .from("studios")
+        .select("organization_id")
+        .eq("id", activeStudio.id)
+        .single();
+
+      const orgId = studioRow?.organization_id;
+
+      let studioIds: string[] = [activeStudio.id];
+
+      if (orgId) {
+        // Get all studios in this org
+        const { data: orgStudios } = await supabase
+          .from("studios")
+          .select("id")
+          .eq("organization_id", orgId);
+        if (orgStudios && orgStudios.length > 0) {
+          studioIds = orgStudios.map((s) => s.id);
+        }
+      }
+
+      // Get student members across all org studios
       const { data: members } = await supabase
         .from("studio_members")
         .select("user_id")
-        .eq("studio_id", activeStudio.id)
+        .in("studio_id", studioIds)
         .eq("role", "student");
 
       if (!members || members.length === 0) { setStudents([]); setLoading(false); return; }
 
-      const userIds = members.map((m) => m.user_id);
+      // Deduplicate user IDs
+      const userIds = [...new Set(members.map((m) => m.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, email, first_name, last_name, membership_tier")
         .in("id", userIds);
 
-      // Get booking counts
+      // Get booking counts across all org studios
       const { data: bookings } = await supabase
         .from("bookings")
         .select("user_id, created_at")
-        .eq("studio_id", activeStudio.id)
+        .in("studio_id", studioIds)
         .in("status", ["confirmed", "checked_in"])
         .in("user_id", userIds);
 
@@ -111,7 +134,7 @@ export default function Students() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold text-foreground">Students</h2>
-          <p className="mt-1 text-muted-foreground">All students at {activeStudio.name}</p>
+          <p className="mt-1 text-muted-foreground">All clients across your organization</p>
         </div>
         <Badge variant="outline" className="text-sm gap-1.5 py-1.5 px-3"><Users className="h-4 w-4" />{students.length} total</Badge>
       </div>

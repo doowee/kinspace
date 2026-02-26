@@ -629,6 +629,15 @@ export default function BookingPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        itemName="10-Class Pack"
+        itemPrice="$199.00"
+        studioName={studio?.name ?? ""}
+      />
     </div>
   );
 }
