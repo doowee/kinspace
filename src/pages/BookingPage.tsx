@@ -153,24 +153,6 @@ export default function BookingPage() {
     setBookingClassId(cls.id);
 
     try {
-      const { data: passes } = await supabase
-        .from("student_passes")
-        .select("id, credits_remaining, expires_at")
-        .eq("user_id", user.id)
-        .eq("studio_id", studio.id)
-        .gt("credits_remaining", 0)
-        .gt("expires_at", new Date().toISOString())
-        .order("expires_at", { ascending: true })
-        .limit(1);
-
-      if (!passes || passes.length === 0) {
-        setBookingClassId(null);
-        setNoCreditsOpen(true);
-        return;
-      }
-
-      const pass = passes[0];
-
       // Check capacity
       const { count } = await supabase
         .from("bookings")
@@ -180,12 +162,6 @@ export default function BookingPage() {
 
       const isFull = (count ?? 0) >= cls.capacity;
       const bookingStatus = isFull ? "waitlist" : "confirmed";
-
-      const { error: passError } = await supabase
-        .from("student_passes")
-        .update({ credits_remaining: pass.credits_remaining - 1 })
-        .eq("id", pass.id);
-      if (passError) throw passError;
 
       const { error: bookError } = await supabase.from("bookings").insert({
         studio_id: studio.id,

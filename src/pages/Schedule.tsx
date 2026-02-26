@@ -43,7 +43,7 @@ interface ClassRow {
   name: string;
   description: string | null;
   start_time: string;
-  capacity: number;
+  capacity_total: number;
   instructor_id: string | null;
   studio_id: string;
   instructors: { name: string } | null;
@@ -97,11 +97,7 @@ export default function Schedule() {
       .select("id, name")
       .order("display_order");
 
-    if (activeStudio.organization_id) {
-      query = query.eq("organization_id", activeStudio.organization_id);
-    } else {
-      query = query.eq("studio_id", activeStudio.id);
-    }
+    query = query.eq("studio_id", activeStudio.id);
 
     const { data } = await query;
     setInstructors(data ?? []);
@@ -178,35 +174,8 @@ export default function Schedule() {
     setBookingClassId(cls.id);
 
     try {
-      // Step A: Check for active student pass with credits
-      const { data: passes } = await supabase
-        .from("student_passes")
-        .select("id, credits_remaining, expires_at")
-        .eq("user_id", user.id)
-        .eq("studio_id", activeStudio.id)
-        .gt("credits_remaining", 0)
-        .gt("expires_at", new Date().toISOString())
-        .order("expires_at", { ascending: true })
-        .limit(1);
-
-      if (!passes || passes.length === 0) {
-        // Step C: No credits
-        setBookingClassId(null);
-        setNoCreditsOpen(true);
-        return;
-      }
-
-      const pass = passes[0];
-      const isFull = (bookingCounts[cls.id] || 0) >= cls.capacity;
+      const isFull = (bookingCounts[cls.id] || 0) >= cls.capacity_total;
       const bookingStatus = isFull ? "waitlist" : "confirmed";
-
-      // Step B: Decrement credits
-      const { error: passError } = await supabase
-        .from("student_passes")
-        .update({ credits_remaining: pass.credits_remaining - 1 })
-        .eq("id", pass.id);
-
-      if (passError) throw passError;
 
       // Insert booking
       const { error: bookError } = await supabase.from("bookings").insert({
@@ -252,7 +221,7 @@ export default function Schedule() {
       name: className,
       description: classDescription || null,
       start_time: dt.toISOString(),
-      capacity: parseInt(capacity) || 10,
+      capacity_total: parseInt(capacity) || 10,
       studio_id: activeStudio.id,
       instructor_id: selectedInstructorId === "none" ? null : selectedInstructorId,
     });
@@ -403,11 +372,11 @@ export default function Schedule() {
             classesOnDate.map((cls) => {
               const count = bookingCounts[cls.id] || 0;
               const waitlistCount = waitlistCounts[cls.id] || 0;
-              const isFull = count >= cls.capacity;
-              const isLow = count < 2 && cls.capacity >= 3;
+              const isFull = count >= cls.capacity_total;
+              const isLow = count < 2 && cls.capacity_total >= 3;
               const isBooked = userBookedClassIds.has(cls.id);
               const isBooking = bookingClassId === cls.id;
-              const fillPercent = Math.min((count / cls.capacity) * 100, 100);
+              const fillPercent = Math.min((count / cls.capacity_total) * 100, 100);
 
               return (
                 <Card
@@ -483,7 +452,7 @@ export default function Schedule() {
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" />
-                          {count}/{cls.capacity} booked
+                          {count}/{cls.capacity_total} booked
                         </span>
                         {waitlistCount > 0 && (
                           <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
@@ -542,7 +511,7 @@ export default function Schedule() {
         onOpenChange={(open) => !open && setViewStudentsClass(null)}
         classId={viewStudentsClass?.id ?? null}
         className={viewStudentsClass?.name ?? ""}
-        capacity={viewStudentsClass?.capacity ?? 0}
+        capacity={viewStudentsClass?.capacity_total ?? 0}
         classStartTime={viewStudentsClass?.start_time}
         onBookingsChanged={fetchBookingData}
       />
@@ -553,7 +522,7 @@ export default function Schedule() {
           classId={manualBookClass?.id ?? null}
           className={manualBookClass?.name ?? ""}
           studioId={activeStudio.id}
-          organizationId={activeStudio.organization_id}
+          studioId={activeStudio.id}
           onBooked={() => { fetchBookingData(); }}
         />
       )}

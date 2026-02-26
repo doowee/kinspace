@@ -30,7 +30,7 @@ export default function StudentDashboard() {
   const { activeStudio } = useStudio();
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [totalCredits, setTotalCredits] = useState(0);
+  const [classPoints, setClassPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -44,8 +44,8 @@ export default function StudentDashboard() {
     if (!user || !activeStudio) return;
     setLoading(true);
 
-    const [profileRes, bookingsRes, creditsRes] = await Promise.all([
-      supabase.from("profiles").select("first_name").eq("id", user.id).single(),
+    const [profileRes, bookingsRes] = await Promise.all([
+      supabase.from("profiles").select("first_name, class_points").eq("id", user.id).single(),
       supabase
         .from("bookings")
         .select("id, class_id, status, classes(name, start_time)")
@@ -53,16 +53,10 @@ export default function StudentDashboard() {
         .eq("studio_id", activeStudio.id)
         .in("status", ["confirmed", "waitlist"])
         .order("created_at", { ascending: true }),
-      supabase
-        .from("student_passes")
-        .select("credits_remaining")
-        .eq("user_id", user.id)
-        .eq("studio_id", activeStudio.id)
-        .gt("credits_remaining", 0)
-        .gt("expires_at", new Date().toISOString()),
     ]);
 
     setFirstName(profileRes.data?.first_name || "");
+    setClassPoints(profileRes.data?.class_points ?? 0);
 
     const mapped: Booking[] = (bookingsRes.data ?? []).map((b: any) => ({
       id: b.id,
@@ -73,9 +67,6 @@ export default function StudentDashboard() {
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     setBookings(mapped);
-
-    const sum = (creditsRes.data ?? []).reduce((acc: number, p: any) => acc + p.credits_remaining, 0);
-    setTotalCredits(sum);
     setLoading(false);
   }, [user?.id, activeStudio?.id]);
 
@@ -173,14 +164,14 @@ export default function StudentDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium font-sans">Wallet</CardTitle>
+            <CardTitle className="text-sm font-medium font-sans">Class Points</CardTitle>
             <Ticket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold font-display ${totalCredits > 0 ? "text-primary" : "text-destructive"}`}>
-              {totalCredits}
+            <div className={`text-2xl font-bold font-display ${classPoints > 0 ? "text-primary" : "text-destructive"}`}>
+              {classPoints}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">credits remaining</p>
+            <p className="text-xs text-muted-foreground mt-1">points available</p>
           </CardContent>
         </Card>
       </div>

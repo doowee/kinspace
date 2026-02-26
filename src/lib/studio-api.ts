@@ -145,7 +145,7 @@ export async function fetchDashboardData(
         .eq("studio_id", studioId),
       supabase
         .from("classes")
-        .select("id, name, start_time, capacity, instructor_id")
+        .select("id, name, start_time, capacity_total, instructor_id")
         .eq("studio_id", studioId)
         .gte("start_time", since)
         .order("start_time", { ascending: true }),
@@ -157,7 +157,7 @@ export async function fetchDashboardData(
       supabase.from("instructors").select("id, name").eq("studio_id", studioId),
       supabase
         .from("classes")
-        .select("id, name, start_time, capacity, instructor_id")
+        .select("id, name, start_time, capacity_total, instructor_id")
         .eq("studio_id", studioId)
         .gte("start_time", todayStart)
         .lte("start_time", todayEnd)
@@ -184,7 +184,7 @@ export async function fetchDashboardData(
   // Avg capacity
   const classFill: Record<string, { booked: number; cap: number }> = {};
   for (const cls of classes) {
-    classFill[cls.id] = { booked: 0, cap: cls.capacity };
+    classFill[cls.id] = { booked: 0, cap: cls.capacity_total };
   }
   for (const b of bookings) {
     if (classFill[b.class_id] && ["confirmed", "checked_in"].includes(b.status)) {
@@ -207,7 +207,7 @@ export async function fetchDashboardData(
     if (!cls.instructor_id || !instMap.has(cls.instructor_id)) continue;
     const a = (instAgg[cls.instructor_id] ??= { cls: 0, bk: 0, cap: 0 });
     a.cls++;
-    a.cap += cls.capacity;
+    a.cap += cls.capacity_total;
     a.bk += classFill[cls.id]?.booked ?? 0;
   }
   const topInstructors: InstructorStat[] = Object.entries(instAgg)
@@ -305,7 +305,7 @@ export async function fetchDashboardData(
       time: format(new Date(cls.start_time), "h:mm a"),
       instructor: instMap.get(cls.instructor_id ?? "") ?? "—",
       checkedIn,
-      capacity: cls.capacity,
+      capacity: cls.capacity_total,
     };
   });
 

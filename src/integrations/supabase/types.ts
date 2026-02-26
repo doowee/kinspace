@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          booking_source: string
           class_id: string
           created_at: string
           id: string
@@ -25,6 +26,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          booking_source?: string
           class_id: string
           created_at?: string
           id?: string
@@ -34,6 +36,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          booking_source?: string
           class_id?: string
           created_at?: string
           id?: string
@@ -68,7 +71,8 @@ export type Database = {
       }
       classes: {
         Row: {
-          capacity: number
+          capacity_booked: number
+          capacity_total: number
           created_at: string
           description: string | null
           id: string
@@ -79,7 +83,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          capacity?: number
+          capacity_booked?: number
+          capacity_total?: number
           created_at?: string
           description?: string | null
           id?: string
@@ -90,7 +95,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          capacity?: number
+          capacity_booked?: number
+          capacity_total?: number
           created_at?: string
           description?: string | null
           id?: string
@@ -124,7 +130,6 @@ export type Database = {
           display_order: number
           id: string
           name: string
-          organization_id: string | null
           photo_url: string | null
           studio_id: string | null
           user_id: string | null
@@ -135,7 +140,6 @@ export type Database = {
           display_order?: number
           id?: string
           name: string
-          organization_id?: string | null
           photo_url?: string | null
           studio_id?: string | null
           user_id?: string | null
@@ -146,118 +150,13 @@ export type Database = {
           display_order?: number
           id?: string
           name?: string
-          organization_id?: string | null
           photo_url?: string | null
           studio_id?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "instructors_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "instructors_studio_id_fkey"
-            columns: ["studio_id"]
-            isOneToOne: false
-            referencedRelation: "studios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_members: {
-        Row: {
-          created_at: string
-          id: string
-          organization_id: string
-          role: Database["public"]["Enums"]["org_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          organization_id: string
-          role?: Database["public"]["Enums"]["org_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          organization_id?: string
-          role?: Database["public"]["Enums"]["org_role"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_members_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organizations: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          slug: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          slug: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          slug?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      packages: {
-        Row: {
-          active: boolean
-          created_at: string
-          credits: number
-          expiration_days: number
-          id: string
-          name: string
-          price: number
-          studio_id: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          credits: number
-          expiration_days?: number
-          id?: string
-          name: string
-          price: number
-          studio_id: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          credits?: number
-          expiration_days?: number
-          id?: string
-          name?: string
-          price?: number
-          studio_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "packages_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
@@ -268,87 +167,55 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          class_points: number
           created_at: string
           email: string
           first_name: string | null
+          home_studio_id: string | null
           id: string
           last_name: string | null
+          membership_tier: string | null
           notification_preferences: Json
           phone: string | null
+          stripe_customer_id: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          class_points?: number
           created_at?: string
           email: string
           first_name?: string | null
+          home_studio_id?: string | null
           id: string
           last_name?: string | null
+          membership_tier?: string | null
           notification_preferences?: Json
           phone?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          class_points?: number
           created_at?: string
           email?: string
           first_name?: string | null
+          home_studio_id?: string | null
           id?: string
           last_name?: string | null
+          membership_tier?: string | null
           notification_preferences?: Json
           phone?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      student_passes: {
-        Row: {
-          created_at: string
-          credits_remaining: number
-          expires_at: string
-          id: string
-          package_id: string
-          studio_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          credits_remaining: number
-          expires_at: string
-          id?: string
-          package_id: string
-          studio_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          credits_remaining?: number
-          expires_at?: string
-          id?: string
-          package_id?: string
-          studio_id?: string
-          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "student_passes_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_passes_studio_id_fkey"
-            columns: ["studio_id"]
+            foreignKeyName: "profiles_home_studio_id_fkey"
+            columns: ["home_studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_passes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -357,6 +224,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_active: boolean
           role: Database["public"]["Enums"]["studio_role"]
           studio_id: string
           user_id: string
@@ -364,6 +232,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean
           role?: Database["public"]["Enums"]["studio_role"]
           studio_id: string
           user_id: string
@@ -371,6 +240,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean
           role?: Database["public"]["Enums"]["studio_role"]
           studio_id?: string
           user_id?: string
@@ -400,16 +270,17 @@ export type Database = {
           brand_secondary: string | null
           brand_text: string | null
           created_at: string
+          currency: string
           id: string
           late_cancel_fee: number | null
           late_cancel_window_hours: number
           location: string | null
           logo_url: string | null
           name: string
-          organization_id: string | null
           owner_id: string
           primary_color: string | null
           slug: string
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -419,16 +290,17 @@ export type Database = {
           brand_secondary?: string | null
           brand_text?: string | null
           created_at?: string
+          currency?: string
           id?: string
           late_cancel_fee?: number | null
           late_cancel_window_hours?: number
           location?: string | null
           logo_url?: string | null
           name: string
-          organization_id?: string | null
           owner_id: string
           primary_color?: string | null
           slug: string
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -438,26 +310,20 @@ export type Database = {
           brand_secondary?: string | null
           brand_text?: string | null
           created_at?: string
+          currency?: string
           id?: string
           late_cancel_fee?: number | null
           late_cancel_window_hours?: number
           location?: string | null
           logo_url?: string | null
           name?: string
-          organization_id?: string | null
           owner_id?: string
           primary_color?: string | null
           slug?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "studios_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "studios_owner_id_fkey"
             columns: ["owner_id"]
@@ -476,6 +342,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"]
           status: Database["public"]["Enums"]["transaction_status"]
           studio_id: string
+          type: string | null
           user_id: string
         }
         Insert: {
@@ -486,6 +353,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"]
           status?: Database["public"]["Enums"]["transaction_status"]
           studio_id: string
+          type?: string | null
           user_id: string
         }
         Update: {
@@ -496,6 +364,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"]
           status?: Database["public"]["Enums"]["transaction_status"]
           studio_id?: string
+          type?: string | null
           user_id?: string
         }
         Relationships: [
@@ -524,29 +393,9 @@ export type Database = {
         Args: { _booking_id: string; _user_id: string }
         Returns: string
       }
-      create_org_with_membership: {
-        Args: { _name: string; _slug: string }
-        Returns: string
-      }
       create_studio_with_membership: {
         Args: { _location?: string; _name: string; _slug: string }
         Returns: string
-      }
-      get_org_role: {
-        Args: { _org_id: string; _user_id: string }
-        Returns: Database["public"]["Enums"]["org_role"]
-      }
-      get_org_students: {
-        Args: { _org_id: string }
-        Returns: {
-          email: string
-          first_name: string
-          home_studio_name: string
-          last_booking_at: string
-          last_name: string
-          total_bookings: number
-          user_id: string
-        }[]
       }
       get_public_classes_by_studio_slug: {
         Args: { _slug: string }
@@ -580,14 +429,6 @@ export type Database = {
         Args: { _studio_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["studio_role"]
       }
-      is_org_member: {
-        Args: { _org_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_org_owner: {
-        Args: { _org_id: string; _user_id: string }
-        Returns: boolean
-      }
       is_studio_member: {
         Args: { _studio_id: string; _user_id: string }
         Returns: boolean
@@ -601,9 +442,8 @@ export type Database = {
         | "waitlist"
         | "late_cancelled"
         | "checked_in"
-      org_role: "owner" | "admin" | "viewer"
       payment_method: "card" | "cash" | "transfer" | "check"
-      studio_role: "owner" | "instructor" | "student"
+      studio_role: "owner" | "instructor" | "student" | "admin" | "front_desk"
       transaction_status: "completed" | "refunded" | "failed"
     }
     CompositeTypes: {
@@ -739,9 +579,8 @@ export const Constants = {
         "late_cancelled",
         "checked_in",
       ],
-      org_role: ["owner", "admin", "viewer"],
       payment_method: ["card", "cash", "transfer", "check"],
-      studio_role: ["owner", "instructor", "student"],
+      studio_role: ["owner", "instructor", "student", "admin", "front_desk"],
       transaction_status: ["completed", "refunded", "failed"],
     },
   },

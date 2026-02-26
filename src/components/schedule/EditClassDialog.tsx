@@ -20,7 +20,7 @@ interface EditClassDialogProps {
     id: string;
     name: string;
     start_time: string;
-    capacity: number;
+    capacity_total: number;
     instructor_id: string | null;
     description?: string | null;
   } | null;
@@ -45,7 +45,7 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
       const dt = new Date(cls.start_time);
       setClassDate(dt);
       setTime({ hour: dt.getHours(), minute: dt.getMinutes() });
-      setCapacity(String(cls.capacity));
+      setCapacity(String(cls.capacity_total));
       setInstructorId(cls.instructor_id || "none");
     }
   }, [cls]);
@@ -64,7 +64,7 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
         name,
         description: description || null,
         start_time: dt.toISOString(),
-        capacity: parseInt(capacity) || 10,
+        capacity_total: parseInt(capacity) || 10,
         instructor_id: instructorId === "none" ? null : instructorId,
       })
       .eq("id", cls.id);

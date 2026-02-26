@@ -148,7 +148,7 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
     // Fetch upcoming classes (without studio join — RLS on studios blocks cross-studio joins)
     const { data: classData } = await supabase
       .from("classes")
-      .select("id, name, description, start_time, capacity, instructor_id, studio_id")
+      .select("id, name, description, start_time, capacity_total, instructor_id, studio_id")
       .in("instructor_id", instructorIds)
       .gt("start_time", new Date().toISOString())
       .order("start_time", { ascending: true });
@@ -189,7 +189,7 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
       name: c.name,
       description: c.description,
       start_time: c.start_time,
-      capacity: c.capacity,
+      capacity: c.capacity_total,
       studio_name: studioMap[c.studio_id]?.name ?? "",
       studio_brand_primary: studioMap[c.studio_id]?.brand_primary ?? null,
       booked_count: countMap[c.id] || 0,

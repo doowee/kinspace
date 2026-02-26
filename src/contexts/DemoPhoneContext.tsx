@@ -155,22 +155,11 @@ export function DemoPhoneProvider({ children }: { children: React.ReactNode }) {
               .update({ status: "confirmed" as any })
               .eq("id", meta.bookingId);
 
-            const { data: passes } = await supabase
-              .from("student_passes")
-              .select("id, credits_remaining")
-              .eq("user_id", meta.userId)
-              .eq("studio_id", meta.studioId)
-              .gt("credits_remaining", 0)
-              .gt("expires_at", new Date().toISOString())
-              .order("expires_at", { ascending: true })
-              .limit(1);
-
-            if (passes && passes.length > 0) {
-              await supabase
-                .from("student_passes")
-                .update({ credits_remaining: passes[0].credits_remaining - 1 })
-                .eq("id", passes[0].id);
-            }
+            // Promote the booking
+            await supabase
+              .from("bookings")
+              .update({ status: "confirmed" as any })
+              .eq("id", meta.bookingId);
           }
 
           setTimeout(() => {

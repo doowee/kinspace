@@ -5,14 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarDays, X, Ticket, ExternalLink, ShoppingBag, AlertTriangle, RotateCw, CalendarPlus, Clock } from "lucide-react";
+import { CalendarDays, X, Ticket, ExternalLink, AlertTriangle, RotateCw, CalendarPlus, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -45,18 +40,15 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [pastBookings, setPastBookings] = useState<Booking[]>([]);
-  const [creditsSummary, setCreditsSummary] = useState(0);
+  const [classPoints, setClassPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [studioPasses, setStudioPasses] = useState<{ studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number; upcoming_classes: number }[]>([]);
 
-  // Cancel dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [isLateCancel, setIsLateCancel] = useState(false);
   const [lateCancelWindowHours, setLateCancelWindowHours] = useState(12);
 
-  // Rebook dialog state
   const [rebookDialogOpen, setRebookDialogOpen] = useState(false);
   const [rebookLoading, setRebookLoading] = useState(false);
   const [rebookCandidate, setRebookCandidate] = useState<NextClassInstance | null>(null);
@@ -67,28 +59,21 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
     if (!effectiveUserId) return;
     setLoading(true);
 
-    const [profileRes, bookingsRes, creditsRes] = await Promise.all([
-      supabase.from("profiles").select("first_name").eq("id", effectiveUserId).single(),
+    const [profileRes, bookingsRes] = await Promise.all([
+      supabase.from("profiles").select("first_name, class_points").eq("id", effectiveUserId).single(),
       supabase
         .from("bookings")
         .select("id, class_id, status, studio_id, classes(name, start_time, instructors:instructor_id(name)), studios:studio_id(name, slug)")
         .eq("user_id", effectiveUserId)
         .in("status", ["confirmed", "checked_in", "waitlist"])
         .order("created_at", { ascending: true }),
-      supabase
-        .from("student_passes")
-        .select("credits_remaining, studio_id, studios:studio_id(name, slug)")
-        .eq("user_id", effectiveUserId)
-        .gt("credits_remaining", 0)
-        .gt("expires_at", new Date().toISOString()),
     ]);
 
     setFirstName(profileRes.data?.first_name || "");
+    setClassPoints(profileRes.data?.class_points ?? 0);
 
     const mapped: Booking[] = (bookingsRes.data ?? []).map((b: any) => ({
-      id: b.id,
-      class_id: b.class_id,
-      status: b.status,
+      id: b.id, class_id: b.class_id, status: b.status,
       class_name: b.classes?.name ?? "Unknown Class",
       start_time: b.classes?.start_time ?? "",
       studio_id: b.studio_id,
@@ -101,50 +86,10 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
     const now = new Date();
     setBookings(mapped.filter((b) => new Date(b.start_time) > now));
     setPastBookings(mapped.filter((b) => new Date(b.start_time) <= now).reverse().slice(0, 10));
-
-    const total = (creditsRes.data ?? []).reduce((sum: number, p: any) => sum + (p.credits_remaining ?? 0), 0);
-    setCreditsSummary(total);
-
-    // Group passes by studio
-    const passMap: Record<string, { studio_id: string; studio_name: string; studio_slug: string; credits_remaining: number; upcoming_classes: number }> = {};
-    (creditsRes.data ?? []).forEach((p: any) => {
-      const sid = p.studio_id;
-      if (!passMap[sid]) {
-        passMap[sid] = {
-          studio_id: sid,
-          studio_name: (p.studios as any)?.name ?? "Unknown",
-          studio_slug: (p.studios as any)?.slug ?? "",
-          credits_remaining: 0,
-          upcoming_classes: 0,
-        };
-      }
-      passMap[sid].credits_remaining += p.credits_remaining;
-    });
-
-    // Count upcoming classes per studio
-    const upcomingByStudio = mapped.filter((b) => new Date(b.start_time) > now);
-    upcomingByStudio.forEach((b) => {
-      if (passMap[b.studio_id]) {
-        passMap[b.studio_id].upcoming_classes += 1;
-      } else {
-        passMap[b.studio_id] = {
-          studio_id: b.studio_id,
-          studio_name: b.studio_name,
-          studio_slug: b.studio_slug,
-          credits_remaining: 0,
-          upcoming_classes: 1,
-        };
-      }
-    });
-
-    setStudioPasses(Object.values(passMap));
-
     setLoading(false);
   }, [effectiveUserId]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const studioColorMap = useMemo(() => {
     const ids = new Set<string>();
@@ -152,24 +97,14 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
     pastBookings.forEach((b) => ids.add(b.studio_id));
     const map: Record<string, string> = {};
     let i = 0;
-    ids.forEach((id) => {
-      map[id] = STUDIO_COLORS[i % STUDIO_COLORS.length];
-      i++;
-    });
+    ids.forEach((id) => { map[id] = STUDIO_COLORS[i % STUDIO_COLORS.length]; i++; });
     return map;
   }, [bookings, pastBookings]);
 
-  // Cancel handlers
   const handleCancelClick = async (booking: Booking) => {
-    const { data: studioData } = await supabase
-      .from("studios")
-      .select("late_cancel_window_hours")
-      .eq("id", booking.studio_id)
-      .single();
-
+    const { data: studioData } = await supabase.from("studios").select("late_cancel_window_hours").eq("id", booking.studio_id).single();
     const windowHours = (studioData as any)?.late_cancel_window_hours ?? 12;
     setLateCancelWindowHours(windowHours);
-
     const hoursUntilClass = (new Date(booking.start_time).getTime() - Date.now()) / (1000 * 60 * 60);
     setIsLateCancel(hoursUntilClass <= windowHours);
     setCancelTarget(booking);
@@ -180,279 +115,76 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
     if (!effectiveUserId || !cancelTarget) return;
     setCancellingId(cancelTarget.id);
     setCancelDialogOpen(false);
-
-    const { data, error } = await supabase.rpc("cancel_booking_logic", {
-      _booking_id: cancelTarget.id,
-      _user_id: effectiveUserId,
-    });
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      const message = data as string;
-      const isLate = message.includes("Late");
-      toast({
-        title: isLate ? "Late Cancellation" : "Cancelled",
-        description: message,
-        variant: isLate ? "destructive" : "default",
-      });
-    }
-
-    setCancellingId(null);
-    setCancelTarget(null);
-    fetchAll();
+    const { data, error } = await supabase.rpc("cancel_booking_logic", { _booking_id: cancelTarget.id, _user_id: effectiveUserId });
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+    else { const message = data as string; toast({ title: message.includes("Late") ? "Late Cancellation" : "Cancelled", description: message, variant: message.includes("Late") ? "destructive" : "default" }); }
+    setCancellingId(null); setCancelTarget(null); fetchAll();
   };
 
-  // Rebook handlers
   const handleRebook = async (booking: Booking, afterCurrentClass: boolean) => {
-    setRebookLoading(true);
-    setRebookSourceBooking(booking);
-
+    setRebookLoading(true); setRebookSourceBooking(booking);
     const preferredHour = new Date(booking.start_time).getHours();
     const afterDate = afterCurrentClass ? booking.start_time : undefined;
-
-    const result = await findNextClassInstance(
-      booking.class_name,
-      booking.studio_id,
-      afterDate,
-      preferredHour,
-    );
-
+    const result = await findNextClassInstance(booking.class_name, booking.studio_id, afterDate, preferredHour);
     setRebookLoading(false);
-
-    if (!result) {
-      toast({
-        title: "No classes found",
-        description: `No upcoming classes found for "${booking.class_name}".`,
-      });
-      setRebookSourceBooking(null);
-      return;
-    }
-
-    setRebookCandidate(result);
-    setRebookDialogOpen(true);
+    if (!result) { toast({ title: "No classes found", description: `No upcoming "${booking.class_name}" found.` }); setRebookSourceBooking(null); return; }
+    setRebookCandidate(result); setRebookDialogOpen(true);
   };
 
   const confirmRebook = async () => {
     if (!effectiveUserId || !rebookCandidate || !rebookSourceBooking) return;
     setRebookConfirming(true);
-
-    // Deduct credit from earliest-expiring pass
-    const { data: passes } = await supabase
-      .from("student_passes")
-      .select("id, credits_remaining")
-      .eq("user_id", effectiveUserId)
-      .eq("studio_id", rebookSourceBooking.studio_id)
-      .gt("credits_remaining", 0)
-      .gt("expires_at", new Date().toISOString())
-      .order("expires_at", { ascending: true })
-      .limit(1);
-
-    if (!passes || passes.length === 0) {
-      toast({
-        title: "No credits",
-        description: "You don't have any credits available at this studio.",
-        variant: "destructive",
-      });
-      setRebookConfirming(false);
-      return;
-    }
-
-    const pass = passes[0];
-
-    // Create booking
     const { error: bookingError } = await supabase.from("bookings").insert({
-      user_id: effectiveUserId,
-      class_id: rebookCandidate.id,
-      studio_id: rebookSourceBooking.studio_id,
-      status: "confirmed",
+      user_id: effectiveUserId, class_id: rebookCandidate.id, studio_id: rebookSourceBooking.studio_id, status: "confirmed",
     });
-
     if (bookingError) {
-      if (bookingError.code === "23505") {
-        toast({ title: "Already booked", description: "You're already booked for this class.", variant: "destructive" });
-      } else {
-        toast({ title: "Error", description: bookingError.message, variant: "destructive" });
-      }
-      setRebookConfirming(false);
-      return;
+      if (bookingError.code === "23505") toast({ title: "Already booked", variant: "destructive" });
+      else toast({ title: "Error", description: bookingError.message, variant: "destructive" });
+      setRebookConfirming(false); return;
     }
-
-    // Deduct 1 credit
-    await supabase
-      .from("student_passes")
-      .update({ credits_remaining: pass.credits_remaining - 1 })
-      .eq("id", pass.id);
-
-    toast({
-      title: "Booked!",
-      description: `${rebookCandidate.name} on ${format(new Date(rebookCandidate.start_time), "EEE, MMM d · h:mm a")}`,
-    });
-
-    setRebookConfirming(false);
-    setRebookDialogOpen(false);
-    setRebookCandidate(null);
-    setRebookSourceBooking(null);
-    fetchAll();
+    toast({ title: "Booked!", description: `${rebookCandidate.name} on ${format(new Date(rebookCandidate.start_time), "EEE, MMM d · h:mm a")}` });
+    setRebookConfirming(false); setRebookDialogOpen(false); setRebookCandidate(null); setRebookSourceBooking(null); fetchAll();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return (<div className="flex items-center justify-center py-16"><div className="animate-pulse text-muted-foreground">Loading...</div></div>);
 
   return (
     <div className="animate-fade-in space-y-8 max-w-3xl mx-auto px-4 py-8">
-      {/* Greeting */}
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground">
-          Welcome back, {firstName || "Student"}.
-        </h2>
-        <p className="mt-1 text-muted-foreground">
-          Here's what's coming up for you.
-        </p>
+        <h2 className="font-display text-3xl font-bold text-foreground">Welcome back, {firstName || "Student"}.</h2>
+        <p className="mt-1 text-muted-foreground">Here's what's coming up for you.</p>
       </div>
 
-      {/* My Studios */}
-      {studioPasses.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {studioPasses.map((sp) => (
-            <Card key={sp.studio_id} className="relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 w-1 bg-primary/30" />
-              <CardHeader className="pb-2 pl-5">
-                <CardTitle className="text-sm font-medium font-sans truncate">{sp.studio_name}</CardTitle>
-              </CardHeader>
-              <CardContent className="pl-5 flex items-end justify-between">
-                <div className="flex gap-6">
-                  <div>
-                    <div className={`text-2xl font-bold font-display ${sp.credits_remaining > 0 ? "text-primary" : "text-destructive"}`}>
-                      {sp.credits_remaining}
-                    </div>
-                    <p className="text-xs text-muted-foreground">credits remaining</p>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold font-display text-primary">
-                      {sp.upcoming_classes}
-                    </div>
-                    <p className="text-xs text-muted-foreground">upcoming classes</p>
-                  </div>
-                </div>
-                {sp.studio_slug && (
-                  <div className="flex flex-col gap-1.5">
-                    <Button variant="outline" size="sm" asChild className="text-xs gap-1">
-                      <Link to={`/book/${sp.studio_slug}`}>
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Book
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" asChild className="text-xs gap-1">
-                      <Link to={`/book/${sp.studio_slug}/packages`}>
-                        <ShoppingBag className="h-3.5 w-3.5" />
-                        Buy More
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Aggregated Quick Stats — only show when multiple studios */}
-      {studioPasses.length > 1 && (
-        <div className="grid grid-cols-2 gap-3">
-          <Card>
+      <div className="grid grid-cols-2 gap-3">
+        <Card><CardContent className="py-4 text-center"><div className="text-2xl font-bold font-display text-primary">{bookings.length}</div><p className="text-xs text-muted-foreground">Upcoming Classes</p></CardContent></Card>
+        <Link to="/wallet">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardContent className="py-4 text-center">
-              <div className="text-2xl font-bold font-display text-primary">{bookings.length}</div>
-              <p className="text-xs text-muted-foreground">Upcoming Classes</p>
+              <div className="text-2xl font-bold font-display text-primary flex items-center justify-center gap-1"><Ticket className="h-5 w-5" />{classPoints}</div>
+              <p className="text-xs text-muted-foreground">Class Points</p>
             </CardContent>
           </Card>
-          <Link to="/wallet">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="py-4 text-center">
-                <div className="text-2xl font-bold font-display text-primary flex items-center justify-center gap-1">
-                  <Ticket className="h-5 w-5" />
-                  {creditsSummary}
-                </div>
-                <p className="text-xs text-muted-foreground">Credits Available</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      )}
+        </Link>
+      </div>
 
-      {/* My Schedule (Upcoming) */}
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <CalendarDays className="h-5 w-5" />
-            My Schedule
-          </CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="font-display flex items-center gap-2"><CalendarDays className="h-5 w-5" />My Schedule</CardTitle></CardHeader>
         <CardContent>
-          {bookings.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No upcoming bookings.
-            </p>
-          ) : (
+          {bookings.length === 0 ? (<p className="text-sm text-muted-foreground py-4 text-center">No upcoming bookings.</p>) : (
             <div className="divide-y">
               {bookings.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2"
-                >
+                <div key={b.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2">
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-sm truncate">{b.class_name}</p>
-                      {b.studio_name && (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] px-2 py-0 border ${studioColorMap[b.studio_id] ?? ""}`}
-                        >
-                          {b.studio_name}
-                        </Badge>
-                      )}
-                      {b.status === "waitlist" && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] px-2 py-0 border border-amber-400 text-amber-600"
-                        >
-                          <Clock className="h-2.5 w-2.5 mr-0.5" />
-                          Waitlisted
-                        </Badge>
-                      )}
+                      {b.studio_name && <Badge variant="outline" className={`text-[10px] px-2 py-0 border ${studioColorMap[b.studio_id] ?? ""}`}>{b.studio_name}</Badge>}
+                      {b.status === "waitlist" && <Badge variant="outline" className="text-[10px] px-2 py-0 border border-amber-400 text-amber-600"><Clock className="h-2.5 w-2.5 mr-0.5" />Waitlisted</Badge>}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {b.instructor_name && <span>{b.instructor_name} · </span>}
-                      {format(new Date(b.start_time), "EEE, MMM d · h:mm a")}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{b.instructor_name && <span>{b.instructor_name} · </span>}{format(new Date(b.start_time), "EEE, MMM d · h:mm a")}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-primary hover:text-primary hover:bg-primary/10 text-xs gap-1"
-                      disabled={rebookLoading && rebookSourceBooking?.id === b.id}
-                      onClick={() => handleRebook(b, true)}
-                      title="Book the next session of this class"
-                    >
-                      <CalendarPlus className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Next Session</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      disabled={cancellingId === b.id}
-                      onClick={() => handleCancelClick(b)}
-                    >
-                      <X className="h-3.5 w-3.5 mr-1" />
-                      Cancel
-                    </Button>
+                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 text-xs gap-1" disabled={rebookLoading && rebookSourceBooking?.id === b.id} onClick={() => handleRebook(b, true)} title="Book the next session"><CalendarPlus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Next Session</span></Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" disabled={cancellingId === b.id} onClick={() => handleCancelClick(b)}><X className="h-3.5 w-3.5 mr-1" />Cancel</Button>
                   </div>
                 </div>
               ))}
@@ -461,49 +193,21 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
         </CardContent>
       </Card>
 
-      {/* Past Classes */}
       {pastBookings.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2 text-muted-foreground">
-              <RotateCw className="h-5 w-5" />
-              Past Classes
-            </CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="font-display flex items-center gap-2 text-muted-foreground"><RotateCw className="h-5 w-5" />Past Classes</CardTitle></CardHeader>
           <CardContent>
             <div className="divide-y">
               {pastBookings.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2"
-                >
+                <div key={b.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2">
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-sm truncate text-muted-foreground">{b.class_name}</p>
-                      {b.studio_name && (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] px-2 py-0 border ${studioColorMap[b.studio_id] ?? ""}`}
-                        >
-                          {b.studio_name}
-                        </Badge>
-                      )}
+                      {b.studio_name && <Badge variant="outline" className="text-[10px] px-2 py-0 opacity-60">{b.studio_name}</Badge>}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {b.instructor_name && <span>{b.instructor_name} · </span>}
-                      {format(new Date(b.start_time), "EEE, MMM d · h:mm a")}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{format(new Date(b.start_time), "EEE, MMM d · h:mm a")}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs gap-1.5 shrink-0"
-                    disabled={rebookLoading && rebookSourceBooking?.id === b.id}
-                    onClick={() => handleRebook(b, false)}
-                  >
-                    <RotateCw className="h-3.5 w-3.5" />
-                    Book Again
-                  </Button>
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 text-xs gap-1 shrink-0" disabled={rebookLoading && rebookSourceBooking?.id === b.id} onClick={() => handleRebook(b, false)}><CalendarPlus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Rebook</span></Button>
                 </div>
               ))}
             </div>
@@ -511,113 +215,34 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
         </Card>
       )}
 
-      {/* Cancel Confirmation Dialog */}
+      {/* Cancel Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
-          {isLateCancel ? (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-display flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  Late Cancellation Warning
-                </DialogTitle>
-                <DialogDescription className="pt-2">
-                  You are cancelling within the <strong>{lateCancelWindowHours}-hour</strong> window.
-                  You will <strong>lose</strong> your credit if you proceed.
-                </DialogDescription>
-              </DialogHeader>
-              {cancelTarget && (
-                <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm">
-                  <p className="font-medium">{cancelTarget.class_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}
-                  </p>
-                </div>
-              )}
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-                  Keep Class
-                </Button>
-                <Button variant="destructive" onClick={executeCancel}>
-                  I Understand, Cancel Anyway
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-display">Cancel Class?</DialogTitle>
-                <DialogDescription className="pt-2">
-                  You are outside the late cancel window. Your credit will be refunded.
-                </DialogDescription>
-              </DialogHeader>
-              {cancelTarget && (
-                <div className="rounded-md border bg-muted/50 p-3 text-sm">
-                  <p className="font-medium">{cancelTarget.class_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}
-                  </p>
-                </div>
-              )}
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-                  Nevermind
-                </Button>
-                <Button onClick={executeCancel}>
-                  Confirm Cancel
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+          {isLateCancel ? (<>
+            <DialogHeader><DialogTitle className="font-display flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" />Late Cancellation Warning</DialogTitle><DialogDescription className="pt-2">You are cancelling within the <strong>{lateCancelWindowHours}-hour</strong> window.</DialogDescription></DialogHeader>
+            {cancelTarget && <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm"><p className="font-medium">{cancelTarget.class_name}</p><p className="text-xs text-muted-foreground">{format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}</p></div>}
+            <DialogFooter className="gap-2 sm:gap-0"><Button variant="outline" onClick={() => setCancelDialogOpen(false)}>Keep Class</Button><Button variant="destructive" onClick={executeCancel}>Cancel Anyway</Button></DialogFooter>
+          </>) : (<>
+            <DialogHeader><DialogTitle className="font-display">Cancel Class?</DialogTitle><DialogDescription className="pt-2">Your credit will be refunded.</DialogDescription></DialogHeader>
+            {cancelTarget && <div className="rounded-md border bg-muted/50 p-3 text-sm"><p className="font-medium">{cancelTarget.class_name}</p><p className="text-xs text-muted-foreground">{format(new Date(cancelTarget.start_time), "EEE, MMM d · h:mm a")}</p></div>}
+            <DialogFooter className="gap-2 sm:gap-0"><Button variant="outline" onClick={() => setCancelDialogOpen(false)}>Nevermind</Button><Button onClick={executeCancel}>Confirm Cancel</Button></DialogFooter>
+          </>)}
         </DialogContent>
       </Dialog>
 
-      {/* Rebook Confirmation Dialog */}
-      <Dialog open={rebookDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          setRebookDialogOpen(false);
-          setRebookCandidate(null);
-          setRebookSourceBooking(null);
-        }
-      }}>
+      {/* Rebook Dialog */}
+      <Dialog open={rebookDialogOpen} onOpenChange={(open) => { if (!open) { setRebookDialogOpen(false); setRebookCandidate(null); setRebookSourceBooking(null); } }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
-              <CalendarPlus className="h-5 w-5 text-primary" />
-              Book Next Available?
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              We found the next available session for you.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><CalendarPlus className="h-5 w-5 text-primary" />Book Next Available?</DialogTitle><DialogDescription className="pt-2">We found the next available session for you.</DialogDescription></DialogHeader>
           {rebookCandidate && (
             <div className="rounded-md border bg-primary/5 border-primary/20 p-4 space-y-1">
               <p className="font-semibold text-sm">{rebookCandidate.name}</p>
-              {rebookCandidate.instructor_name && (
-                <p className="text-xs text-muted-foreground">
-                  with {rebookCandidate.instructor_name}
-                </p>
-              )}
-              <p className="text-sm font-medium text-primary">
-                {format(new Date(rebookCandidate.start_time), "EEEE, MMM d · h:mm a")}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {rebookCandidate.current_bookings}/{rebookCandidate.capacity} spots filled
-              </p>
+              {rebookCandidate.instructor_name && <p className="text-xs text-muted-foreground">with {rebookCandidate.instructor_name}</p>}
+              <p className="text-sm font-medium text-primary">{format(new Date(rebookCandidate.start_time), "EEEE, MMM d · h:mm a")}</p>
+              <p className="text-xs text-muted-foreground">{rebookCandidate.current_bookings}/{rebookCandidate.capacity} spots filled</p>
             </div>
           )}
-          <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
-            <Ticket className="h-3.5 w-3.5 shrink-0" />
-            This will use 1 credit from your pass.
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRebookDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={confirmRebook} disabled={rebookConfirming}>
-              {rebookConfirming ? "Booking…" : "Confirm Booking"}
-            </Button>
-          </DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0"><Button variant="outline" onClick={() => setRebookDialogOpen(false)}>Cancel</Button><Button onClick={confirmRebook} disabled={rebookConfirming}>{rebookConfirming ? "Booking…" : "Confirm Booking"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

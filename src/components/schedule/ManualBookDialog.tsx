@@ -12,7 +12,6 @@ interface ManualBookDialogProps {
   classId: string | null;
   className: string;
   studioId: string;
-  organizationId: string | null;
   onBooked: () => void;
 }
 
@@ -23,7 +22,7 @@ interface StudentResult {
   email: string;
 }
 
-export default function ManualBookDialog({ open, onOpenChange, classId, className, studioId, organizationId, onBooked }: ManualBookDialogProps) {
+export default function ManualBookDialog({ open, onOpenChange, classId, className, studioId, onBooked }: ManualBookDialogProps) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<StudentResult[]>([]);
@@ -45,19 +44,9 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
     const timer = setTimeout(async () => {
       setSearching(true);
 
-      // Get all studios in the org, or fall back to current studio
-      let studioIds: string[] = [studioId];
-      if (organizationId) {
-        const { data: orgStudios } = await supabase
-          .from("studios")
-          .select("id")
-          .eq("organization_id", organizationId);
-        if (orgStudios && orgStudios.length > 0) {
-          studioIds = orgStudios.map((s) => s.id);
-        }
-      }
+      const studioIds: string[] = [studioId];
 
-      // Search members across all org studios
+      // Search members in this studio
       const { data: members } = await supabase
         .from("studio_members")
         .select("user_id")
@@ -81,7 +70,7 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
       setSearching(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, studioId, organizationId]);
+  }, [search, studioId]);
 
   const handleBook = async (student: StudentResult) => {
     if (!classId) return;
@@ -91,7 +80,7 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
       // Check current confirmed count vs capacity
       const { data: cls } = await supabase
         .from("classes")
-        .select("capacity")
+        .select("capacity_total")
         .eq("id", classId)
         .single();
 
@@ -101,7 +90,7 @@ export default function ManualBookDialog({ open, onOpenChange, classId, classNam
         .eq("class_id", classId)
         .eq("status", "confirmed");
 
-      const isFull = (count ?? 0) >= (cls?.capacity ?? 0);
+      const isFull = (count ?? 0) >= (cls?.capacity_total ?? 0);
       const bookingStatus = isFull ? "waitlist" : "confirmed";
 
       const { error } = await supabase.from("bookings").insert({
