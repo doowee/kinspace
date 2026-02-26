@@ -19,6 +19,7 @@ import PublicPackagesPage from "./pages/PublicPackagesPage";
 import OrgRevenue from "./pages/OrgRevenue";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 import Wallet from "./pages/Wallet";
 import Profile from "./pages/Profile";
 import BookClass from "./pages/BookClass";
@@ -118,6 +119,7 @@ const App = () => (
               <Route path="/org-revenue" element={<OrgRevenue />} />
               <Route path="/finance" element={<Finance />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/admin/billing" element={<Billing />} />
             </Route>
             <Route path="/book/:studio_slug" element={<ThemedBookingPage />} />
             <Route path="/book/:studio_slug/packages" element={<ThemedPackagesPage />} />
