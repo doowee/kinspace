@@ -120,6 +120,12 @@ export default function AIMarketingHub() {
   const [editBody, setEditBody] = useState("");
   const [recipientCount, setRecipientCount] = useState(0);
 
+  // Flash Drop / Revenue Agent state
+  const [flashDropLoading, setFlashDropLoading] = useState(false);
+  const [flashDropSms, setFlashDropSms] = useState("");
+  const [flashDropModalOpen, setFlashDropModalOpen] = useState(false);
+  const [flashDropTone, setFlashDropTone] = useState("Urgent");
+
   const handleAutoDraft = (opp: Opportunity) => {
     setGeneratingId(opp.id);
     setTimeout(() => {
