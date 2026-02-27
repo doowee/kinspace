@@ -213,6 +213,7 @@ export default function InstructorsAdmin() {
         studio_id: activeStudio.id,
         authorized_studios: newAuthorized,
         certified_class_types: newCerts,
+        pin_code: newPin.trim() || null,
       },
     });
     if (error || data?.error) {
