@@ -28,6 +28,7 @@ import BookClass from "./pages/BookClass";
 import NotFound from "./pages/NotFound";
 import CreateStudio from "./pages/CreateStudio";
 import InstructorPortal from "./pages/InstructorPortal";
+import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
@@ -140,9 +141,9 @@ const App = () => {
             <Route
               path="/instructor-portal"
               element={
-                <AuthGate>
+                <InstructorAuthGate>
                   <InstructorPortal />
-                </AuthGate>
+                </InstructorAuthGate>
               }
             />
             <Route path="*" element={<NotFound />} />
