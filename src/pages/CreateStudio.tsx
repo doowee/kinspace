@@ -32,7 +32,7 @@ const PLANS = [
 
 export default function CreateStudio() {
   const { user } = useAuth();
-  const { refetch, memberships } = useStudio();
+  const { refetch, memberships, setActiveStudioId } = useStudio();
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>("pro");
