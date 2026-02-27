@@ -201,44 +201,33 @@ Deno.serve(async (req) => {
     let totalBookings = 0;
     let totalTransactions = 0;
 
-    for (const sid of studioIds) {
-      // ── Instructors (including demo Elena Voss) ──
-      const instructorIds: string[] = [];
-      let elenaInstructorId: string | null = null;
+    // ── Create canonical instructors ONCE on the primary studio only ──
+    const primaryStudioId = studioIds[0];
+    const instructorIds: string[] = [];
+    let elenaInstructorId: string | null = null;
 
-      // Ensure Elena Voss exists and is linked to her auth user
-      const allInstructorNames = [...INSTRUCTOR_NAMES, DEMO_INSTRUCTOR_NAME];
-      for (const instName of allInstructorNames) {
-        const { data: existing } = await supabaseAdmin
-          .from("instructors")
-          .select("id")
-          .eq("studio_id", sid)
-          .eq("name", instName)
-          .maybeSingle();
-
-        if (existing) {
-          instructorIds.push(existing.id);
-          if (instName === DEMO_INSTRUCTOR_NAME) {
-            elenaInstructorId = existing.id;
-            // Ensure user_id is linked
-            await supabaseAdmin.from("instructors").update({ user_id: DEMO_INSTRUCTOR_USER_ID }).eq("id", existing.id);
-          }
-        } else {
-          const insertPayload: any = { name: instName, studio_id: sid };
-          if (instName === DEMO_INSTRUCTOR_NAME) insertPayload.user_id = DEMO_INSTRUCTOR_USER_ID;
-          const { data: created, error: instErr } = await supabaseAdmin
-            .from("instructors")
-            .insert(insertPayload)
-            .select("id")
-            .single();
-          if (instErr) {
-            console.warn(`Instructor ${instName}: ${instErr.message}`);
-            continue;
-          }
-          instructorIds.push(created.id);
-          if (instName === DEMO_INSTRUCTOR_NAME) elenaInstructorId = created.id;
-        }
+    for (const inst of CANONICAL_INSTRUCTORS) {
+      const { data: created, error: instErr } = await supabaseAdmin
+        .from("instructors")
+        .insert({
+          name: inst.name,
+          studio_id: primaryStudioId,
+          bio: inst.bio,
+          display_order: inst.display_order,
+          pin_code: inst.pin_code,
+          user_id: inst.user_id,
+        })
+        .select("id")
+        .single();
+      if (instErr) {
+        console.warn(`Instructor ${inst.name}: ${instErr.message}`);
+        continue;
       }
+      instructorIds.push(created.id);
+      if (inst.name === "Elena Voss") elenaInstructorId = created.id;
+    }
+
+    for (const sid of studioIds) {
 
       // ── Studio memberships (include Jen Woohoo as student) ──
       const allMembers = [...new Set([...studentIds, DEMO_STUDENT_USER_ID])];
