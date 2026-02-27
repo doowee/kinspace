@@ -13,3 +13,5 @@ project_id = "rkwwoefndegyuoyoaukz"
     verify_jwt = false
   [functions.create-connect-account]
     verify_jwt = false
+  [functions.provision-instructor]
+    verify_jwt = false

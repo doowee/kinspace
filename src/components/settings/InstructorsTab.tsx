@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Users, Link2, Unlink, Plus, Trash2, Pencil, X, MapPin, Award } from "lucide-react";
+import { Users, Plus, Trash2, Pencil, X, MapPin, Award, Loader2 } from "lucide-react";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -38,15 +38,16 @@ export default function InstructorsTab() {
   const { activeStudio, memberships } = useStudio();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Add/Provision modal state
   const [showAdd, setShowAdd] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newBio, setNewBio] = useState("");
-  const [addingInstructor, setAddingInstructor] = useState(false);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkTarget, setLinkTarget] = useState<Instructor | null>(null);
-  const [linkEmail, setLinkEmail] = useState("");
-  const [linking, setLinking] = useState(false);
-  const [linkError, setLinkError] = useState("");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newAuthorizedStudios, setNewAuthorizedStudios] = useState<string[]>([]);
+  const [newCertifiedTypes, setNewCertifiedTypes] = useState<string[]>([]);
+  const [newCustomType, setNewCustomType] = useState("");
+  const [provisioning, setProvisioning] = useState(false);
 
   // Edit modal state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -106,55 +107,70 @@ export default function InstructorsTab() {
 
   useEffect(() => { fetchInstructors(); }, [activeStudio?.id]);
 
-  const handleAddInstructor = async () => {
-    if (!activeStudio || !newName.trim()) return;
-    setAddingInstructor(true);
-    const { error } = await supabase.from("instructors").insert({
-      name: newName.trim(),
-      bio: newBio.trim() || null,
-      studio_id: activeStudio.id,
-      display_order: instructors.length,
-    } as any);
-
-    if (error) { toast.error("Failed to add instructor"); }
-    else { toast.success("Instructor added!"); setNewName(""); setNewBio(""); setShowAdd(false); fetchInstructors(); }
-    setAddingInstructor(false);
+  // ── Provision Instructor (new flow) ──
+  const resetAddForm = () => {
+    setNewFirstName("");
+    setNewLastName("");
+    setNewEmail("");
+    setNewAuthorizedStudios([]);
+    setNewCertifiedTypes([]);
+    setNewCustomType("");
   };
 
+  const handleProvisionInstructor = async () => {
+    if (!activeStudio || !newFirstName.trim() || !newLastName.trim() || !newEmail.trim()) return;
+    setProvisioning(true);
+
+    const { data, error } = await supabase.functions.invoke("provision-instructor", {
+      body: {
+        first_name: newFirstName.trim(),
+        last_name: newLastName.trim(),
+        email: newEmail.trim(),
+        studio_id: activeStudio.id,
+        authorized_studios: newAuthorizedStudios,
+        certified_class_types: newCertifiedTypes,
+      },
+    });
+
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Failed to provision instructor");
+    } else {
+      toast.success(`Instructor provisioned successfully. An invite email has been sent to ${newEmail.trim()}.`);
+      resetAddForm();
+      setShowAdd(false);
+      fetchInstructors();
+    }
+    setProvisioning(false);
+  };
+
+  const toggleNewAuthorizedStudio = (studioId: string) => {
+    setNewAuthorizedStudios((prev) =>
+      prev.includes(studioId) ? prev.filter((id) => id !== studioId) : [...prev, studioId]
+    );
+  };
+
+  const toggleNewCertifiedType = (type: string) => {
+    setNewCertifiedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const addNewCustomType = () => {
+    const t = newCustomType.trim().toLowerCase();
+    if (t && !newCertifiedTypes.includes(t)) {
+      setNewCertifiedTypes((prev) => [...prev, t]);
+    }
+    setNewCustomType("");
+  };
+
+  // ── Delete ──
   const handleDeleteInstructor = async (inst: Instructor) => {
     const { error } = await supabase.from("instructors").delete().eq("id", inst.id);
     if (error) toast.error("Failed to delete instructor");
     else { toast.success("Instructor removed"); fetchInstructors(); }
   };
 
-  const openLinkDialog = (inst: Instructor) => { setLinkTarget(inst); setLinkEmail(""); setLinkError(""); setLinkDialogOpen(true); };
-
-  const handleLink = async () => {
-    if (!linkTarget || !linkEmail.trim()) return;
-    setLinking(true); setLinkError("");
-    const { data: userId, error: lookupError } = await supabase.rpc("lookup_user_id_by_email", { _email: linkEmail.trim().toLowerCase() });
-    if (lookupError || !userId) { setLinkError("No user found with that email."); setLinking(false); return; }
-
-    const { data: existingMember } = await supabase.from("studio_members").select("id, role").eq("user_id", userId).eq("studio_id", linkTarget.studio_id ?? "").limit(1);
-    if (!existingMember || existingMember.length === 0) {
-      await supabase.from("studio_members").insert({ user_id: userId, studio_id: linkTarget.studio_id ?? (activeStudio?.id ?? ""), role: "instructor" } as any);
-    } else if (existingMember[0].role === "student") {
-      await supabase.from("studio_members").update({ role: "instructor" } as any).eq("id", existingMember[0].id);
-    }
-
-    const { error: updateError } = await supabase.from("instructors").update({ user_id: userId } as any).eq("id", linkTarget.id);
-    if (updateError) setLinkError("Failed to link: " + updateError.message);
-    else { toast.success(`Linked ${linkEmail} to ${linkTarget.name}`); setLinkDialogOpen(false); fetchInstructors(); }
-    setLinking(false);
-  };
-
-  const handleUnlink = async (inst: Instructor) => {
-    const { error } = await supabase.from("instructors").update({ user_id: null } as any).eq("id", inst.id);
-    if (error) toast.error("Failed to unlink user");
-    else { toast.success("User unlinked"); fetchInstructors(); }
-  };
-
-  // Edit modal handlers
+  // ── Edit modal handlers ──
   const openEditDialog = (inst: Instructor) => {
     setEditTarget(inst);
     setEditName(inst.name);
@@ -208,9 +224,9 @@ export default function InstructorsTab() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Instructors</CardTitle>
-            <CardDescription>Manage your studio's instructors and link them to user accounts.</CardDescription>
+            <CardDescription>Manage your studio's instructors.</CardDescription>
           </div>
-          <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4 mr-1" />Add Instructor</Button>
+          <Button size="sm" onClick={() => { resetAddForm(); setShowAdd(true); }}><Plus className="h-4 w-4 mr-1" />Add Instructor</Button>
         </CardHeader>
         <CardContent>
           {instructors.length === 0 ? (
@@ -222,13 +238,8 @@ export default function InstructorsTab() {
                   <div className="min-w-0 space-y-0.5">
                     <p className="font-medium text-sm">{inst.name}</p>
                     {inst.bio && <p className="text-xs text-muted-foreground line-clamp-1">{inst.bio}</p>}
-                    {inst.user_id ? (
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20"><Link2 className="h-3 w-3 mr-0.5" />Linked</Badge>
-                        <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
-                      </div>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px] text-muted-foreground">No account linked</Badge>
+                    {inst.linked_email && (
+                      <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
                     )}
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {inst.authorized_studios.length > 0 && (
@@ -249,11 +260,6 @@ export default function InstructorsTab() {
                     <Button variant="ghost" size="sm" className="text-xs" onClick={() => openEditDialog(inst)}>
                       <Pencil className="h-3.5 w-3.5 mr-1" />Edit
                     </Button>
-                    {inst.user_id ? (
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => handleUnlink(inst)}><Unlink className="h-3.5 w-3.5 mr-1" />Unlink</Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="text-xs" onClick={() => openLinkDialog(inst)}><Link2 className="h-3.5 w-3.5 mr-1" />Link User</Button>
-                    )}
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteInstructor(inst)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
@@ -263,15 +269,122 @@ export default function InstructorsTab() {
         </CardContent>
       </Card>
 
-      {/* Add Instructor Dialog */}
+      {/* Add / Provision Instructor Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">Add Instructor</DialogTitle><DialogDescription>Create an instructor profile.</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div><Label htmlFor="inst-name">Name</Label><Input id="inst-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Sarah Johnson" /></div>
-            <div><Label htmlFor="inst-bio">Bio (optional)</Label><textarea id="inst-bio" value={newBio} onChange={(e) => setNewBio(e.target.value)} placeholder="Brief bio…" rows={3} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" /></div>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">Provision New Instructor</DialogTitle>
+            <DialogDescription>Create their account, set locations & certifications. An invite email will be sent automatically.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="new-first-name">First Name</Label>
+                <Input id="new-first-name" value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} placeholder="Sarah" />
+              </div>
+              <div>
+                <Label htmlFor="new-last-name">Last Name</Label>
+                <Input id="new-last-name" value={newLastName} onChange={(e) => setNewLastName(e.target.value)} placeholder="Johnson" />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <Label htmlFor="new-email">Email Address</Label>
+              <Input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="sarah@example.com" />
+            </div>
+
+            {/* Authorized Locations */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                Authorized Locations
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select studios this instructor can float to for SmartCover requests.
+              </p>
+              <div className="space-y-2 rounded-md border border-input p-3 max-h-40 overflow-y-auto">
+                {orgStudios.map((studio) => (
+                  <label key={studio.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={newAuthorizedStudios.includes(studio.id)}
+                      onCheckedChange={() => toggleNewAuthorizedStudio(studio.id)}
+                    />
+                    <span className="font-medium">{studio.name}</span>
+                    {studio.location && <span className="text-xs text-muted-foreground">· {studio.location}</span>}
+                  </label>
+                ))}
+                {orgStudios.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No studios found in your organization.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Certifications */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2">
+                <Award className="h-3.5 w-3.5 text-primary" />
+                Certifications / Class Types
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select the class types this instructor is certified to teach.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {COMMON_CLASS_TYPES.map((type) => {
+                  const isSelected = newCertifiedTypes.includes(type);
+                  return (
+                    <Badge
+                      key={type}
+                      variant={isSelected ? "default" : "outline"}
+                      className={`cursor-pointer text-xs capitalize transition-all ${
+                        isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                      onClick={() => toggleNewCertifiedType(type)}
+                    >
+                      {type}
+                      {isSelected && <X className="h-3 w-3 ml-1" />}
+                    </Badge>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {newCertifiedTypes
+                  .filter((t) => !COMMON_CLASS_TYPES.includes(t))
+                  .map((type) => (
+                    <Badge key={type} className="cursor-pointer text-xs capitalize bg-primary text-primary-foreground" onClick={() => toggleNewCertifiedType(type)}>
+                      {type}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add custom type…"
+                  value={newCustomType}
+                  onChange={(e) => setNewCustomType(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addNewCustomType())}
+                  className="flex-1"
+                />
+                <Button variant="outline" size="sm" onClick={addNewCustomType} disabled={!newCustomType.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button><Button onClick={handleAddInstructor} disabled={addingInstructor || !newName.trim()}>{addingInstructor ? "Adding…" : "Add Instructor"}</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button
+              onClick={handleProvisionInstructor}
+              disabled={provisioning || !newFirstName.trim() || !newLastName.trim() || !newEmail.trim()}
+            >
+              {provisioning ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Provisioning…</>
+              ) : (
+                "Save Instructor"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -283,7 +396,6 @@ export default function InstructorsTab() {
             <DialogDescription>Update profile, authorized locations, and certifications.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
-            {/* Name & Bio */}
             <div className="space-y-3">
               <div>
                 <Label htmlFor="edit-name">Name</Label>
@@ -322,7 +434,7 @@ export default function InstructorsTab() {
               </div>
             </div>
 
-            {/* Certifications / Class Types */}
+            {/* Certifications */}
             <div>
               <Label className="flex items-center gap-1.5 mb-2">
                 <Award className="h-3.5 w-3.5 text-primary" />
@@ -349,7 +461,6 @@ export default function InstructorsTab() {
                   );
                 })}
               </div>
-              {/* Custom tags already added */}
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {editCertifiedTypes
                   .filter((t) => !COMMON_CLASS_TYPES.includes(t))
@@ -380,17 +491,6 @@ export default function InstructorsTab() {
               {saving ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Link User Dialog */}
-      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">Link User to {linkTarget?.name}</DialogTitle><DialogDescription>Enter the email of an existing user.</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div><Label htmlFor="link-email">User Email</Label><Input id="link-email" type="email" value={linkEmail} onChange={(e) => { setLinkEmail(e.target.value); setLinkError(""); }} placeholder="instructor@example.com" />{linkError && <p className="text-xs text-destructive mt-1">{linkError}</p>}</div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setLinkDialogOpen(false)}>Cancel</Button><Button onClick={handleLink} disabled={linking || !linkEmail.trim()}>{linking ? "Linking…" : "Link User"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
