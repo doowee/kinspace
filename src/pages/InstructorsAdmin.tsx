@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { GraduationCap, Search, Pencil, Plus, Trash2, Link2, Unlink, MapPin, Award, X, Home } from "lucide-react";
+import { GraduationCap, Search, Pencil, Plus, Trash2, MapPin, Award, X, Home, Loader2 } from "lucide-react";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -64,18 +64,15 @@ export default function InstructorsAdmin() {
   const [customType, setCustomType] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Add state
+  // Add/Provision state
   const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newBio, setNewBio] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  // Link state
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [linkTarget, setLinkTarget] = useState<InstructorRow | null>(null);
-  const [linkEmail, setLinkEmail] = useState("");
-  const [linking, setLinking] = useState(false);
-  const [linkError, setLinkError] = useState("");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newAuthorized, setNewAuthorized] = useState<string[]>([]);
+  const [newCerts, setNewCerts] = useState<string[]>([]);
+  const [newCustomType, setNewCustomType] = useState("");
+  const [provisioning, setProvisioning] = useState(false);
 
   // Fetch org studios
   useEffect(() => {
@@ -180,20 +177,48 @@ export default function InstructorsAdmin() {
     setSaving(false);
   };
 
-  // Add handler
-  const handleAdd = async () => {
-    if (!activeStudio || !newName.trim()) return;
-    setAdding(true);
-    const { error } = await supabase.from("instructors").insert({
-      name: newName.trim(),
-      bio: newBio.trim() || null,
-      studio_id: activeStudio.id,
-      home_studio_id: activeStudio.id,
-      display_order: instructors.length,
-    } as any);
-    if (error) toast.error("Failed to add");
-    else { toast.success("Instructor added"); setNewName(""); setNewBio(""); setAddOpen(false); fetchInstructors(); }
-    setAdding(false);
+  // Provision handler
+  const resetAddForm = () => {
+    setNewFirstName(""); setNewLastName(""); setNewEmail("");
+    setNewAuthorized([]); setNewCerts([]); setNewCustomType("");
+  };
+
+  const handleProvision = async () => {
+    if (!activeStudio || !newFirstName.trim() || !newLastName.trim() || !newEmail.trim()) return;
+    setProvisioning(true);
+    const { data, error } = await supabase.functions.invoke("provision-instructor", {
+      body: {
+        first_name: newFirstName.trim(),
+        last_name: newLastName.trim(),
+        email: newEmail.trim(),
+        studio_id: activeStudio.id,
+        authorized_studios: newAuthorized,
+        certified_class_types: newCerts,
+      },
+    });
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Failed to provision instructor");
+    } else {
+      toast.success(`Instructor provisioned successfully. An invite email has been sent to ${newEmail.trim()}.`);
+      resetAddForm();
+      setAddOpen(false);
+      fetchInstructors();
+    }
+    setProvisioning(false);
+  };
+
+  const toggleNewAuthorized = (id: string) => {
+    setNewAuthorized((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]);
+  };
+
+  const toggleNewCert = (type: string) => {
+    setNewCerts((prev) => prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]);
+  };
+
+  const addNewCustom = () => {
+    const t = newCustomType.trim().toLowerCase();
+    if (t && !newCerts.includes(t)) setNewCerts((prev) => [...prev, t]);
+    setNewCustomType("");
   };
 
   // Delete handler
@@ -201,34 +226,6 @@ export default function InstructorsAdmin() {
     const { error } = await supabase.from("instructors").delete().eq("id", inst.id);
     if (error) toast.error("Failed to delete");
     else { toast.success("Instructor removed"); fetchInstructors(); }
-  };
-
-  // Link handlers
-  const openLink = (inst: InstructorRow) => { setLinkTarget(inst); setLinkEmail(""); setLinkError(""); setLinkOpen(true); };
-
-  const handleLink = async () => {
-    if (!linkTarget || !linkEmail.trim()) return;
-    setLinking(true); setLinkError("");
-    const { data: userId, error: lookupError } = await supabase.rpc("lookup_user_id_by_email", { _email: linkEmail.trim().toLowerCase() });
-    if (lookupError || !userId) { setLinkError("No user found with that email."); setLinking(false); return; }
-
-    const { data: existing } = await supabase.from("studio_members").select("id, role").eq("user_id", userId).eq("studio_id", linkTarget.studio_id ?? "").limit(1);
-    if (!existing || existing.length === 0) {
-      await supabase.from("studio_members").insert({ user_id: userId, studio_id: linkTarget.studio_id ?? (activeStudio?.id ?? ""), role: "instructor" } as any);
-    } else if (existing[0].role === "student") {
-      await supabase.from("studio_members").update({ role: "instructor" } as any).eq("id", existing[0].id);
-    }
-
-    const { error } = await supabase.from("instructors").update({ user_id: userId } as any).eq("id", linkTarget.id);
-    if (error) setLinkError("Failed to link: " + error.message);
-    else { toast.success(`Linked to ${linkEmail}`); setLinkOpen(false); fetchInstructors(); }
-    setLinking(false);
-  };
-
-  const handleUnlink = async (inst: InstructorRow) => {
-    const { error } = await supabase.from("instructors").update({ user_id: null } as any).eq("id", inst.id);
-    if (error) toast.error("Failed to unlink");
-    else { toast.success("User unlinked"); fetchInstructors(); }
   };
 
   if (!activeStudio) return null;
@@ -271,7 +268,7 @@ export default function InstructorsAdmin() {
                     <TableHead>Home Studio</TableHead>
                     <TableHead>Certifications</TableHead>
                     <TableHead>Locations</TableHead>
-                    <TableHead>Account</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -319,15 +316,10 @@ export default function InstructorsAdmin() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {inst.user_id ? (
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 gap-0.5">
-                              <Link2 className="h-2.5 w-2.5" />Linked
-                            </Badge>
-                            <span className="text-[10px] text-muted-foreground hidden lg:inline">{inst.linked_email}</span>
-                          </div>
+                        {inst.linked_email ? (
+                          <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Unlinked</Badge>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -335,15 +327,6 @@ export default function InstructorsAdmin() {
                           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(inst)}>
                             <Pencil className="h-3 w-3 mr-1" />Edit
                           </Button>
-                          {inst.user_id ? (
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleUnlink(inst)}>
-                              <Unlink className="h-3 w-3" />
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openLink(inst)}>
-                              <Link2 className="h-3 w-3" />
-                            </Button>
-                          )}
                           <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(inst)}>
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -433,26 +416,66 @@ export default function InstructorsAdmin() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Add Dialog ── */}
+      {/* ── Provision Instructor Dialog ── */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">Add Instructor</DialogTitle><DialogDescription>Create a new instructor profile.</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div><Label>Name</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Sarah Johnson" /></div>
-            <div><Label>Bio (optional)</Label><textarea value={newBio} onChange={(e) => setNewBio(e.target.value)} placeholder="Brief bio…" rows={3} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button><Button onClick={handleAdd} disabled={adding || !newName.trim()}>{adding ? "Adding…" : "Add Instructor"}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">Provision New Instructor</DialogTitle>
+            <DialogDescription>Create their account, set locations & certifications. An invite email will be sent automatically.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>First Name</Label><Input value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} placeholder="Sarah" /></div>
+              <div><Label>Last Name</Label><Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} placeholder="Johnson" /></div>
+            </div>
+            <div><Label>Email Address</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="sarah@example.com" /></div>
 
-      {/* ── Link Dialog ── */}
-      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="font-display">Link User to {linkTarget?.name}</DialogTitle><DialogDescription>Enter the email of an existing user.</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div><Label>User Email</Label><Input type="email" value={linkEmail} onChange={(e) => { setLinkEmail(e.target.value); setLinkError(""); }} placeholder="instructor@example.com" />{linkError && <p className="text-xs text-destructive mt-1">{linkError}</p>}</div>
+            {/* Authorized Locations */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2"><MapPin className="h-3.5 w-3.5 text-primary" />Authorized Locations</Label>
+              <div className="space-y-2 rounded-md border border-input p-3 max-h-40 overflow-y-auto">
+                {orgStudios.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox checked={newAuthorized.includes(s.id)} onCheckedChange={() => toggleNewAuthorized(s.id)} />
+                    <span className="font-medium">{s.name}</span>
+                    {s.location && <span className="text-xs text-muted-foreground">· {s.location}</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Certifications */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2"><Award className="h-3.5 w-3.5 text-primary" />Certifications / Class Types</Label>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {COMMON_CLASS_TYPES.map((type) => {
+                  const sel = newCerts.includes(type);
+                  return (
+                    <Badge key={type} variant={sel ? "default" : "outline"} className={`cursor-pointer text-xs capitalize transition-all ${sel ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`} onClick={() => toggleNewCert(type)}>
+                      {type}{sel && <X className="h-3 w-3 ml-1" />}
+                    </Badge>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {newCerts.filter((t) => !COMMON_CLASS_TYPES.includes(t)).map((type) => (
+                  <Badge key={type} className="cursor-pointer text-xs capitalize bg-primary text-primary-foreground" onClick={() => toggleNewCert(type)}>
+                    {type}<X className="h-3 w-3 ml-1" />
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input placeholder="Add custom type…" value={newCustomType} onChange={(e) => setNewCustomType(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addNewCustom())} className="flex-1" />
+                <Button variant="outline" size="sm" onClick={addNewCustom} disabled={!newCustomType.trim()}><Plus className="h-4 w-4" /></Button>
+              </div>
+            </div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setLinkOpen(false)}>Cancel</Button><Button onClick={handleLink} disabled={linking || !linkEmail.trim()}>{linking ? "Linking…" : "Link User"}</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleProvision} disabled={provisioning || !newFirstName.trim() || !newLastName.trim() || !newEmail.trim()}>
+              {provisioning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Provisioning…</> : "Save Instructor"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
