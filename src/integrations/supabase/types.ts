@@ -203,6 +203,7 @@ export type Database = {
           display_order: number
           home_studio_id: string | null
           id: string
+          is_active: boolean
           name: string
           photo_url: string | null
           studio_id: string | null
@@ -216,6 +217,7 @@ export type Database = {
           display_order?: number
           home_studio_id?: string | null
           id?: string
+          is_active?: boolean
           name: string
           photo_url?: string | null
           studio_id?: string | null
@@ -229,6 +231,7 @@ export type Database = {
           display_order?: number
           home_studio_id?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           photo_url?: string | null
           studio_id?: string | null
