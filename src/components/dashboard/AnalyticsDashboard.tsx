@@ -4,6 +4,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { useViewAsRole } from "@/components/AppLayout";
 import { fetchDashboardData } from "@/lib/studio-api";
 import type { DashboardData } from "@/lib/studio-api";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
