@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import CreateStudio from "./pages/CreateStudio";
 import InstructorPortal from "./pages/InstructorPortal";
 import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
+import StudentAuthGate from "./components/student/StudentAuthGate";
 import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
@@ -104,6 +105,18 @@ const App = () => {
                 </AuthGate>
               }
             />
+            {/* /book-class has its own auth gate with login/signup */}
+            <Route
+              path="/book-class"
+              element={
+                <StudentAuthGate>
+                  <StudentLayout />
+                </StudentAuthGate>
+              }
+            >
+              <Route index element={<BookClass />} />
+            </Route>
+            {/* Other student routes still require auth */}
             <Route
               element={
                 <AuthGate>
@@ -112,7 +125,6 @@ const App = () => {
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/book-class" element={<BookClass />} />
               <Route path="/wallet" element={<Wallet />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
