@@ -8,6 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SubscriptionTier } from "@/hooks/use-subscription-tier";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import {
   Building2,
   ExternalLink,
   CreditCard,
@@ -19,6 +28,7 @@ import {
   Check,
   Sparkles,
   ArrowUpRight,
+  ArrowRight,
   MapPin,
   Receipt,
 } from "lucide-react";
