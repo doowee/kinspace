@@ -109,10 +109,20 @@ export default function Billing() {
     return sum + (info?.price ?? 129);
   }, 0);
 
-  const handleChangeTier = async (studioId: string, newTier: SubscriptionTier) => {
+  const openConfirmModal = (studio: StudioBilling, newTier: SubscriptionTier) => {
+    setConfirmModal({
+      studioId: studio.id,
+      studioName: studio.name,
+      currentTier: (studio.subscription_tier as SubscriptionTier) || "standard",
+      newTier,
+    });
+  };
+
+  const handleChangeTier = async () => {
+    if (!confirmModal) return;
+    const { studioId, newTier } = confirmModal;
     setSwitching(studioId);
 
-    // Call edge function for Stripe proration
     const { data, error } = await supabase.functions.invoke("manage-subscription", {
       body: { action: "change-tier", studio_id: studioId, new_tier: newTier },
     });
@@ -120,7 +130,6 @@ export default function Billing() {
     setSwitching(null);
 
     if (error || data?.error) {
-      // Fallback: update DB directly if Stripe isn't connected yet
       await supabase
         .from("studios")
         .update({ subscription_tier: newTier } as any)
@@ -130,6 +139,8 @@ export default function Billing() {
     setStudios((prev) =>
       prev.map((s) => (s.id === studioId ? { ...s, subscription_tier: newTier } : s))
     );
+
+    setConfirmModal(null);
 
     toast({
       title: newTier === "pro" ? "Upgraded to Pro Engine! 🚀" : "Switched to Standard",
