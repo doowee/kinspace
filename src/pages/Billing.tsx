@@ -228,9 +228,9 @@ export default function Billing() {
               <ExternalLink className="h-4 w-4" />
               {portalLoading ? "Opening…" : "View Past Invoices"}
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleViewInvoices} disabled={portalLoading}>
               <CreditCard className="h-4 w-4" />
-              Update Payment Method
+              {portalLoading ? "Opening…" : "Update Payment Method"}
             </Button>
           </div>
         </CardContent>
