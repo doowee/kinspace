@@ -600,3 +600,4 @@ export async function fetchOrgDashboardData(
     .slice(0, 5);
 
   return { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed, studios: allStudios, topClasses, topPackages };
+}
