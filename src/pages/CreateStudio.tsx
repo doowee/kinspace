@@ -74,9 +74,11 @@ export default function CreateStudio() {
         if (data?.error) console.warn("Stripe subscription update skipped:", data.error);
       }
 
+      // Set new studio as active before refetching
+      setActiveStudioId(studioId);
       await refetch();
       toast({ title: "Location added!", description: `${name} is ready to go. Prorated charges will appear on your next invoice.` });
-      navigate("/");
+      navigate("/admin");
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
