@@ -511,6 +511,12 @@ export default function Schedule() {
                               Low Enrollment
                             </Badge>
                           )}
+                          {isUncovered && (
+                            <Badge variant="destructive" className="gap-1 text-[10px] font-bold uppercase tracking-wide animate-pulse">
+                              <ShieldAlert className="h-3 w-3" />
+                              Uncovered
+                            </Badge>
+                          )}
                         </div>
                         {cls.instructors?.name && (
                           <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
@@ -524,6 +530,12 @@ export default function Schedule() {
                       </div>
                       {canManage ? (
                         <div className="flex items-center gap-1.5">
+                          {isUncovered && (
+                            <Button size="sm" variant="destructive" onClick={() => { setOverrideClass(cls); setOverrideInstructorId("none"); }} className="gap-1.5 text-xs">
+                              <ShieldAlert className="h-3.5 w-3.5" />
+                              Intervene
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)} className="gap-1.5">
                             <UsersRound className="h-3.5 w-3.5" />
                             {count}
