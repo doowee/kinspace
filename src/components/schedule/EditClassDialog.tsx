@@ -36,12 +36,14 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
   const [time, setTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
   const [instructorId, setInstructorId] = useState("none");
+  const [classType, setClassType] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (cls) {
       setName(cls.name);
       setDescription((cls as any).description || "");
+      setClassType((cls as any).class_type || "");
       const dt = new Date(cls.start_time);
       setClassDate(dt);
       setTime({ hour: dt.getHours(), minute: dt.getMinutes() });
@@ -63,10 +65,11 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
       .update({
         name,
         description: description || null,
+        class_type: classType.trim().toLowerCase() || null,
         start_time: dt.toISOString(),
         capacity_total: parseInt(capacity) || 10,
         instructor_id: instructorId === "none" ? null : instructorId,
-      })
+      } as any)
       .eq("id", cls.id);
 
     if (error) {
@@ -99,6 +102,15 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
               placeholder="Brief description…"
               rows={3}
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-class-type">Class Type (for SmartCover)</Label>
+            <Input
+              id="edit-class-type"
+              value={classType}
+              onChange={(e) => setClassType(e.target.value)}
+              placeholder="e.g. reformer, mat, hiit"
             />
           </div>
           <div>

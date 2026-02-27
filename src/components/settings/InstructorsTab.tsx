@@ -6,11 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Users, Link2, Unlink, Plus, Trash2 } from "lucide-react";
+import { Users, Link2, Unlink, Plus, Trash2, Pencil, X, MapPin, Award } from "lucide-react";
+
+const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
+
+interface StudioOption {
+  id: string;
+  name: string;
+  location: string | null;
+}
 
 interface Instructor {
   id: string;
@@ -21,10 +30,12 @@ interface Instructor {
   display_order: number;
   studio_id: string | null;
   linked_email?: string | null;
+  authorized_studios: string[];
+  certified_class_types: string[];
 }
 
 export default function InstructorsTab() {
-  const { activeStudio } = useStudio();
+  const { activeStudio, memberships } = useStudio();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -37,17 +48,34 @@ export default function InstructorsTab() {
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState("");
 
+  // Edit modal state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Instructor | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editAuthorizedStudios, setEditAuthorizedStudios] = useState<string[]>([]);
+  const [editCertifiedTypes, setEditCertifiedTypes] = useState<string[]>([]);
+  const [customType, setCustomType] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Org studios for multi-select
+  const [orgStudios, setOrgStudios] = useState<StudioOption[]>([]);
+
   const fetchInstructors = async () => {
     if (!activeStudio) return;
     setLoading(true);
 
     const { data } = await supabase
       .from("instructors")
-      .select("id, name, bio, photo_url, user_id, display_order, studio_id")
+      .select("id, name, bio, photo_url, user_id, display_order, studio_id, authorized_studios, certified_class_types")
       .eq("studio_id", activeStudio.id)
       .order("display_order");
 
-    const items: Instructor[] = (data ?? []) as any[];
+    const items: Instructor[] = ((data ?? []) as any[]).map((i) => ({
+      ...i,
+      authorized_studios: i.authorized_studios ?? [],
+      certified_class_types: i.certified_class_types ?? [],
+    }));
 
     const userIds = items.filter((i) => i.user_id).map((i) => i.user_id!);
     if (userIds.length > 0) {
@@ -61,6 +89,20 @@ export default function InstructorsTab() {
     setInstructors(items);
     setLoading(false);
   };
+
+  // Fetch all studios in the org for multi-select
+  useEffect(() => {
+    const fetchOrgStudios = async () => {
+      const studioIds = memberships.map((m) => m.studio_id);
+      if (studioIds.length === 0) return;
+      const { data } = await supabase
+        .from("studios")
+        .select("id, name, location")
+        .in("id", studioIds);
+      setOrgStudios((data ?? []) as StudioOption[]);
+    };
+    fetchOrgStudios();
+  }, [memberships]);
 
   useEffect(() => { fetchInstructors(); }, [activeStudio?.id]);
 
@@ -112,6 +154,52 @@ export default function InstructorsTab() {
     else { toast.success("User unlinked"); fetchInstructors(); }
   };
 
+  // Edit modal handlers
+  const openEditDialog = (inst: Instructor) => {
+    setEditTarget(inst);
+    setEditName(inst.name);
+    setEditBio(inst.bio ?? "");
+    setEditAuthorizedStudios(inst.authorized_studios);
+    setEditCertifiedTypes(inst.certified_class_types);
+    setCustomType("");
+    setEditDialogOpen(true);
+  };
+
+  const toggleAuthorizedStudio = (studioId: string) => {
+    setEditAuthorizedStudios((prev) =>
+      prev.includes(studioId) ? prev.filter((id) => id !== studioId) : [...prev, studioId]
+    );
+  };
+
+  const toggleCertifiedType = (type: string) => {
+    setEditCertifiedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const addCustomType = () => {
+    const t = customType.trim().toLowerCase();
+    if (t && !editCertifiedTypes.includes(t)) {
+      setEditCertifiedTypes((prev) => [...prev, t]);
+    }
+    setCustomType("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return;
+    setSaving(true);
+    const { error } = await supabase.from("instructors").update({
+      name: editName.trim(),
+      bio: editBio.trim() || null,
+      authorized_studios: editAuthorizedStudios,
+      certified_class_types: editCertifiedTypes,
+    } as any).eq("id", editTarget.id);
+
+    if (error) toast.error("Failed to update instructor");
+    else { toast.success("Instructor updated"); setEditDialogOpen(false); fetchInstructors(); }
+    setSaving(false);
+  };
+
   if (loading) return <div className="animate-pulse text-muted-foreground py-8 text-center">Loading instructors...</div>;
 
   return (
@@ -142,8 +230,25 @@ export default function InstructorsTab() {
                     ) : (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground">No account linked</Badge>
                     )}
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {inst.authorized_studios.length > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
+                          <MapPin className="h-2.5 w-2.5" />
+                          {inst.authorized_studios.length} location{inst.authorized_studios.length !== 1 ? "s" : ""}
+                        </Badge>
+                      )}
+                      {inst.certified_class_types.length > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
+                          <Award className="h-2.5 w-2.5" />
+                          {inst.certified_class_types.length} cert{inst.certified_class_types.length !== 1 ? "s" : ""}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-4">
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => openEditDialog(inst)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />Edit
+                    </Button>
                     {inst.user_id ? (
                       <Button variant="ghost" size="sm" className="text-xs" onClick={() => handleUnlink(inst)}><Unlink className="h-3.5 w-3.5 mr-1" />Unlink</Button>
                     ) : (
@@ -158,6 +263,7 @@ export default function InstructorsTab() {
         </CardContent>
       </Card>
 
+      {/* Add Instructor Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">Add Instructor</DialogTitle><DialogDescription>Create an instructor profile.</DialogDescription></DialogHeader>
@@ -169,6 +275,115 @@ export default function InstructorsTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Instructor Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">Edit {editTarget?.name}</DialogTitle>
+            <DialogDescription>Update profile, authorized locations, and certifications.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            {/* Name & Bio */}
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="edit-name">Name</Label>
+                <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="edit-bio">Bio</Label>
+                <textarea id="edit-bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={2}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
+              </div>
+            </div>
+
+            {/* Authorized Locations */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                Authorized Locations
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select studios this instructor can float to for SmartCover requests.
+              </p>
+              <div className="space-y-2 rounded-md border border-input p-3 max-h-40 overflow-y-auto">
+                {orgStudios.map((studio) => (
+                  <label key={studio.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={editAuthorizedStudios.includes(studio.id)}
+                      onCheckedChange={() => toggleAuthorizedStudio(studio.id)}
+                    />
+                    <span className="font-medium">{studio.name}</span>
+                    {studio.location && <span className="text-xs text-muted-foreground">· {studio.location}</span>}
+                  </label>
+                ))}
+                {orgStudios.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No studios found in your organization.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Certifications / Class Types */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2">
+                <Award className="h-3.5 w-3.5 text-primary" />
+                Certifications / Class Types
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select the class types this instructor is certified to teach.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {COMMON_CLASS_TYPES.map((type) => {
+                  const isSelected = editCertifiedTypes.includes(type);
+                  return (
+                    <Badge
+                      key={type}
+                      variant={isSelected ? "default" : "outline"}
+                      className={`cursor-pointer text-xs capitalize transition-all ${
+                        isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                      onClick={() => toggleCertifiedType(type)}
+                    >
+                      {type}
+                      {isSelected && <X className="h-3 w-3 ml-1" />}
+                    </Badge>
+                  );
+                })}
+              </div>
+              {/* Custom tags already added */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {editCertifiedTypes
+                  .filter((t) => !COMMON_CLASS_TYPES.includes(t))
+                  .map((type) => (
+                    <Badge key={type} className="cursor-pointer text-xs capitalize bg-primary text-primary-foreground" onClick={() => toggleCertifiedType(type)}>
+                      {type}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add custom type…"
+                  value={customType}
+                  onChange={(e) => setCustomType(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomType())}
+                  className="flex-1"
+                />
+                <Button variant="outline" size="sm" onClick={addCustomType} disabled={!customType.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link User Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">Link User to {linkTarget?.name}</DialogTitle><DialogDescription>Enter the email of an existing user.</DialogDescription></DialogHeader>

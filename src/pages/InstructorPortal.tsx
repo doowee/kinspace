@@ -89,6 +89,8 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   // Cover request state
   const [coverRequestClass, setCoverRequestClass] = useState<InstructorClass | null>(null);
   const [coverRequested, setCoverRequested] = useState<Set<string>>(new Set());
+  const [smartCoverLoading, setSmartCoverLoading] = useState(false);
+  const [smartCoverCount, setSmartCoverCount] = useState<number | null>(null);
 
   // SmartCover board state
   const [openShifts, setOpenShifts] = useState<OpenShift[]>(MOCK_OPEN_SHIFTS);
@@ -262,19 +264,50 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   };
 
   // SmartCover handlers
+
   const confirmCoverRequest = (cls: InstructorClass, e: React.MouseEvent) => {
     e.stopPropagation();
     setCoverRequestClass(cls);
+    setSmartCoverCount(null);
   };
 
-  const handleCoverConfirm = () => {
+  const handleCoverConfirm = async () => {
     if (!coverRequestClass) return;
-    setCoverRequested((prev) => new Set(prev).add(coverRequestClass.id));
-    setCoverRequestClass(null);
-    toast({
-      title: "Coverage Requested",
-      description: `All eligible instructors have been notified about ${coverRequestClass.name}.`,
-    });
+    setSmartCoverLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("smartcover-request", {
+        body: { class_id: coverRequestClass.id },
+      });
+
+      if (error || data?.error) {
+        toast({
+          title: "SmartCover Error",
+          description: data?.error || error?.message || "Failed to process request",
+          variant: "destructive",
+        });
+        setSmartCoverLoading(false);
+        return;
+      }
+
+      const count = data?.eligible_count ?? 0;
+      setCoverRequested((prev) => new Set(prev).add(coverRequestClass.id));
+      setCoverRequestClass(null);
+      setSmartCoverLoading(false);
+      toast({
+        title: "SmartCover Activated ⚡",
+        description: count > 0
+          ? `Notifying ${count} qualified instructor${count !== 1 ? "s" : ""}.`
+          : `No qualified instructors found. Update SmartCover profiles in Settings → Instructors.`,
+      });
+    } catch {
+      setSmartCoverLoading(false);
+      toast({
+        title: "SmartCover Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleClaimShift = (shift: OpenShift) => {
@@ -568,12 +601,15 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCoverRequestClass(null)}>
+            <Button variant="outline" onClick={() => setCoverRequestClass(null)} disabled={smartCoverLoading}>
               Cancel
             </Button>
-            <Button onClick={handleCoverConfirm}>
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              Confirm Request
+            <Button onClick={handleCoverConfirm} disabled={smartCoverLoading}>
+              {smartCoverLoading ? (
+                <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Finding instructors…</>
+              ) : (
+                <><RefreshCw className="mr-1.5 h-4 w-4" />Confirm Request</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
