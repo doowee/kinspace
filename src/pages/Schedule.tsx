@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon, Flame, AlertTriangle, ListOrdered } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon, Flame, AlertTriangle, ListOrdered, ShieldAlert, UserCheck, XCircle, Loader2 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,14 @@ interface BookingCount {
   count: number;
 }
 
+interface CoverRequest {
+  id: string;
+  class_id: string;
+  status: string;
+  requesting_instructor_id: string;
+  eligible_count: number;
+}
+
 export default function Schedule() {
   const { user } = useAuth();
   const { activeStudio, activeRole } = useStudio();
@@ -70,6 +78,12 @@ export default function Schedule() {
   const [editClass, setEditClass] = useState<ClassRow | null>(null);
   const [viewStudentsClass, setViewStudentsClass] = useState<ClassRow | null>(null);
   const [manualBookClass, setManualBookClass] = useState<ClassRow | null>(null);
+
+  // Cover request / escalation state
+  const [coverRequests, setCoverRequests] = useState<Record<string, CoverRequest>>({});
+  const [overrideClass, setOverrideClass] = useState<ClassRow | null>(null);
+  const [overrideLoading, setOverrideLoading] = useState(false);
+  const [overrideInstructorId, setOverrideInstructorId] = useState<string>("none");
 
   // Booking counts per class & user's own bookings
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
@@ -154,9 +168,25 @@ export default function Schedule() {
     setUserBookedClassIds(new Set(myBookings?.map((b) => b.class_id) ?? []));
   };
 
+  const fetchCoverRequests = async () => {
+    if (!activeStudio) return;
+    const { data } = await supabase
+      .from("cover_requests")
+      .select("id, class_id, status, requesting_instructor_id, eligible_count")
+      .eq("studio_id", activeStudio.id)
+      .in("status", ["escalated", "pending"]);
+
+    const map: Record<string, CoverRequest> = {};
+    (data ?? []).forEach((cr: any) => {
+      map[cr.class_id] = cr;
+    });
+    setCoverRequests(map);
+  };
+
   useEffect(() => {
     fetchClasses();
     fetchInstructors();
+    fetchCoverRequests();
   }, [activeStudio?.id]);
 
   useEffect(() => {
