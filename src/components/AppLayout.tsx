@@ -199,6 +199,15 @@ export default function AppLayout() {
                             View Client App
                           </DropdownMenuItem>
                           <CopyBookingLinkItem slug={activeStudio.slug} />
+                          <DropdownMenuItem onClick={() => {
+                            const url = `${window.location.origin}/kiosk-login`;
+                            navigator.clipboard.writeText(url).then(() => {
+                              // reuse same pattern
+                            });
+                          }}>
+                            <Ticket className="h-4 w-4 mr-2" />
+                            Copy Kiosk Link
+                          </DropdownMenuItem>
                         </>
                       )}
                     </>
