@@ -309,15 +309,10 @@ export default function InstructorsAdmin() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {inst.user_id ? (
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 gap-0.5">
-                              <Link2 className="h-2.5 w-2.5" />Linked
-                            </Badge>
-                            <span className="text-[10px] text-muted-foreground hidden lg:inline">{inst.linked_email}</span>
-                          </div>
+                        {inst.linked_email ? (
+                          <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Unlinked</Badge>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -325,15 +320,6 @@ export default function InstructorsAdmin() {
                           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(inst)}>
                             <Pencil className="h-3 w-3 mr-1" />Edit
                           </Button>
-                          {inst.user_id ? (
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleUnlink(inst)}>
-                              <Unlink className="h-3 w-3" />
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openLink(inst)}>
-                              <Link2 className="h-3 w-3" />
-                            </Button>
-                          )}
                           <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(inst)}>
                             <Trash2 className="h-3 w-3" />
                           </Button>
