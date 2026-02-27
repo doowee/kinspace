@@ -30,6 +30,11 @@ const CLASS_NAMES = [
 
 const INSTRUCTOR_NAMES = ["Sarah Jenkins","Mike Ross","Emma Stone"];
 
+/* ── Demo persona constants ── */
+const DEMO_INSTRUCTOR_NAME = "Elena Voss";
+const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84";
+const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
+
 /* ── Helpers ── */
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -168,9 +173,13 @@ Deno.serve(async (req) => {
     let totalTransactions = 0;
 
     for (const sid of studioIds) {
-      // ── Instructors ──
+      // ── Instructors (including demo Elena Voss) ──
       const instructorIds: string[] = [];
-      for (const instName of INSTRUCTOR_NAMES) {
+      let elenaInstructorId: string | null = null;
+
+      // Ensure Elena Voss exists and is linked to her auth user
+      const allInstructorNames = [...INSTRUCTOR_NAMES, DEMO_INSTRUCTOR_NAME];
+      for (const instName of allInstructorNames) {
         const { data: existing } = await supabaseAdmin
           .from("instructors")
           .select("id")
@@ -180,10 +189,17 @@ Deno.serve(async (req) => {
 
         if (existing) {
           instructorIds.push(existing.id);
+          if (instName === DEMO_INSTRUCTOR_NAME) {
+            elenaInstructorId = existing.id;
+            // Ensure user_id is linked
+            await supabaseAdmin.from("instructors").update({ user_id: DEMO_INSTRUCTOR_USER_ID }).eq("id", existing.id);
+          }
         } else {
+          const insertPayload: any = { name: instName, studio_id: sid };
+          if (instName === DEMO_INSTRUCTOR_NAME) insertPayload.user_id = DEMO_INSTRUCTOR_USER_ID;
           const { data: created, error: instErr } = await supabaseAdmin
             .from("instructors")
-            .insert({ name: instName, studio_id: sid })
+            .insert(insertPayload)
             .select("id")
             .single();
           if (instErr) {
@@ -191,11 +207,13 @@ Deno.serve(async (req) => {
             continue;
           }
           instructorIds.push(created.id);
+          if (instName === DEMO_INSTRUCTOR_NAME) elenaInstructorId = created.id;
         }
       }
 
-      // ── Studio memberships ──
-      for (const uid of studentIds) {
+      // ── Studio memberships (include Jen Woohoo as student) ──
+      const allMembers = [...new Set([...studentIds, DEMO_STUDENT_USER_ID])];
+      for (const uid of allMembers) {
         await supabaseAdmin
           .from("studio_members")
           .upsert(
@@ -225,7 +243,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Also add a few future classes (next 5 days)
+      // Future classes (next 5 days)
       for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
         const classCount = randInt(2, 3);
         for (let c = 0; c < classCount; c++) {
@@ -245,6 +263,15 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── Guarantee Elena teaches ~30% of classes ──
+      if (elenaInstructorId) {
+        const elenaCount = Math.ceil(classRows.length * 0.3);
+        const indices = classRows.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, elenaCount);
+        for (const idx of indices) {
+          classRows[idx].instructor_id = elenaInstructorId;
+        }
+      }
+
       // Insert classes in batches
       for (let i = 0; i < classRows.length; i += 50) {
         const { error: classErr } = await supabaseAdmin
@@ -254,13 +281,16 @@ Deno.serve(async (req) => {
       }
       totalClasses += classRows.length;
 
-      // ── Bookings: 5-10 per class ──
+      // ── Bookings: 5-10 per class, always include Jen Woohoo ──
       const bookingRows: any[] = [];
       for (const cls of classRows) {
         const classDate = new Date(cls.start_time);
         const isPast = classDate < now;
         const shuffled = [...studentIds].sort(() => Math.random() - 0.5);
         const fill = randInt(5, Math.min(10, shuffled.length));
+
+        // Always book Jen into Elena's classes
+        const isElenaClass = cls.instructor_id === elenaInstructorId;
 
         for (let j = 0; j < fill; j++) {
           bookingRows.push({
@@ -270,7 +300,19 @@ Deno.serve(async (req) => {
             status: isPast
               ? (Math.random() > 0.3 ? "checked_in" : "confirmed")
               : (j < cls.capacity_total ? "confirmed" : "waitlist"),
-            created_at: cls.start_time, // same day as class
+            created_at: cls.start_time,
+          });
+        }
+
+        // Ensure Jen is booked into Elena's classes (and ~40% of other classes)
+        const shouldBookJen = isElenaClass || Math.random() < 0.4;
+        if (shouldBookJen && !shuffled.slice(0, fill).includes(DEMO_STUDENT_USER_ID)) {
+          bookingRows.push({
+            class_id: cls.id,
+            user_id: DEMO_STUDENT_USER_ID,
+            studio_id: sid,
+            status: isPast ? "checked_in" : "confirmed",
+            created_at: cls.start_time,
           });
         }
       }
