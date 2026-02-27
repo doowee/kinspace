@@ -412,6 +412,18 @@ export interface OrgNetworkFeedItem {
   type: "transaction" | "booking";
 }
 
+export interface OrgTopClass {
+  name: string;
+  totalBookings: number;
+  avgFillRate: number; // 0-100
+}
+
+export interface OrgTopPackage {
+  name: string;
+  totalRevenue: number;
+  unitsSold: number;
+}
+
 export interface OrgDashboardData {
   globalRevenue: number;
   totalClients: number;
@@ -419,6 +431,8 @@ export interface OrgDashboardData {
   studioBreakdowns: OrgStudioBreakdown[];
   networkFeed: OrgNetworkFeedItem[];
   studios: { id: string; name: string; location: string | null }[];
+  topClasses: OrgTopClass[];
+  topPackages: OrgTopPackage[];
 }
 
 export interface OrgDashboardFilters {
@@ -446,12 +460,12 @@ export async function fetchOrgDashboardData(
   const studioMap = new Map(allStudios.map((s) => [s.id, s]));
 
   if (studioIds.length === 0) {
-    return { globalRevenue: 0, totalClients: 0, totalBookings: 0, studioBreakdowns: [], networkFeed: [], studios: allStudios };
+    return { globalRevenue: 0, totalClients: 0, totalBookings: 0, studioBreakdowns: [], networkFeed: [], studios: allStudios, topClasses: [], topPackages: [] };
   }
 
   const since = filters?.since ?? subDays(new Date(), 30).toISOString();
 
-  // 2. Fetch transactions, bookings, members in parallel
+  // 2. Fetch transactions, bookings, members, and classes in parallel
   let txQuery = supabase
     .from("transactions")
     .select("id, amount, created_at, description, status, studio_id, profiles(first_name, last_name, email)")
@@ -461,7 +475,7 @@ export async function fetchOrgDashboardData(
 
   let bookingsQuery = supabase
     .from("bookings")
-    .select("id, user_id, studio_id, created_at, status, classes(name)")
+    .select("id, user_id, studio_id, created_at, status, class_id, classes(name, capacity_total)")
     .in("studio_id", studioIds)
     .in("status", ["confirmed", "checked_in"])
     .order("created_at", { ascending: false });
@@ -542,5 +556,48 @@ export async function fetchOrgDashboardData(
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 20);
 
-  return { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed, studios: allStudios };
+  // 6. Top Classes by bookings (grouped by class name)
+  const classAgg: Record<string, { bookings: number; totalCap: number; classCount: number }> = {};
+  for (const b of bookings as any[]) {
+    const className = b.classes?.name ?? "Unknown";
+    const cap = b.classes?.capacity_total ?? 10;
+    const a = (classAgg[className] ??= { bookings: 0, totalCap: 0, classCount: 0 });
+    a.bookings++;
+    // Track unique class instances for avg fill
+    if (!a.totalCap) a.totalCap = 0;
+  }
+  // We need class instance counts for fill rate — approximate from bookings data
+  const classInstances: Record<string, Set<string>> = {};
+  const classCapMap: Record<string, number> = {};
+  for (const b of bookings as any[]) {
+    const className = b.classes?.name ?? "Unknown";
+    const classId = b.class_id;
+    const cap = b.classes?.capacity_total ?? 10;
+    (classInstances[className] ??= new Set()).add(classId);
+    classCapMap[className] = cap; // last seen cap per class name
+  }
+  const topClasses: OrgTopClass[] = Object.entries(classAgg)
+    .map(([name, agg]) => {
+      const instances = classInstances[name]?.size ?? 1;
+      const cap = classCapMap[name] ?? 10;
+      const avgFillRate = Math.min(100, Math.round((agg.bookings / (instances * cap)) * 100));
+      return { name, totalBookings: agg.bookings, avgFillRate };
+    })
+    .sort((a, b) => b.totalBookings - a.totalBookings)
+    .slice(0, 5);
+
+  // 7. Best Selling Packages (grouped by transaction description)
+  const pkgAgg: Record<string, { revenue: number; units: number }> = {};
+  for (const t of transactions) {
+    const desc = t.description ?? "Other";
+    const a = (pkgAgg[desc] ??= { revenue: 0, units: 0 });
+    a.revenue += Number(t.amount);
+    a.units++;
+  }
+  const topPackages: OrgTopPackage[] = Object.entries(pkgAgg)
+    .map(([name, agg]) => ({ name, totalRevenue: agg.revenue, unitsSold: agg.units }))
+    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .slice(0, 5);
+
+  return { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed, studios: allStudios, topClasses, topPackages };
 }
