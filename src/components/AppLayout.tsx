@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck, Copy, Check, CreditCard } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck, Copy, Check, CreditCard, GraduationCap } from "lucide-react";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Outlet, Navigate } from "react-router-dom";
 import { createContext, useContext, useState, useCallback } from "react";
@@ -111,6 +111,14 @@ export default function AppLayout() {
                     >
                       <Users className="h-4 w-4" />
                       Students
+                    </NavLink>
+                    <NavLink
+                      to="/instructors"
+                      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      activeClassName="bg-accent text-accent-foreground font-medium"
+                    >
+                      <GraduationCap className="h-4 w-4" />
+                      Instructors
                     </NavLink>
                     <NavLink
                       to="/finance"
