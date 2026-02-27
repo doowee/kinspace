@@ -81,6 +81,35 @@ export default function Billing() {
   const ownerMembership = memberships.find((m) => m.role === "owner");
   const orgId = (ownerMembership?.studios as any)?.organization_id ?? null;
 
+  // Handle Stripe Connect return redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connectSuccess = params.get("connect_success");
+    const studioId = params.get("studio_id");
+
+    if (connectSuccess === "true" && studioId) {
+      // Check connect status and update UI
+      supabase.functions.invoke("create-connect-account", {
+        body: { action: "check-status", studio_id: studioId },
+      }).then(({ data }) => {
+        if (data?.connected) {
+          setStudios((prev) =>
+            prev.map((s) =>
+              s.id === studioId ? { ...s, stripe_account_id: data.account_id } : s
+            )
+          );
+          toast({
+            title: "Bank account connected! ✅",
+            description: "This location is now set up to receive client payouts.",
+          });
+        }
+      });
+
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     const ownerStudioIds = memberships
       .filter((m) => m.role === "owner")
@@ -91,7 +120,7 @@ export default function Billing() {
       return;
     }
 
-    const fetch = async () => {
+    const fetchStudios = async () => {
       const { data } = await supabase
         .from("studios")
         .select("id, name, location, stripe_account_id, subscription_tier")
@@ -101,7 +130,7 @@ export default function Billing() {
       setLoading(false);
     };
 
-    fetch();
+    fetchStudios();
   }, [memberships]);
 
   // Calculate MRR
