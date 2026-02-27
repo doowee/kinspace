@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from("bookings").delete().eq("studio_id", sid);
       await supabaseAdmin.from("transactions").delete().eq("studio_id", sid);
       await supabaseAdmin.from("classes").delete().eq("studio_id", sid);
+      await supabaseAdmin.from("instructors").delete().eq("studio_id", sid);
     }
 
     /* ═══════════════════════════════════════════════════════════
