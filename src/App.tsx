@@ -14,6 +14,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import Students from "./pages/Students";
+import InstructorsAdmin from "./pages/InstructorsAdmin";
 import AppLayout from "./components/AppLayout";
 import BookingPage from "./pages/BookingPage";
 import PublicPackagesPage from "./pages/PublicPackagesPage";
@@ -128,6 +129,7 @@ const App = () => {
               <Route path="/admin" element={<Dashboard />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/students" element={<Students />} />
+              <Route path="/instructors" element={<InstructorsAdmin />} />
               <Route path="/org-revenue" element={<OrgRevenue />} />
               <Route path="/finance" element={<Finance />} />
               <Route path="/settings" element={<Settings />} />

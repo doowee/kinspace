@@ -133,6 +133,7 @@ export type Database = {
           certified_class_types: string[] | null
           created_at: string
           display_order: number
+          home_studio_id: string | null
           id: string
           name: string
           photo_url: string | null
@@ -145,6 +146,7 @@ export type Database = {
           certified_class_types?: string[] | null
           created_at?: string
           display_order?: number
+          home_studio_id?: string | null
           id?: string
           name: string
           photo_url?: string | null
@@ -157,6 +159,7 @@ export type Database = {
           certified_class_types?: string[] | null
           created_at?: string
           display_order?: number
+          home_studio_id?: string | null
           id?: string
           name?: string
           photo_url?: string | null
@@ -164,6 +167,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "instructors_home_studio_id_fkey"
+            columns: ["home_studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "instructors_studio_id_fkey"
             columns: ["studio_id"]
