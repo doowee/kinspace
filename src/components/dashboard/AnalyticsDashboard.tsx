@@ -34,6 +34,7 @@ import {
   ArrowRightLeft,
   Activity,
 } from "lucide-react";
+import BIInsightsGrid from "./BIInsightsGrid";
 import {
   ResponsiveContainer,
   AreaChart,
