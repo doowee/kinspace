@@ -412,6 +412,18 @@ export interface OrgNetworkFeedItem {
   type: "transaction" | "booking";
 }
 
+export interface OrgTopClass {
+  name: string;
+  totalBookings: number;
+  avgFillRate: number; // 0-100
+}
+
+export interface OrgTopPackage {
+  name: string;
+  totalRevenue: number;
+  unitsSold: number;
+}
+
 export interface OrgDashboardData {
   globalRevenue: number;
   totalClients: number;
@@ -419,6 +431,8 @@ export interface OrgDashboardData {
   studioBreakdowns: OrgStudioBreakdown[];
   networkFeed: OrgNetworkFeedItem[];
   studios: { id: string; name: string; location: string | null }[];
+  topClasses: OrgTopClass[];
+  topPackages: OrgTopPackage[];
 }
 
 export interface OrgDashboardFilters {
@@ -451,7 +465,7 @@ export async function fetchOrgDashboardData(
 
   const since = filters?.since ?? subDays(new Date(), 30).toISOString();
 
-  // 2. Fetch transactions, bookings, members in parallel
+  // 2. Fetch transactions, bookings, members, and classes in parallel
   let txQuery = supabase
     .from("transactions")
     .select("id, amount, created_at, description, status, studio_id, profiles(first_name, last_name, email)")
@@ -461,7 +475,7 @@ export async function fetchOrgDashboardData(
 
   let bookingsQuery = supabase
     .from("bookings")
-    .select("id, user_id, studio_id, created_at, status, classes(name)")
+    .select("id, user_id, studio_id, created_at, status, class_id, classes(name, capacity_total)")
     .in("studio_id", studioIds)
     .in("status", ["confirmed", "checked_in"])
     .order("created_at", { ascending: false });
