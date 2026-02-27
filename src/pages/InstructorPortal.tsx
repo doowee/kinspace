@@ -89,6 +89,8 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   // Cover request state
   const [coverRequestClass, setCoverRequestClass] = useState<InstructorClass | null>(null);
   const [coverRequested, setCoverRequested] = useState<Set<string>>(new Set());
+  const [smartCoverLoading, setSmartCoverLoading] = useState(false);
+  const [smartCoverCount, setSmartCoverCount] = useState<number | null>(null);
 
   // SmartCover board state
   const [openShifts, setOpenShifts] = useState<OpenShift[]>(MOCK_OPEN_SHIFTS);
