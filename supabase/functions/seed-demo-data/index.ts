@@ -30,6 +30,11 @@ const CLASS_NAMES = [
 
 const INSTRUCTOR_NAMES = ["Sarah Jenkins","Mike Ross","Emma Stone"];
 
+/* ── Demo persona constants ── */
+const DEMO_INSTRUCTOR_NAME = "Elena Voss";
+const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84";
+const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
+
 /* ── Helpers ── */
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
