@@ -109,6 +109,7 @@ export default function Schedule() {
     let query = supabase
       .from("instructors")
       .select("id, name")
+      .eq("is_active", true)
       .order("display_order");
 
     query = query.eq("studio_id", activeStudio.id);
