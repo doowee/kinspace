@@ -644,6 +644,87 @@ export default function Schedule() {
           onBooked={() => { fetchBookingData(); }}
         />
       )}
+
+      {/* Uncovered Class Override Dialog */}
+      <Dialog open={!!overrideClass} onOpenChange={(open) => !open && setOverrideClass(null)}>
+        <DialogContent className="border-destructive/30">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
+                <ShieldAlert className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <DialogTitle className="text-destructive">Uncovered Class — Manual Override</DialogTitle>
+              </div>
+            </div>
+          </DialogHeader>
+          {overrideClass && (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
+                <p className="font-semibold">{overrideClass.name}</p>
+                <p className="text-muted-foreground text-xs">
+                  {format(new Date(overrideClass.start_time), "EEE, MMM d · h:mm a")} · {bookingCounts[overrideClass.id] || 0}/{overrideClass.capacity_total} booked
+                </p>
+                {overrideClass.instructors?.name && (
+                  <p className="text-xs text-muted-foreground">Currently assigned: {overrideClass.instructors.name}</p>
+                )}
+              </div>
+
+              {/* Option 1: Manual Assign */}
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                  Option 1: Assign a Substitute
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Bypass certification/location restrictions and manually assign any instructor.
+                </p>
+                <Select value={overrideInstructorId} onValueChange={setOverrideInstructorId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select instructor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select instructor…</SelectItem>
+                    {instructors.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="w-full gap-1.5"
+                  disabled={overrideInstructorId === "none" || overrideLoading}
+                  onClick={handleManualAssign}
+                >
+                  {overrideLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+                  Assign Sub
+                </Button>
+              </div>
+
+              {/* Option 2: Cancel Class */}
+              <div className="space-y-2 rounded-lg border border-destructive/20 p-3">
+                <p className="text-sm font-semibold flex items-center gap-2 text-destructive">
+                  <XCircle className="h-4 w-4" />
+                  Option 2: Cancel Class
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Cancel the class and notify all {bookingCounts[overrideClass.id] || 0} booked students. Credits should be refunded manually.
+                </p>
+                <Button
+                  variant="destructive"
+                  className="w-full gap-1.5"
+                  disabled={overrideLoading}
+                  onClick={handleCancelClass}
+                >
+                  {overrideLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                  Cancel Class & Notify Students
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
