@@ -1,4 +1,1 @@
-project_id = "kgfnesbqoavqbpkwzmwb"
-
-[functions.handle-incoming-sms]
-verify_jwt = false
+project_id = "rkwwoefndegyuoyoaukz"
