@@ -28,12 +28,40 @@ const CLASS_NAMES = [
   "Tower Sculpt","Cardio Reformer","Pilates for Runners","Deep Core Restore",
 ];
 
-const INSTRUCTOR_NAMES = ["Sarah Jenkins","Mike Ross","Emma Stone"];
-
 /* ── Demo persona constants ── */
-const DEMO_INSTRUCTOR_NAME = "Elena Voss";
 const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84";
 const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
+
+const CANONICAL_INSTRUCTORS = [
+  {
+    name: "Elena Voss",
+    bio: "Classical Pilates instructor with 8 years of reformer and mat experience. Specializes in injury rehabilitation and pre/post-natal conditioning.",
+    display_order: 1,
+    pin_code: "1234",
+    user_id: DEMO_INSTRUCTOR_USER_ID,
+  },
+  {
+    name: "Jordan Lee",
+    bio: "Former dancer specializing in barre fusion and core conditioning. Brings energy and precision to every class.",
+    display_order: 2,
+    pin_code: "5678",
+    user_id: null,
+  },
+  {
+    name: "Priya Sharma",
+    bio: "Mindful movement coach blending Pilates with breathwork and yoga. Certified in pre-natal Pilates and therapeutic exercise.",
+    display_order: 3,
+    pin_code: "9012",
+    user_id: null,
+  },
+  {
+    name: "Marco Rivera",
+    bio: "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques with 10 years of teaching experience.",
+    display_order: 4,
+    pin_code: "2468",
+    user_id: null,
+  },
+];
 
 /* ── Helpers ── */
 function pick<T>(arr: T[]): T {
