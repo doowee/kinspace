@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const TIERS: Record<string, string> = {
-  standard: "price_1T5KOBDZK6HIkv08lOuqE4n1",
+  standard: "price_1T5VjwDZK6HIkv08OnLNmJX4",
   pro: "price_1T5KOsDZK6HIkv08PtBso865",
 };
 
