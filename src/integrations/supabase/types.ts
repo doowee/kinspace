@@ -73,6 +73,7 @@ export type Database = {
         Row: {
           capacity_booked: number
           capacity_total: number
+          class_type: string | null
           created_at: string
           description: string | null
           id: string
@@ -85,6 +86,7 @@ export type Database = {
         Insert: {
           capacity_booked?: number
           capacity_total?: number
+          class_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -97,6 +99,7 @@ export type Database = {
         Update: {
           capacity_booked?: number
           capacity_total?: number
+          class_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -125,7 +128,9 @@ export type Database = {
       }
       instructors: {
         Row: {
+          authorized_studios: string[] | null
           bio: string | null
+          certified_class_types: string[] | null
           created_at: string
           display_order: number
           id: string
@@ -135,7 +140,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          authorized_studios?: string[] | null
           bio?: string | null
+          certified_class_types?: string[] | null
           created_at?: string
           display_order?: number
           id?: string
@@ -145,7 +152,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          authorized_studios?: string[] | null
           bio?: string | null
+          certified_class_types?: string[] | null
           created_at?: string
           display_order?: number
           id?: string
