@@ -7,3 +7,7 @@ project_id = "rkwwoefndegyuoyoaukz"
     verify_jwt = false
   [functions.smartcover-request]
     verify_jwt = false
+  [functions.create-saas-subscription]
+    verify_jwt = false
+  [functions.create-client-payment]
+    verify_jwt = false
