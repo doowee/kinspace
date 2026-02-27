@@ -69,38 +69,19 @@ function BrandName() {
 
 }
 
-function WaitlistForm({ buttonText = "Join the US Beta Waitlist" }: {buttonText?: string;}) {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    toast.success("You're on the list! Keep an eye on your inbox.");
-    setEmail("");
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-  };
-
+function SignupCTA({ buttonText = "Get Started Free" }: {buttonText?: string;}) {
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-      <Input
-        type="email"
-        placeholder="Enter your email..."
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        className="h-12 bg-card/80 backdrop-blur-sm border-border/60 text-foreground placeholder:text-muted-foreground" />
-
-      <Button type="submit" size="lg" className="h-12 px-6 whitespace-nowrap gap-2">
-        {submitted ?
-        <><Check className="h-4 w-4" /> You're in!</> :
-
-        <>{buttonText} <ArrowRight className="h-4 w-4" /></>
-        }
+    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+      <Button size="lg" className="h-12 px-8 whitespace-nowrap gap-2" asChild>
+        <Link to="/auth">
+          {buttonText} <ArrowRight className="h-4 w-4" />
+        </Link>
       </Button>
-    </form>);
-
+      <Button variant="outline" size="lg" className="h-12 px-6 whitespace-nowrap" asChild>
+        <Link to="/auth">Sign In</Link>
+      </Button>
+    </div>
+  );
 }
 
 /* ─── Social Proof Marquee ─── */
@@ -655,7 +636,7 @@ export default function Index() {
 
               </motion.p>
               <motion.div variants={fadeLeft}>
-                <WaitlistForm />
+                <SignupCTA buttonText="Start Your Free Trial" />
               </motion.div>
             </motion.div>
             <motion.div
@@ -756,11 +737,10 @@ export default function Index() {
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground">
               Boutique studios deserve boutique software.
             </h2>
-            <p className="text-muted-foreground leading-relaxed">We are onboarding a strictly limited cohort of premium studios for our Q2 Beta launch. Secure your spot.
-
+            <p className="text-muted-foreground leading-relaxed">Start managing your studio smarter today. No credit card required.
             </p>
             <div className="flex justify-center">
-              <WaitlistForm buttonText="Request Beta Access" />
+              <SignupCTA buttonText="Create Your Studio" />
             </div>
           </GlassCard>
         </div>
