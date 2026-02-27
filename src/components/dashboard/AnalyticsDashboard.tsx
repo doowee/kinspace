@@ -251,13 +251,12 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
             />
             <KPICard
               label="MRR"
-              value="$28,450"
+              value={`$${d.totalRevenue > 0 ? Math.round(d.totalRevenue / (days / 30)).toLocaleString() : "0"}`}
               icon={<TrendingUp className="h-4 w-4" />}
-              badge="+4.2%"
             />
             <KPICard
-              label="Active Memberships"
-              value="142"
+              label="Active Members"
+              value={d.memberCount.toLocaleString()}
               icon={<UserCheck className="h-4 w-4" />}
             />
             <KPICard
