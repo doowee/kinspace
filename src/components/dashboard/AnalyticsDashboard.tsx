@@ -539,11 +539,12 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
                         <Button
                           size="sm"
                           variant="outline"
-                          className="shrink-0 gap-1.5 text-xs"
-                          onClick={() => onNavigateToMarketing?.()}
+                          className={`shrink-0 gap-1.5 text-xs ${!isPro ? "opacity-50" : ""}`}
+                          onClick={() => isPro ? onNavigateToMarketing?.() : undefined}
+                          disabled={!isPro}
                         >
                           <Sparkles className="h-3 w-3" />
-                          Deploy Marketing Agent
+                          {isPro ? "Deploy Marketing Agent" : "✨ Pro Only"}
                         </Button>
                       )}
                     </div>
