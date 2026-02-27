@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { studioColorClass } from "@/lib/studio-colors";
 import { toast } from "sonner";
-import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff, Fingerprint, Shuffle } from "lucide-react";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -38,6 +38,7 @@ interface InstructorRow {
   certified_class_types: string[];
   linked_email?: string | null;
   is_active: boolean;
+  pin_code: string | null;
 }
 
 export default function InstructorsAdmin() {
@@ -63,6 +64,7 @@ export default function InstructorsAdmin() {
   const [editHomeStudio, setEditHomeStudio] = useState<string>("none");
   const [editAuthorized, setEditAuthorized] = useState<string[]>([]);
   const [editCerts, setEditCerts] = useState<string[]>([]);
+  const [editPin, setEditPin] = useState("");
   const [customType, setCustomType] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -74,6 +76,7 @@ export default function InstructorsAdmin() {
   const [newAuthorized, setNewAuthorized] = useState<string[]>([]);
   const [newCerts, setNewCerts] = useState<string[]>([]);
   const [newCustomType, setNewCustomType] = useState("");
+  const [newPin, setNewPin] = useState("");
   const [provisioning, setProvisioning] = useState(false);
 
   // Offboard state
@@ -109,7 +112,7 @@ export default function InstructorsAdmin() {
 
     const { data } = await supabase
       .from("instructors")
-      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active")
+      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active, pin_code")
       .in("studio_id", studioIds)
       .order("name");
 
@@ -118,6 +121,7 @@ export default function InstructorsAdmin() {
       authorized_studios: i.authorized_studios ?? [],
       certified_class_types: i.certified_class_types ?? [],
       is_active: i.is_active ?? true,
+      pin_code: i.pin_code ?? null,
     }));
 
     const userIds = items.filter((i) => i.user_id).map((i) => i.user_id!);
