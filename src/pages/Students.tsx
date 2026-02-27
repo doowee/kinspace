@@ -167,13 +167,14 @@ export default function Students() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Tier</TableHead>
-                    <TableHead className="text-right">Bookings</TableHead>
-                    <TableHead className="text-right">Last Visit</TableHead>
-                  </TableRow>
+                   <TableRow>
+                     <TableHead>Name</TableHead>
+                     <TableHead>Email</TableHead>
+                     <TableHead>Home Studio</TableHead>
+                     <TableHead>Tier</TableHead>
+                     <TableHead className="text-right">Bookings</TableHead>
+                     <TableHead className="text-right">Last Visit</TableHead>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((s) => (
