@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { createStudioWithMembership } from "@/lib/supabase-helpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
-import { Check, Sparkles, Zap } from "lucide-react";
+import { Check, Sparkles, Zap, Loader2 } from "lucide-react";
 import type { SubscriptionTier } from "@/hooks/use-subscription-tier";
 
 const PLANS: { tier: SubscriptionTier; name: string; price: string; description: string; features: string[]; badge?: string }[] = [
@@ -67,12 +67,35 @@ export default function Onboarding() {
     try {
       const studioId = await createStudioWithMembership(name, slug);
 
-      // Update the studio's subscription tier directly
+      // Update the studio's subscription tier
       await supabase
         .from("studios")
         .update({ subscription_tier: selectedTier } as any)
         .eq("id", studioId);
 
+      // Get the organization_id from the studio we just created
+      const { data: studioData } = await supabase
+        .from("studios")
+        .select("organization_id")
+        .eq("id", studioId)
+        .maybeSingle();
+
+      // Redirect to Stripe Checkout for subscription payment
+      const { data, error } = await supabase.functions.invoke("create-saas-subscription", {
+        body: {
+          tier: selectedTier,
+          studioName: name,
+          organizationId: studioData?.organization_id,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.url) {
+        window.location.href = data.url;
+        return; // Don't setLoading(false) — navigating away
+      }
+
+      // Fallback if no URL returned
       toast({ title: "Studio created!", description: `${name} is ready to go.` });
       navigate("/dashboard");
     } catch (err: any) {
@@ -81,7 +104,6 @@ export default function Onboarding() {
         description: err.message,
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -189,7 +211,11 @@ export default function Onboarding() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !slug}>
-                    {loading ? "Creating..." : "Create Studio & Enter"}
+                    {loading ? (
+                      <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Setting up & redirecting to checkout…</span>
+                    ) : (
+                      "Create Studio & Subscribe"
+                    )}
                   </Button>
                 </form>
               </CardContent>
