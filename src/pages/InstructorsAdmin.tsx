@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { studioColorClass } from "@/lib/studio-colors";
 import { toast } from "sonner";
-import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff, Fingerprint, Shuffle } from "lucide-react";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -38,6 +38,7 @@ interface InstructorRow {
   certified_class_types: string[];
   linked_email?: string | null;
   is_active: boolean;
+  pin_code: string | null;
 }
 
 export default function InstructorsAdmin() {
@@ -63,6 +64,7 @@ export default function InstructorsAdmin() {
   const [editHomeStudio, setEditHomeStudio] = useState<string>("none");
   const [editAuthorized, setEditAuthorized] = useState<string[]>([]);
   const [editCerts, setEditCerts] = useState<string[]>([]);
+  const [editPin, setEditPin] = useState("");
   const [customType, setCustomType] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -74,6 +76,7 @@ export default function InstructorsAdmin() {
   const [newAuthorized, setNewAuthorized] = useState<string[]>([]);
   const [newCerts, setNewCerts] = useState<string[]>([]);
   const [newCustomType, setNewCustomType] = useState("");
+  const [newPin, setNewPin] = useState("");
   const [provisioning, setProvisioning] = useState(false);
 
   // Offboard state
@@ -109,7 +112,7 @@ export default function InstructorsAdmin() {
 
     const { data } = await supabase
       .from("instructors")
-      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active")
+      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active, pin_code")
       .in("studio_id", studioIds)
       .order("name");
 
@@ -118,6 +121,7 @@ export default function InstructorsAdmin() {
       authorized_studios: i.authorized_studios ?? [],
       certified_class_types: i.certified_class_types ?? [],
       is_active: i.is_active ?? true,
+      pin_code: i.pin_code ?? null,
     }));
 
     const userIds = items.filter((i) => i.user_id).map((i) => i.user_id!);
@@ -156,6 +160,7 @@ export default function InstructorsAdmin() {
     setEditHomeStudio(inst.home_studio_id ?? "none");
     setEditAuthorized(inst.authorized_studios);
     setEditCerts(inst.certified_class_types);
+    setEditPin(inst.pin_code ?? "");
     setCustomType("");
     setEditOpen(true);
   };
@@ -183,6 +188,7 @@ export default function InstructorsAdmin() {
       home_studio_id: editHomeStudio === "none" ? null : editHomeStudio,
       authorized_studios: editAuthorized,
       certified_class_types: editCerts,
+      pin_code: editPin.trim() || null,
     } as any).eq("id", editTarget.id);
 
     if (error) toast.error("Failed to update");
@@ -193,7 +199,7 @@ export default function InstructorsAdmin() {
   // Provision handler
   const resetAddForm = () => {
     setNewFirstName(""); setNewLastName(""); setNewEmail("");
-    setNewAuthorized([]); setNewCerts([]); setNewCustomType("");
+    setNewAuthorized([]); setNewCerts([]); setNewCustomType(""); setNewPin("");
   };
 
   const handleProvision = async () => {
@@ -207,6 +213,7 @@ export default function InstructorsAdmin() {
         studio_id: activeStudio.id,
         authorized_studios: newAuthorized,
         certified_class_types: newCerts,
+        pin_code: newPin.trim() || null,
       },
     });
     if (error || data?.error) {
@@ -423,6 +430,15 @@ export default function InstructorsAdmin() {
             <div className="space-y-3">
               <div><Label>Name</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
               <div><Label>Bio</Label><textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={2} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" /></div>
+              <div>
+                <Label className="flex items-center gap-1.5"><Fingerprint className="h-3.5 w-3.5 text-primary" />4-Digit Kiosk PIN</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input value={editPin} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 4); setEditPin(v); }} placeholder="••••" maxLength={4} className="font-mono tracking-[0.5em] text-center w-32" />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditPin(String(Math.floor(1000 + Math.random() * 9000)))} className="gap-1 text-xs shrink-0">
+                    <Shuffle className="h-3 w-3" />Generate
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* Home Studio */}
@@ -500,6 +516,15 @@ export default function InstructorsAdmin() {
               <div><Label>Last Name</Label><Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} placeholder="Johnson" /></div>
             </div>
             <div><Label>Email Address</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="sarah@example.com" /></div>
+            <div>
+              <Label className="flex items-center gap-1.5"><Fingerprint className="h-3.5 w-3.5 text-primary" />4-Digit Kiosk PIN</Label>
+              <div className="flex gap-2 mt-1">
+                <Input value={newPin} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 4); setNewPin(v); }} placeholder="••••" maxLength={4} className="font-mono tracking-[0.5em] text-center w-32" />
+                <Button type="button" variant="outline" size="sm" onClick={() => setNewPin(String(Math.floor(1000 + Math.random() * 9000)))} className="gap-1 text-xs shrink-0">
+                  <Shuffle className="h-3 w-3" />Generate
+                </Button>
+              </div>
+            </div>
 
             {/* Authorized Locations */}
             <div>

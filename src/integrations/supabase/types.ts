@@ -206,6 +206,7 @@ export type Database = {
           is_active: boolean
           name: string
           photo_url: string | null
+          pin_code: string | null
           studio_id: string | null
           user_id: string | null
         }
@@ -220,6 +221,7 @@ export type Database = {
           is_active?: boolean
           name: string
           photo_url?: string | null
+          pin_code?: string | null
           studio_id?: string | null
           user_id?: string | null
         }
@@ -234,6 +236,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           photo_url?: string | null
+          pin_code?: string | null
           studio_id?: string | null
           user_id?: string | null
         }
@@ -361,6 +364,7 @@ export type Database = {
           first_name: string | null
           home_studio_id: string | null
           id: string
+          injury_notes: string | null
           last_name: string | null
           membership_tier: string | null
           notification_preferences: Json
@@ -377,6 +381,7 @@ export type Database = {
           first_name?: string | null
           home_studio_id?: string | null
           id: string
+          injury_notes?: string | null
           last_name?: string | null
           membership_tier?: string | null
           notification_preferences?: Json
@@ -393,6 +398,7 @@ export type Database = {
           first_name?: string | null
           home_studio_id?: string | null
           id?: string
+          injury_notes?: string | null
           last_name?: string | null
           membership_tier?: string | null
           notification_preferences?: Json
