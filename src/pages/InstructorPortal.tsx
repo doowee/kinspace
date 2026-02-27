@@ -264,8 +264,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   };
 
   // SmartCover handlers
-  const [smartCoverLoading, setSmartCoverLoading] = useState(false);
-  const [smartCoverCount, setSmartCoverCount] = useState<number | null>(null);
 
   const confirmCoverRequest = (cls: InstructorClass, e: React.MouseEvent) => {
     e.stopPropagation();
