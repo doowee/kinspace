@@ -515,6 +515,15 @@ export default function InstructorsAdmin() {
               <div><Label>Last Name</Label><Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} placeholder="Johnson" /></div>
             </div>
             <div><Label>Email Address</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="sarah@example.com" /></div>
+            <div>
+              <Label className="flex items-center gap-1.5"><Fingerprint className="h-3.5 w-3.5 text-primary" />4-Digit Kiosk PIN</Label>
+              <div className="flex gap-2 mt-1">
+                <Input value={newPin} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 4); setNewPin(v); }} placeholder="••••" maxLength={4} className="font-mono tracking-[0.5em] text-center w-32" />
+                <Button type="button" variant="outline" size="sm" onClick={() => setNewPin(String(Math.floor(1000 + Math.random() * 9000)))} className="gap-1 text-xs shrink-0">
+                  <Shuffle className="h-3 w-3" />Generate
+                </Button>
+              </div>
+            </div>
 
             {/* Authorized Locations */}
             <div>
