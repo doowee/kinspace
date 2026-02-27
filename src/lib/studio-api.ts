@@ -142,7 +142,8 @@ export async function fetchDashboardData(
       supabase
         .from("studio_members")
         .select("id", { count: "exact", head: true })
-        .eq("studio_id", studioId),
+        .eq("studio_id", studioId)
+        .eq("role", "student"),
       supabase
         .from("classes")
         .select("id, name, start_time, capacity_total, instructor_id")
@@ -361,7 +362,8 @@ export async function fetchFinanceData(studioId: string): Promise<FinanceData> {
     supabase
       .from("studio_members")
       .select("id", { count: "exact", head: true })
-      .eq("studio_id", studioId),
+      .eq("studio_id", studioId)
+      .eq("role", "student"),
   ]);
 
   const rawTx = txRes.data ?? [];

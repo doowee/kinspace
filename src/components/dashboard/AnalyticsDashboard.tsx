@@ -265,9 +265,9 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
               icon={<BarChart3 className="h-4 w-4" />}
             />
             <KPICard
-              label="Active Members"
-              value={d.memberCount.toLocaleString()}
-              icon={<Users className="h-4 w-4" />}
+              label="Total Classes"
+              value={d.topClasses.length.toLocaleString()}
+              icon={<CalendarDays className="h-4 w-4" />}
             />
             <KPICard
               label="ARPU"
