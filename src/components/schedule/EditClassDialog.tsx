@@ -112,6 +112,7 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
               onChange={(e) => setClassType(e.target.value)}
               placeholder="e.g. reformer, mat, hiit"
             />
+          </div>
           <div>
             <Label>Instructor</Label>
             <Select value={instructorId} onValueChange={setInstructorId}>
