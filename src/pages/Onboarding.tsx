@@ -17,7 +17,7 @@ const PLANS: { tier: SubscriptionTier; name: string; price: string; description:
   {
     tier: "standard",
     name: "Standard",
-    price: "$129",
+    price: "$99",
     description: "Core booking, multi-location management, and frictionless Stripe payments.",
     features: [
       "Unlimited classes & bookings",
