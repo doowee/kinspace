@@ -8,6 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SubscriptionTier } from "@/hooks/use-subscription-tier";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import {
   Building2,
   ExternalLink,
   CreditCard,
@@ -19,6 +28,7 @@ import {
   Check,
   Sparkles,
   ArrowUpRight,
+  ArrowRight,
   MapPin,
   Receipt,
 } from "lucide-react";
@@ -59,6 +69,12 @@ export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    studioId: string;
+    studioName: string;
+    currentTier: SubscriptionTier;
+    newTier: SubscriptionTier;
+  } | null>(null);
 
   // Get org ID from first owner membership
   const ownerMembership = memberships.find((m) => m.role === "owner");
@@ -93,10 +109,20 @@ export default function Billing() {
     return sum + (info?.price ?? 129);
   }, 0);
 
-  const handleChangeTier = async (studioId: string, newTier: SubscriptionTier) => {
+  const openConfirmModal = (studio: StudioBilling, newTier: SubscriptionTier) => {
+    setConfirmModal({
+      studioId: studio.id,
+      studioName: studio.name,
+      currentTier: (studio.subscription_tier as SubscriptionTier) || "standard",
+      newTier,
+    });
+  };
+
+  const handleChangeTier = async () => {
+    if (!confirmModal) return;
+    const { studioId, newTier } = confirmModal;
     setSwitching(studioId);
 
-    // Call edge function for Stripe proration
     const { data, error } = await supabase.functions.invoke("manage-subscription", {
       body: { action: "change-tier", studio_id: studioId, new_tier: newTier },
     });
@@ -104,7 +130,6 @@ export default function Billing() {
     setSwitching(null);
 
     if (error || data?.error) {
-      // Fallback: update DB directly if Stripe isn't connected yet
       await supabase
         .from("studios")
         .update({ subscription_tier: newTier } as any)
@@ -114,6 +139,8 @@ export default function Billing() {
     setStudios((prev) =>
       prev.map((s) => (s.id === studioId ? { ...s, subscription_tier: newTier } : s))
     );
+
+    setConfirmModal(null);
 
     toast({
       title: newTier === "pro" ? "Upgraded to Pro Engine! 🚀" : "Switched to Standard",
@@ -297,7 +324,7 @@ export default function Billing() {
                             className="w-full gap-1 text-xs"
                             variant={plan.tier === "pro" ? "default" : "outline"}
                             disabled={isSwitching}
-                            onClick={() => handleChangeTier(studio.id, plan.tier)}
+                            onClick={() => openConfirmModal(studio, plan.tier)}
                           >
                             {isSwitching ? "Switching…" : plan.tier === "pro" ? "Upgrade to Pro" : "Switch to Standard"}
                             <ArrowUpRight className="h-3 w-3" />
@@ -376,6 +403,67 @@ export default function Billing() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ─── Confirmation Modal ─── */}
+      <Dialog open={!!confirmModal} onOpenChange={(open) => !open && !switching && setConfirmModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Plan Change for {confirmModal?.studioName}</DialogTitle>
+            <DialogDescription>Review the billing change below before confirming.</DialogDescription>
+          </DialogHeader>
+
+          {confirmModal && (
+            <div className="space-y-4 py-2">
+              {/* Transition breakdown */}
+              <div className="flex items-center justify-center gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Current Plan</p>
+                  <p className="font-semibold text-foreground">{TIER_INFO[confirmModal.currentTier]?.name}</p>
+                  <p className="text-lg font-bold text-foreground">${TIER_INFO[confirmModal.currentTier]?.price}/mo</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">New Plan</p>
+                  <p className="font-semibold text-primary">{TIER_INFO[confirmModal.newTier]?.name}</p>
+                  <p className="text-lg font-bold text-primary">${TIER_INFO[confirmModal.newTier]?.price}/mo</p>
+                </div>
+              </div>
+
+              {/* Price difference */}
+              {(() => {
+                const diff = (TIER_INFO[confirmModal.newTier]?.price ?? 0) - (TIER_INFO[confirmModal.currentTier]?.price ?? 0);
+                const isUpgrade = diff > 0;
+                return (
+                  <div className={`rounded-lg border p-3 text-sm ${isUpgrade ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30"}`}>
+                    <p className="font-medium text-foreground mb-1">
+                      {isUpgrade ? `+$${diff}/mo increase` : `-$${Math.abs(diff)}/mo decrease`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Stripe will automatically calculate the prorated difference for the remainder of your current billing cycle. This prorated amount will be applied to your next unified monthly invoice.
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="secondary" onClick={() => setConfirmModal(null)} disabled={!!switching}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangeTier} disabled={!!switching}>
+              {switching ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                "Confirm & Update"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
