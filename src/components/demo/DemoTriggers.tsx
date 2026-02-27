@@ -2,8 +2,9 @@ import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Zap, Bell, Users, AlertTriangle, RotateCcw, Database, MessageSquare, CreditCard, Flame } from "lucide-react";
+import { Zap, Bell, Users, AlertTriangle, RotateCcw, Database, MessageSquare, CreditCard, Flame, Lock } from "lucide-react";
 import { seedDemoData } from "@/lib/seed-demo-data";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ export default function DemoTriggers() {
   const { activeRole, activeStudio } = useStudio();
   const { triggerScenario, triggerWaitlistPromotion, onWaitlistPromoted, clearMessages } = useDemoPhone();
   const queryClient = useQueryClient();
+  const { isPro } = useSubscriptionTier();
 
   const studioName = activeStudio?.name || "Your Studio";
   const studioId = activeStudio?.id;
@@ -142,15 +144,32 @@ export default function DemoTriggers() {
           <AlertTriangle className="h-4 w-4 text-orange-500" /> Trigger: Low Balance Warning
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Frictionless Commerce</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => triggerScenario("smart-review", studioName)} className="gap-2 cursor-pointer">
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          Frictionless Commerce {!isPro && <Lock className="inline h-3 w-3 ml-1 text-muted-foreground" />}
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => isPro && triggerScenario("smart-review", studioName)}
+          className={`gap-2 cursor-pointer ${!isPro ? "opacity-50 pointer-events-none" : ""}`}
+          disabled={!isPro}
+        >
           <MessageSquare className="h-4 w-4 text-teal-500" /> Trigger: Smart Review
+          {!isPro && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => triggerScenario("refill", studioName)} className="gap-2 cursor-pointer">
+        <DropdownMenuItem
+          onClick={() => isPro && triggerScenario("refill", studioName)}
+          className={`gap-2 cursor-pointer ${!isPro ? "opacity-50 pointer-events-none" : ""}`}
+          disabled={!isPro}
+        >
           <CreditCard className="h-4 w-4 text-emerald-500" /> Trigger: Low Balance Refill
+          {!isPro && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => triggerScenario("flash-deal", studioName)} className="gap-2 cursor-pointer">
+        <DropdownMenuItem
+          onClick={() => isPro && triggerScenario("flash-deal", studioName)}
+          className={`gap-2 cursor-pointer ${!isPro ? "opacity-50 pointer-events-none" : ""}`}
+          disabled={!isPro}
+        >
           <Flame className="h-4 w-4 text-red-500" /> Trigger: 1-Hour Flash Deal
+          {!isPro && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleResetWaitlistDemo} className="gap-2 cursor-pointer text-muted-foreground">

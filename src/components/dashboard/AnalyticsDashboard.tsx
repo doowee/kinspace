@@ -4,6 +4,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { useViewAsRole } from "@/components/AppLayout";
 import { fetchDashboardData } from "@/lib/studio-api";
 import type { DashboardData } from "@/lib/studio-api";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import {
   ArrowRightLeft,
   Activity,
 } from "lucide-react";
+import BIInsightsGrid from "./BIInsightsGrid";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -62,6 +64,7 @@ const DATE_RANGE_DAYS: Record<string, number> = {
 export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNavigateToMarketing?: () => void }) {
   const { activeStudio } = useStudio();
   const viewAsRole = useViewAsRole();
+  const { isPro } = useSubscriptionTier();
   const [dateRange, setDateRange] = useState("month");
   const [instructor, setInstructor] = useState("all");
   const [chartGranularity, setChartGranularity] = useState("week");
@@ -355,6 +358,9 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
         </Card>
       )}
 
+      {/* ── BI Insights Grid (Owner only) ───────────────────── */}
+      {isOwner && <BIInsightsGrid data={d} />}
+
       {/* ── Recent Transactions (Owner only) ────────────────── */}
       {isOwner && d.recentTransactions.length > 0 && (
         <Card>
@@ -533,11 +539,12 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
                         <Button
                           size="sm"
                           variant="outline"
-                          className="shrink-0 gap-1.5 text-xs"
-                          onClick={() => onNavigateToMarketing?.()}
+                          className={`shrink-0 gap-1.5 text-xs ${!isPro ? "opacity-50" : ""}`}
+                          onClick={() => isPro ? onNavigateToMarketing?.() : undefined}
+                          disabled={!isPro}
                         >
                           <Sparkles className="h-3 w-3" />
-                          Deploy Marketing Agent
+                          {isPro ? "Deploy Marketing Agent" : "✨ Pro Only"}
                         </Button>
                       )}
                     </div>

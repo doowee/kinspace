@@ -5,11 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap, Sparkles, BarChart3 } from "lucide-react";
+import { Search, PlusCircle, Eye, ArrowLeft, GraduationCap, Sparkles, BarChart3, Lock } from "lucide-react";
 import StudentPortal from "@/components/dashboard/StudentPortal";
 import InstructorPortal from "@/pages/InstructorPortal";
 import AIMarketingHub from "@/components/dashboard/AIMarketingHub";
 import AnalyticsDashboard from "@/components/dashboard/AnalyticsDashboard";
+import ProUpgradeOverlay from "@/components/dashboard/ProUpgradeOverlay";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 
 const DEMO_STUDENT_USER_ID = "d4e1b69b-bc2c-4e16-9875-0938910a96c5"; // Jen Woohoo
 const DEMO_INSTRUCTOR_USER_ID = "5a04866e-05c2-4040-a8ea-86d5ea379f84"; // Elena Voss
@@ -175,6 +177,7 @@ export default function Dashboard() {
 
 function DashboardTabs({ demoMode }: { demoMode: DemoMode }) {
   const [activeTab, setActiveTab] = useState("analytics");
+  const { isPro, loading: tierLoading } = useSubscriptionTier();
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -183,16 +186,21 @@ function DashboardTabs({ demoMode }: { demoMode: DemoMode }) {
           <BarChart3 className="h-3.5 w-3.5" />
           Analytics
         </TabsTrigger>
-        <TabsTrigger value="marketing" className="gap-1.5">
+        <TabsTrigger value="marketing" className="gap-1.5 relative">
           <Sparkles className="h-3.5 w-3.5" />
           AI Marketing
+          {!tierLoading && !isPro && (
+            <Lock className="ml-1 h-3 w-3 text-muted-foreground" />
+          )}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="analytics" className="mt-4">
         <AnalyticsDashboard onNavigateToMarketing={() => setActiveTab("marketing")} />
       </TabsContent>
       <TabsContent value="marketing" className="mt-4">
-        <AIMarketingHub />
+        <ProUpgradeOverlay locked={!isPro}>
+          <AIMarketingHub />
+        </ProUpgradeOverlay>
       </TabsContent>
     </Tabs>
   );
