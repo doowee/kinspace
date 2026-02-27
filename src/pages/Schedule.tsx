@@ -519,10 +519,18 @@ export default function Schedule() {
                               Uncovered
                             </Badge>
                           )}
+                          {isUnassigned && !isUncovered && (
+                            <Badge className="gap-1 text-[10px] font-bold uppercase tracking-wide bg-amber-500 text-white border-amber-600 animate-pulse">
+                              <AlertTriangle className="h-3 w-3" />
+                              Staff Needed
+                            </Badge>
+                          )}
                         </div>
-                        {cls.instructors?.name && (
+                        {cls.instructors?.name ? (
                           <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
-                        )}
+                        ) : isUnassigned ? (
+                          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Unassigned — tap to staff</p>
+                        ) : null}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
