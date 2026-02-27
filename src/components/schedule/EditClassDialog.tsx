@@ -36,12 +36,14 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
   const [time, setTime] = useState({ hour: 9, minute: 0 });
   const [capacity, setCapacity] = useState("10");
   const [instructorId, setInstructorId] = useState("none");
+  const [classType, setClassType] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (cls) {
       setName(cls.name);
       setDescription((cls as any).description || "");
+      setClassType((cls as any).class_type || "");
       const dt = new Date(cls.start_time);
       setClassDate(dt);
       setTime({ hour: dt.getHours(), minute: dt.getMinutes() });
