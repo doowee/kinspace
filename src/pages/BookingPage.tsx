@@ -636,7 +636,10 @@ export default function BookingPage() {
         onOpenChange={setCheckoutOpen}
         itemName="10-Class Pack"
         itemPrice="$199.00"
+        amount={199}
+        studioId={studio?.id ?? ""}
         studioName={studio?.name ?? ""}
+        studioSlug={studio_slug}
       />
     </div>
   );
