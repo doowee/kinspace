@@ -24,7 +24,7 @@ export default function ProUpgradeOverlay({ children, locked, label }: ProUpgrad
         {children}
       </div>
       <button
-        onClick={() => navigate("/billing")}
+        onClick={() => navigate("/admin/billing")}
         className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-background/60 backdrop-blur-sm cursor-pointer transition-all hover:bg-background/70"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
