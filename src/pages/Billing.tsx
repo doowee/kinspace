@@ -226,12 +226,9 @@ export default function Billing() {
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" size="sm" className="gap-2" onClick={handleViewInvoices} disabled={portalLoading}>
               <ExternalLink className="h-4 w-4" />
-              {portalLoading ? "Opening…" : "View Past Invoices"}
+              {portalLoading ? "Opening…" : "Manage Billing"}
             </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleViewInvoices} disabled={portalLoading}>
-              <CreditCard className="h-4 w-4" />
-              {portalLoading ? "Opening…" : "Update Payment Method"}
-            </Button>
+            <p className="text-[11px] text-muted-foreground self-center">View invoices, update payment method, and more</p>
           </div>
         </CardContent>
       </Card>
