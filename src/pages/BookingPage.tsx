@@ -639,7 +639,7 @@ export default function BookingPage() {
         amount={199}
         studioId={studio?.id ?? ""}
         studioName={studio?.name ?? ""}
-        studioSlug={studioSlug}
+        studioSlug={studio_slug}
       />
     </div>
   );
