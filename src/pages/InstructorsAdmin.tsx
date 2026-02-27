@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { GraduationCap, Search, Pencil, Plus, Trash2, Link2, Unlink, MapPin, Award, X, Home } from "lucide-react";
+import { GraduationCap, Search, Pencil, Plus, Trash2, MapPin, Award, X, Home, Loader2 } from "lucide-react";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -64,18 +64,15 @@ export default function InstructorsAdmin() {
   const [customType, setCustomType] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Add state
+  // Add/Provision state
   const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newBio, setNewBio] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  // Link state
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [linkTarget, setLinkTarget] = useState<InstructorRow | null>(null);
-  const [linkEmail, setLinkEmail] = useState("");
-  const [linking, setLinking] = useState(false);
-  const [linkError, setLinkError] = useState("");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newAuthorized, setNewAuthorized] = useState<string[]>([]);
+  const [newCerts, setNewCerts] = useState<string[]>([]);
+  const [newCustomType, setNewCustomType] = useState("");
+  const [provisioning, setProvisioning] = useState(false);
 
   // Fetch org studios
   useEffect(() => {
@@ -180,55 +177,48 @@ export default function InstructorsAdmin() {
     setSaving(false);
   };
 
-  // Add handler
-  const handleAdd = async () => {
-    if (!activeStudio || !newName.trim()) return;
-    setAdding(true);
-    const { error } = await supabase.from("instructors").insert({
-      name: newName.trim(),
-      bio: newBio.trim() || null,
-      studio_id: activeStudio.id,
-      home_studio_id: activeStudio.id,
-      display_order: instructors.length,
-    } as any);
-    if (error) toast.error("Failed to add");
-    else { toast.success("Instructor added"); setNewName(""); setNewBio(""); setAddOpen(false); fetchInstructors(); }
-    setAdding(false);
+  // Provision handler
+  const resetAddForm = () => {
+    setNewFirstName(""); setNewLastName(""); setNewEmail("");
+    setNewAuthorized([]); setNewCerts([]); setNewCustomType("");
   };
 
-  // Delete handler
-  const handleDelete = async (inst: InstructorRow) => {
-    const { error } = await supabase.from("instructors").delete().eq("id", inst.id);
-    if (error) toast.error("Failed to delete");
-    else { toast.success("Instructor removed"); fetchInstructors(); }
-  };
-
-  // Link handlers
-  const openLink = (inst: InstructorRow) => { setLinkTarget(inst); setLinkEmail(""); setLinkError(""); setLinkOpen(true); };
-
-  const handleLink = async () => {
-    if (!linkTarget || !linkEmail.trim()) return;
-    setLinking(true); setLinkError("");
-    const { data: userId, error: lookupError } = await supabase.rpc("lookup_user_id_by_email", { _email: linkEmail.trim().toLowerCase() });
-    if (lookupError || !userId) { setLinkError("No user found with that email."); setLinking(false); return; }
-
-    const { data: existing } = await supabase.from("studio_members").select("id, role").eq("user_id", userId).eq("studio_id", linkTarget.studio_id ?? "").limit(1);
-    if (!existing || existing.length === 0) {
-      await supabase.from("studio_members").insert({ user_id: userId, studio_id: linkTarget.studio_id ?? (activeStudio?.id ?? ""), role: "instructor" } as any);
-    } else if (existing[0].role === "student") {
-      await supabase.from("studio_members").update({ role: "instructor" } as any).eq("id", existing[0].id);
+  const handleProvision = async () => {
+    if (!activeStudio || !newFirstName.trim() || !newLastName.trim() || !newEmail.trim()) return;
+    setProvisioning(true);
+    const { data, error } = await supabase.functions.invoke("provision-instructor", {
+      body: {
+        first_name: newFirstName.trim(),
+        last_name: newLastName.trim(),
+        email: newEmail.trim(),
+        studio_id: activeStudio.id,
+        authorized_studios: newAuthorized,
+        certified_class_types: newCerts,
+      },
+    });
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Failed to provision instructor");
+    } else {
+      toast.success(`Instructor provisioned successfully. An invite email has been sent to ${newEmail.trim()}.`);
+      resetAddForm();
+      setAddOpen(false);
+      fetchInstructors();
     }
-
-    const { error } = await supabase.from("instructors").update({ user_id: userId } as any).eq("id", linkTarget.id);
-    if (error) setLinkError("Failed to link: " + error.message);
-    else { toast.success(`Linked to ${linkEmail}`); setLinkOpen(false); fetchInstructors(); }
-    setLinking(false);
+    setProvisioning(false);
   };
 
-  const handleUnlink = async (inst: InstructorRow) => {
-    const { error } = await supabase.from("instructors").update({ user_id: null } as any).eq("id", inst.id);
-    if (error) toast.error("Failed to unlink");
-    else { toast.success("User unlinked"); fetchInstructors(); }
+  const toggleNewAuthorized = (id: string) => {
+    setNewAuthorized((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]);
+  };
+
+  const toggleNewCert = (type: string) => {
+    setNewCerts((prev) => prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]);
+  };
+
+  const addNewCustom = () => {
+    const t = newCustomType.trim().toLowerCase();
+    if (t && !newCerts.includes(t)) setNewCerts((prev) => [...prev, t]);
+    setNewCustomType("");
   };
 
   if (!activeStudio) return null;
