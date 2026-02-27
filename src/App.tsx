@@ -62,7 +62,18 @@ function ThemedPackagesPage() {
   );
 }
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    const handler = (e: PromiseRejectionEvent) => {
+      if (e.reason?.message?.includes?.("MetaMask") || e.reason?.toString?.().includes?.("MetaMask")) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("unhandledrejection", handler);
+    return () => window.removeEventListener("unhandledrejection", handler);
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
