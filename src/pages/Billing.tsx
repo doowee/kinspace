@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
+import { useStudio } from "@/contexts/StudioContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { SubscriptionTier } from "@/hooks/use-subscription-tier";
 import {
   Building2,
   ExternalLink,
@@ -18,10 +20,8 @@ import {
   Check,
   Sparkles,
   ArrowUpRight,
+  MapPin,
 } from "lucide-react";
-
-// MVP: toggle this to preview connected vs not-connected states
-const MOCK_CONNECTED = false;
 
 const PLANS = [
   {
@@ -39,121 +39,219 @@ const PLANS = [
   },
 ];
 
-export default function Billing() {
-  const [isConnected] = useState(MOCK_CONNECTED);
-  const { tier, isPro, loading, changeTier } = useSubscriptionTier();
-  const { toast } = useToast();
-  const [switching, setSwitching] = useState(false);
+interface StudioBilling {
+  id: string;
+  name: string;
+  location: string | null;
+  stripe_account_id: string | null;
+  subscription_tier: string;
+}
 
-  const handleChangePlan = async (newTier: "standard" | "pro") => {
-    if (newTier === tier) return;
-    setSwitching(true);
-    const error = await changeTier(newTier);
-    setSwitching(false);
+export default function Billing() {
+  const { memberships } = useStudio();
+  const { toast } = useToast();
+  const [studios, setStudios] = useState<StudioBilling[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState<string | null>(null);
+
+  // Fetch all studios the owner has
+  useEffect(() => {
+    const ownerStudioIds = memberships
+      .filter((m) => m.role === "owner")
+      .map((m) => m.studio_id);
+
+    if (ownerStudioIds.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("studios")
+        .select("id, name, location, stripe_account_id, subscription_tier")
+        .in("id", ownerStudioIds);
+
+      setStudios((data as StudioBilling[]) ?? []);
+      setLoading(false);
+    };
+
+    fetch();
+  }, [memberships]);
+
+  const handleChangeTier = async (studioId: string, newTier: SubscriptionTier) => {
+    setSwitching(studioId);
+    const { error } = await supabase
+      .from("studios")
+      .update({ subscription_tier: newTier } as any)
+      .eq("id", studioId);
+
+    setSwitching(null);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      setStudios((prev) =>
+        prev.map((s) => (s.id === studioId ? { ...s, subscription_tier: newTier } : s))
+      );
       toast({
         title: newTier === "pro" ? "Upgraded to Pro Engine! 🚀" : "Switched to Standard",
         description: newTier === "pro"
-          ? "AI Marketing Hub and Flash Drops are now unlocked."
+          ? "AI Marketing Hub and Flash Drops are now unlocked for this location."
           : "You can upgrade back anytime.",
       });
     }
   };
 
   return (
-    <div className="animate-fade-in space-y-8 max-w-3xl">
+    <div className="animate-fade-in space-y-8 max-w-4xl">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground">
           Billing & Payouts
         </h2>
         <p className="mt-1 text-muted-foreground">
-          Manage how you get paid and your Kinspace subscription
+          Manage subscriptions and payouts per studio location
         </p>
       </div>
 
-      {/* ─── Section 1: Plan Switcher ─── */}
-      <Card className="border-border">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-foreground" />
-            <CardTitle className="text-xl">Your Plan</CardTitle>
-          </div>
-          <CardDescription className="text-sm leading-relaxed">
-            {loading ? "Loading…" : (
-              <>
-                You are on the{" "}
-                <span className="font-semibold text-foreground">
-                  {isPro ? "Pro Engine" : "Standard"}
-                </span>{" "}
-                plan ({isPro ? "$169" : "$129"}/mo).
-              </>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {PLANS.map((plan) => {
-              const isCurrent = plan.tier === tier;
-              return (
-                <div
-                  key={plan.tier}
-                  className={`relative rounded-xl border p-5 transition-all ${
-                    isCurrent
-                      ? "border-primary ring-2 ring-primary/20 bg-primary/5"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  {plan.badge && (
-                    <Badge className="absolute -top-2.5 right-4 bg-primary text-primary-foreground text-[10px] px-2.5 py-0.5">
-                      {plan.badge}
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    {plan.tier === "pro" ? (
-                      <Sparkles className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Zap className="h-4 w-4 text-muted-foreground" />
+      {/* ─── Per-Studio Billing Cards ─── */}
+      {loading ? (
+        <div className="text-muted-foreground text-sm">Loading studios…</div>
+      ) : studios.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            No studios found. Create a studio first.
+          </CardContent>
+        </Card>
+      ) : (
+        studios.map((studio) => {
+          const tier = (studio.subscription_tier as SubscriptionTier) || "standard";
+          const isConnected = !!studio.stripe_account_id;
+          const currentPlan = PLANS.find((p) => p.tier === tier) ?? PLANS[0];
+          const otherPlan = PLANS.find((p) => p.tier !== tier)!;
+          const isSwitching = switching === studio.id;
+
+          return (
+            <Card key={studio.id} className="border-border">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg truncate">{studio.name}</CardTitle>
+                    {studio.location && (
+                      <CardDescription className="flex items-center gap-1 text-xs">
+                        <MapPin className="h-3 w-3" />
+                        {studio.location}
+                      </CardDescription>
                     )}
-                    <h3 className="font-display text-base font-bold text-foreground">{plan.name}</h3>
                   </div>
-                  <div className="mb-3">
-                    <span className="text-2xl font-bold text-foreground">{plan.price}</span>
-                    <span className="text-sm text-muted-foreground">/mo</span>
-                  </div>
-                  <ul className="space-y-1.5 mb-4">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-xs text-foreground">
-                        <Check className="h-3 w-3 shrink-0 text-primary" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  {isCurrent ? (
-                    <Badge variant="outline" className="w-full justify-center py-1.5 text-xs">
-                      Current Plan
-                    </Badge>
+                  <Badge
+                    variant="outline"
+                    className={`shrink-0 ${tier === "pro" ? "border-primary text-primary" : ""}`}
+                  >
+                    {currentPlan.name} · {currentPlan.price}/mo
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Subscription Plan */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {PLANS.map((plan) => {
+                    const isCurrent = plan.tier === tier;
+                    return (
+                      <div
+                        key={plan.tier}
+                        className={`relative rounded-xl border p-4 transition-all ${
+                          isCurrent
+                            ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                            : "border-border"
+                        }`}
+                      >
+                        {plan.badge && (
+                          <Badge className="absolute -top-2 right-3 bg-primary text-primary-foreground text-[10px] px-2 py-0.5">
+                            {plan.badge}
+                          </Badge>
+                        )}
+                        <div className="flex items-center gap-2 mb-1.5">
+                          {plan.tier === "pro" ? (
+                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          ) : (
+                            <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          <span className="font-display text-sm font-bold text-foreground">{plan.name}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="text-xl font-bold text-foreground">{plan.price}</span>
+                          <span className="text-xs text-muted-foreground">/mo</span>
+                        </div>
+                        <ul className="space-y-1 mb-3">
+                          {plan.features.map((f) => (
+                            <li key={f} className="flex items-center gap-1.5 text-[11px] text-foreground">
+                              <Check className="h-2.5 w-2.5 shrink-0 text-primary" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                        {isCurrent ? (
+                          <Badge variant="outline" className="w-full justify-center py-1 text-[10px]">
+                            Current Plan
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="w-full gap-1 text-xs"
+                            variant={plan.tier === "pro" ? "default" : "outline"}
+                            disabled={isSwitching}
+                            onClick={() => handleChangeTier(studio.id, plan.tier)}
+                          >
+                            {isSwitching ? "Switching…" : plan.tier === "pro" ? "Upgrade to Pro" : "Switch to Standard"}
+                            <ArrowUpRight className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Separator />
+
+                {/* Bank Connection */}
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Client Payments & Payouts</p>
+                  {isConnected ? (
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant="outline"
+                        className="gap-1.5 border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-950 dark:text-green-300"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Payouts Active
+                      </Badge>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Stripe Dashboard
+                      </Button>
+                    </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      className="w-full gap-1.5"
-                      variant={plan.tier === "pro" ? "default" : "outline"}
-                      disabled={switching || loading}
-                      onClick={() => handleChangePlan(plan.tier)}
-                    >
-                      {switching ? "Switching…" : plan.tier === "pro" ? "Upgrade to Pro" : "Switch to Standard"}
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="rounded-lg border border-dashed border-border bg-muted/50 p-4 text-center">
+                      <LinkIcon className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Connect a bank account to receive payouts for this location.
+                      </p>
+                      <Button size="sm" className="gap-1.5">
+                        <LinkIcon className="h-3.5 w-3.5" />
+                        Connect Bank Account
+                      </Button>
+                    </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          );
+        })
+      )}
 
-      {/* ─── Section 2: Billing Details ─── */}
+      {/* ─── Global Billing Details ─── */}
       <Card className="border-border">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -187,75 +285,6 @@ export default function Billing() {
           </div>
         </CardContent>
       </Card>
-
-      {/* ─── Section 3: Get Paid (Stripe Connect) ─── */}
-      <Card className="border-border">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-foreground" />
-            <CardTitle className="text-xl">Client Payments & Payouts</CardTitle>
-          </div>
-          <CardDescription className="text-sm leading-relaxed">
-            Connect your bank account to receive daily payouts from your class
-            and membership sales. Kinspace takes $0 in success fees.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isConnected ? <ConnectedState /> : <NotConnectedState />}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-/* ─── Sub-components ─── */
-
-function NotConnectedState() {
-  return (
-    <div className="flex flex-col items-start gap-4">
-      <div className="rounded-lg border border-dashed border-border bg-muted/50 p-6 w-full text-center">
-        <LinkIcon className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground mb-4">
-          You haven't connected a bank account yet. Set up Stripe Connect to
-          start receiving payouts from client purchases.
-        </p>
-        <Button size="lg" className="gap-2">
-          <LinkIcon className="h-4 w-4" />
-          Connect Bank Account (via Stripe)
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ConnectedState() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Badge
-          variant="outline"
-          className="gap-1.5 border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-950 dark:text-green-300"
-        >
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          Payouts Active
-        </Badge>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <DetailRow
-          icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
-          label="Connected Bank"
-          value="Chase ****1234"
-        />
-        <DetailRow
-          icon={<Receipt className="h-4 w-4 text-muted-foreground" />}
-          label="Payout Schedule"
-          value="Daily (T+2)"
-        />
-      </div>
-      <Button variant="outline" size="sm" className="gap-2">
-        <ExternalLink className="h-4 w-4" />
-        View Stripe Dashboard
-      </Button>
     </div>
   );
 }

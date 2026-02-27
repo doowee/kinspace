@@ -1,74 +1,51 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useStudio } from "@/contexts/StudioContext";
 
 export type SubscriptionTier = "standard" | "pro";
 
+/**
+ * Reads the subscription_tier from the *currently active studio*.
+ * Provides a `changeTier` helper that updates the studio's tier in the DB.
+ */
 export function useSubscriptionTier() {
-  const { user } = useAuth();
+  const { activeStudio } = useStudio();
   const [tier, setTier] = useState<SubscriptionTier>("standard");
-  const [orgId, setOrgId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchTier = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
+    if (!activeStudio?.id) { setLoading(false); return; }
 
-    // Try profile → org
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("organization_id")
-      .eq("id", user.id)
+    const { data } = await supabase
+      .from("studios")
+      .select("subscription_tier")
+      .eq("id", activeStudio.id)
       .maybeSingle();
 
-    if (profile?.organization_id) {
-      setOrgId(profile.organization_id);
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("subscription_tier")
-        .eq("id", profile.organization_id)
-        .maybeSingle();
-
-      setTier((org?.subscription_tier as SubscriptionTier) ?? "standard");
-      setLoading(false);
-      return;
-    }
-
-    // Fallback: studio membership → studio → org
-    const { data: memberships } = await supabase
-      .from("studio_members")
-      .select("studios(organization_id)")
-      .eq("user_id", user.id)
-      .eq("role", "owner")
-      .limit(1);
-
-    const foundOrgId = (memberships?.[0] as any)?.studios?.organization_id;
-    if (foundOrgId) {
-      setOrgId(foundOrgId);
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("subscription_tier")
-        .eq("id", foundOrgId)
-        .maybeSingle();
-
-      setTier((org?.subscription_tier as SubscriptionTier) ?? "standard");
-    }
-
+    setTier((data?.subscription_tier as SubscriptionTier) ?? "standard");
     setLoading(false);
-  }, [user?.id]);
+  }, [activeStudio?.id]);
 
   useEffect(() => { fetchTier(); }, [fetchTier]);
 
+  // Also react to activeStudio changes from context if it carries the tier
+  useEffect(() => {
+    if ((activeStudio as any)?.subscription_tier) {
+      setTier((activeStudio as any).subscription_tier as SubscriptionTier);
+    }
+  }, [activeStudio]);
+
   const changeTier = useCallback(async (newTier: SubscriptionTier) => {
-    if (!orgId) return;
+    if (!activeStudio?.id) return;
     const { error } = await supabase
-      .from("organizations")
+      .from("studios")
       .update({ subscription_tier: newTier } as any)
-      .eq("id", orgId);
+      .eq("id", activeStudio.id);
     if (!error) {
       setTier(newTier);
     }
     return error;
-  }, [orgId]);
+  }, [activeStudio?.id]);
 
-  return { tier, isPro: tier === "pro", loading, changeTier, orgId };
+  return { tier, isPro: tier === "pro", loading, changeTier };
 }
