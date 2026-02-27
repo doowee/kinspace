@@ -43,7 +43,6 @@ serve(async (req) => {
     let customerId = profile?.stripe_customer_id;
 
     if (!customerId) {
-      // Search Stripe by email
       const customers = await stripe.customers.list({ email: user.email, limit: 1 });
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
@@ -56,16 +55,37 @@ serve(async (req) => {
         customerId = customer.id;
       }
 
-      // Save stripe_customer_id to profile
       await supabase
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);
     }
 
+    // Look up studio's connected account for destination charges
+    const { data: studio } = await supabase
+      .from("studios")
+      .select("stripe_account_id")
+      .eq("id", studioId)
+      .maybeSingle();
+
     const origin = req.headers.get("origin") || "https://kinspace.lovable.app";
 
-    // Create Checkout Session with setup_future_usage for card vaulting
+    // Build payment intent data with optional destination charge
+    const paymentIntentData: any = {
+      setup_future_usage: "off_session",
+      metadata: {
+        studio_id: studioId,
+        user_id: user.id,
+      },
+    };
+
+    // Route funds to studio's connected Stripe account if available
+    if (studio?.stripe_account_id) {
+      paymentIntentData.transfer_data = {
+        destination: studio.stripe_account_id,
+      };
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -79,13 +99,7 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      payment_intent_data: {
-        setup_future_usage: "off_session",
-        metadata: {
-          studio_id: studioId,
-          user_id: user.id,
-        },
-      },
+      payment_intent_data: paymentIntentData,
       success_url: `${origin}/book/${studioSlug || studioId}?payment=success`,
       cancel_url: `${origin}/book/${studioSlug || studioId}?payment=cancelled`,
       metadata: {
