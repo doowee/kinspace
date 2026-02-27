@@ -221,6 +221,13 @@ export default function InstructorsAdmin() {
     setNewCustomType("");
   };
 
+  // Delete handler
+  const handleDelete = async (inst: InstructorRow) => {
+    const { error } = await supabase.from("instructors").delete().eq("id", inst.id);
+    if (error) toast.error("Failed to delete");
+    else { toast.success("Instructor removed"); fetchInstructors(); }
+  };
+
   if (!activeStudio) return null;
 
   return (
