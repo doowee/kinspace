@@ -202,6 +202,24 @@ export default function Billing() {
     }
   };
 
+  const handleConnectBank = async (studioId: string) => {
+    setConnectingStudio(studioId);
+    const { data, error } = await supabase.functions.invoke("create-connect-account", {
+      body: { action: "create-onboarding", studio_id: studioId },
+    });
+    setConnectingStudio(null);
+
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      toast({
+        title: "Could not start onboarding",
+        description: error?.message || data?.error || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="animate-fade-in space-y-8 max-w-4xl">
       <div>
