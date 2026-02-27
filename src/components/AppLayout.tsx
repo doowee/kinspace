@@ -45,6 +45,24 @@ function CopyBookingLinkItem({ slug }: { slug: string }) {
   );
 }
 
+function CopyKioskLinkItem() {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    const url = `${PUBLISHED_DOMAIN}/kiosk-login`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, []);
+
+  return (
+    <DropdownMenuItem onClick={handleCopy}>
+      {copied ? <Check className="h-4 w-4 mr-2 text-primary" /> : <Ticket className="h-4 w-4 mr-2" />}
+      {copied ? "Link Copied!" : "Copy Kiosk Link"}
+    </DropdownMenuItem>
+  );
+}
+
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const { memberships, loading, activeStudio, activeRole } = useStudio();
