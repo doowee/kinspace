@@ -50,6 +50,7 @@ serve(async (req) => {
       studio_id,
       authorized_studios,
       certified_class_types,
+      pin_code,
     } = await req.json();
 
     if (!first_name || !last_name || !email || !studio_id) {
