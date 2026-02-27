@@ -482,14 +482,16 @@ export default function Schedule() {
               const isBooked = userBookedClassIds.has(cls.id);
               const isBooking = bookingClassId === cls.id;
               const fillPercent = Math.min((count / cls.capacity_total) * 100, 100);
+              const isUncovered = !!coverRequests[cls.id] && coverRequests[cls.id].status === "escalated";
 
               return (
                 <Card
                   key={cls.id}
                   className={cn(
                     "transition-all duration-300",
-                    isFull && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
-                    isLow && !isFull && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
+                    isUncovered && "border-destructive/60 bg-destructive/5 shadow-md shadow-destructive/10 ring-1 ring-destructive/20",
+                    isFull && !isUncovered && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
+                    isLow && !isFull && !isUncovered && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
                   )}
                 >
                   <CardContent className="p-4 space-y-3">
