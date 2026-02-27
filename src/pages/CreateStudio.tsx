@@ -18,7 +18,7 @@ const PLANS = [
   {
     tier: "standard" as SubscriptionTier,
     name: "Standard",
-    price: "$129",
+    price: "$99",
     features: ["Unlimited classes & bookings", "Multi-location management", "Stripe payments", "Client portal & wallet"],
   },
   {

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 
 const TIER_INFO: Record<string, { name: string; price: number }> = {
-  standard: { name: "Standard", price: 129 },
+  standard: { name: "Standard", price: 99 },
   pro: { name: "Pro Engine", price: 169 },
 };
 
@@ -42,7 +42,7 @@ const PLANS = [
   {
     tier: "standard" as const,
     name: "Standard",
-    price: "$129",
+    price: "$99",
     features: ["Unlimited classes & bookings", "Multi-location management", "Stripe payments", "Client portal & wallet", "Analytics dashboard"],
   },
   {
@@ -136,7 +136,7 @@ export default function Billing() {
   // Calculate MRR
   const totalMRR = studios.reduce((sum, s) => {
     const info = TIER_INFO[(s.subscription_tier as string) || "standard"];
-    return sum + (info?.price ?? 129);
+    return sum + (info?.price ?? 99);
   }, 0);
 
   const openConfirmModal = (studio: StudioBilling, newTier: SubscriptionTier) => {
@@ -265,7 +265,7 @@ export default function Billing() {
                     <Badge variant="outline" className={`text-[10px] ${studio.subscription_tier === "pro" ? "border-primary text-primary" : ""}`}>
                       {info?.name ?? "Standard"}
                     </Badge>
-                    <span className="text-sm font-semibold text-foreground">${info?.price ?? 129}</span>
+                    <span className="text-sm font-semibold text-foreground">${info?.price ?? 99}</span>
                   </div>
                 </div>
               );
@@ -316,7 +316,7 @@ export default function Billing() {
                     variant="outline"
                     className={`shrink-0 ${tier === "pro" ? "border-primary text-primary" : ""}`}
                   >
-                    {TIER_INFO[tier]?.name ?? "Standard"} · ${TIER_INFO[tier]?.price ?? 129}/mo
+                    {TIER_INFO[tier]?.name ?? "Standard"} · ${TIER_INFO[tier]?.price ?? 99}/mo
                   </Badge>
                 </div>
               </CardHeader>

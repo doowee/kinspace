@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const TIER_PRICES: Record<string, number> = {
-  standard: 12900, // $129 in cents
+  standard: 9900,  // $99 in cents
   pro: 16900,      // $169 in cents
 };
 

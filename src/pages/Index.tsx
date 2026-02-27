@@ -466,7 +466,7 @@ const COMPARE_COLUMNS = [
     name: "Kinspace.Studio",
     sub: "The Standard",
     featured: true,
-    price: "$129/mo",
+    price: "$99/mo",
     priceSub: "Flat rate. All features.",
     items: [
       { icon: "check" as const, text: "100% White-Labeled Ecosystem" },
