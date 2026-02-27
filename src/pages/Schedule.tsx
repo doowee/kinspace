@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon, Flame, AlertTriangle, ListOrdered } from "lucide-react";
+import { Plus, Clock, Users, CheckCircle2, Pencil, UserPlus, UsersRound, CalendarIcon, Flame, AlertTriangle, ListOrdered, ShieldAlert, UserCheck, XCircle, Loader2 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,14 @@ interface BookingCount {
   count: number;
 }
 
+interface CoverRequest {
+  id: string;
+  class_id: string;
+  status: string;
+  requesting_instructor_id: string;
+  eligible_count: number;
+}
+
 export default function Schedule() {
   const { user } = useAuth();
   const { activeStudio, activeRole } = useStudio();
@@ -70,6 +78,12 @@ export default function Schedule() {
   const [editClass, setEditClass] = useState<ClassRow | null>(null);
   const [viewStudentsClass, setViewStudentsClass] = useState<ClassRow | null>(null);
   const [manualBookClass, setManualBookClass] = useState<ClassRow | null>(null);
+
+  // Cover request / escalation state
+  const [coverRequests, setCoverRequests] = useState<Record<string, CoverRequest>>({});
+  const [overrideClass, setOverrideClass] = useState<ClassRow | null>(null);
+  const [overrideLoading, setOverrideLoading] = useState(false);
+  const [overrideInstructorId, setOverrideInstructorId] = useState<string>("none");
 
   // Booking counts per class & user's own bookings
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
@@ -154,9 +168,25 @@ export default function Schedule() {
     setUserBookedClassIds(new Set(myBookings?.map((b) => b.class_id) ?? []));
   };
 
+  const fetchCoverRequests = async () => {
+    if (!activeStudio) return;
+    const { data } = await supabase
+      .from("cover_requests")
+      .select("id, class_id, status, requesting_instructor_id, eligible_count")
+      .eq("studio_id", activeStudio.id)
+      .in("status", ["escalated", "pending"]);
+
+    const map: Record<string, CoverRequest> = {};
+    (data ?? []).forEach((cr: any) => {
+      map[cr.class_id] = cr;
+    });
+    setCoverRequests(map);
+  };
+
   useEffect(() => {
     fetchClasses();
     fetchInstructors();
+    fetchCoverRequests();
   }, [activeStudio?.id]);
 
   useEffect(() => {
@@ -239,6 +269,81 @@ export default function Schedule() {
       fetchClasses();
     }
     setSubmitting(false);
+  };
+
+  // Override handlers for uncovered classes
+  const handleManualAssign = async () => {
+    if (!overrideClass || overrideInstructorId === "none") return;
+    setOverrideLoading(true);
+
+    // Update the class instructor
+    const { error: classErr } = await supabase
+      .from("classes")
+      .update({ instructor_id: overrideInstructorId })
+      .eq("id", overrideClass.id);
+
+    if (classErr) {
+      toast({ title: "Error", description: classErr.message, variant: "destructive" });
+      setOverrideLoading(false);
+      return;
+    }
+
+    // Update cover request status to manual_override
+    const cr = coverRequests[overrideClass.id];
+    if (cr) {
+      await supabase
+        .from("cover_requests")
+        .update({ status: "manual_override", resolved_by: user?.id, resolved_at: new Date().toISOString() })
+        .eq("id", cr.id);
+    }
+
+    toast({ title: "Sub Assigned ✅", description: "The class has been reassigned successfully." });
+    setOverrideClass(null);
+    setOverrideInstructorId("none");
+    setOverrideLoading(false);
+    fetchClasses();
+    fetchCoverRequests();
+  };
+
+  const handleCancelClass = async () => {
+    if (!overrideClass || !activeStudio) return;
+    setOverrideLoading(true);
+
+    // Cancel all bookings for this class and set status to cancelled
+    const { data: classBookings } = await supabase
+      .from("bookings")
+      .select("id, user_id")
+      .eq("class_id", overrideClass.id)
+      .in("status", ["confirmed", "waitlist"]);
+
+    if (classBookings && classBookings.length > 0) {
+      await supabase
+        .from("bookings")
+        .update({ status: "cancelled" as any })
+        .in("id", classBookings.map((b) => b.id));
+    }
+
+    // Delete the class
+    await supabase.from("classes").delete().eq("id", overrideClass.id);
+
+    // Resolve cover request
+    const cr = coverRequests[overrideClass.id];
+    if (cr) {
+      await supabase
+        .from("cover_requests")
+        .update({ status: "cancelled", resolved_by: user?.id, resolved_at: new Date().toISOString() })
+        .eq("id", cr.id);
+    }
+
+    const cancelledCount = classBookings?.length ?? 0;
+    toast({
+      title: "Class Cancelled",
+      description: `${cancelledCount} booking${cancelledCount !== 1 ? "s" : ""} have been cancelled. Credits should be refunded manually.`,
+    });
+    setOverrideClass(null);
+    setOverrideLoading(false);
+    fetchClasses();
+    fetchCoverRequests();
   };
 
   if (!activeStudio) return null;
@@ -377,14 +482,16 @@ export default function Schedule() {
               const isBooked = userBookedClassIds.has(cls.id);
               const isBooking = bookingClassId === cls.id;
               const fillPercent = Math.min((count / cls.capacity_total) * 100, 100);
+              const isUncovered = !!coverRequests[cls.id] && coverRequests[cls.id].status === "escalated";
 
               return (
                 <Card
                   key={cls.id}
                   className={cn(
                     "transition-all duration-300",
-                    isFull && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
-                    isLow && !isFull && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
+                    isUncovered && "border-destructive/60 bg-destructive/5 shadow-md shadow-destructive/10 ring-1 ring-destructive/20",
+                    isFull && !isUncovered && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
+                    isLow && !isFull && !isUncovered && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
                   )}
                 >
                   <CardContent className="p-4 space-y-3">
@@ -404,6 +511,12 @@ export default function Schedule() {
                               Low Enrollment
                             </Badge>
                           )}
+                          {isUncovered && (
+                            <Badge variant="destructive" className="gap-1 text-[10px] font-bold uppercase tracking-wide animate-pulse">
+                              <ShieldAlert className="h-3 w-3" />
+                              Uncovered
+                            </Badge>
+                          )}
                         </div>
                         {cls.instructors?.name && (
                           <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
@@ -417,6 +530,12 @@ export default function Schedule() {
                       </div>
                       {canManage ? (
                         <div className="flex items-center gap-1.5">
+                          {isUncovered && (
+                            <Button size="sm" variant="destructive" onClick={() => { setOverrideClass(cls); setOverrideInstructorId("none"); }} className="gap-1.5 text-xs">
+                              <ShieldAlert className="h-3.5 w-3.5" />
+                              Intervene
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)} className="gap-1.5">
                             <UsersRound className="h-3.5 w-3.5" />
                             {count}
@@ -525,6 +644,87 @@ export default function Schedule() {
           onBooked={() => { fetchBookingData(); }}
         />
       )}
+
+      {/* Uncovered Class Override Dialog */}
+      <Dialog open={!!overrideClass} onOpenChange={(open) => !open && setOverrideClass(null)}>
+        <DialogContent className="border-destructive/30">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
+                <ShieldAlert className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <DialogTitle className="text-destructive">Uncovered Class — Manual Override</DialogTitle>
+              </div>
+            </div>
+          </DialogHeader>
+          {overrideClass && (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
+                <p className="font-semibold">{overrideClass.name}</p>
+                <p className="text-muted-foreground text-xs">
+                  {format(new Date(overrideClass.start_time), "EEE, MMM d · h:mm a")} · {bookingCounts[overrideClass.id] || 0}/{overrideClass.capacity_total} booked
+                </p>
+                {overrideClass.instructors?.name && (
+                  <p className="text-xs text-muted-foreground">Currently assigned: {overrideClass.instructors.name}</p>
+                )}
+              </div>
+
+              {/* Option 1: Manual Assign */}
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                  Option 1: Assign a Substitute
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Bypass certification/location restrictions and manually assign any instructor.
+                </p>
+                <Select value={overrideInstructorId} onValueChange={setOverrideInstructorId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select instructor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select instructor…</SelectItem>
+                    {instructors.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="w-full gap-1.5"
+                  disabled={overrideInstructorId === "none" || overrideLoading}
+                  onClick={handleManualAssign}
+                >
+                  {overrideLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+                  Assign Sub
+                </Button>
+              </div>
+
+              {/* Option 2: Cancel Class */}
+              <div className="space-y-2 rounded-lg border border-destructive/20 p-3">
+                <p className="text-sm font-semibold flex items-center gap-2 text-destructive">
+                  <XCircle className="h-4 w-4" />
+                  Option 2: Cancel Class
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Cancel the class and notify all {bookingCounts[overrideClass.id] || 0} booked students. Credits should be refunded manually.
+                </p>
+                <Button
+                  variant="destructive"
+                  className="w-full gap-1.5"
+                  disabled={overrideLoading}
+                  onClick={handleCancelClass}
+                >
+                  {overrideLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                  Cancel Class & Notify Students
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

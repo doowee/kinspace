@@ -126,6 +126,74 @@ export type Database = {
           },
         ]
       }
+      cover_requests: {
+        Row: {
+          class_id: string
+          created_at: string
+          eligible_count: number
+          id: string
+          requesting_instructor_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          studio_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          eligible_count?: number
+          id?: string
+          requesting_instructor_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          studio_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          eligible_count?: number
+          id?: string
+          requesting_instructor_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          studio_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cover_requests_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cover_requests_requesting_instructor_id_fkey"
+            columns: ["requesting_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cover_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cover_requests_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instructors: {
         Row: {
           authorized_studios: string[] | null

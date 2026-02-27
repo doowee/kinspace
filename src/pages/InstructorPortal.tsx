@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarDays, Clock, Users, ChevronRight, CheckCircle2, LogOut, RefreshCw, ArrowRightLeft, Loader2 } from "lucide-react";
+import { CalendarDays, Clock, Users, ChevronRight, CheckCircle2, LogOut, RefreshCw, ArrowRightLeft, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -92,6 +92,14 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   const [smartCoverLoading, setSmartCoverLoading] = useState(false);
   const [smartCoverCount, setSmartCoverCount] = useState<number | null>(null);
 
+  // Escalation modal state
+  const [escalationModalOpen, setEscalationModalOpen] = useState(false);
+  const [escalationData, setEscalationData] = useState<{
+    className: string;
+    studioName: string;
+    startTime: string;
+  } | null>(null);
+
   // SmartCover board state
   const [openShifts, setOpenShifts] = useState<OpenShift[]>(MOCK_OPEN_SHIFTS);
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -133,7 +141,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
     if (!effectiveUserId) return;
     setLoading(true);
 
-    // Find instructor records linked to this user
     const { data: instRecords } = await supabase
       .from("instructors")
       .select("id, name")
@@ -147,7 +154,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
     setInstructorName((instRecords[0] as any).name || "");
     const instructorIds = instRecords.map((i: any) => i.id);
 
-    // Fetch upcoming classes (without studio join — RLS on studios blocks cross-studio joins)
     const { data: classData } = await supabase
       .from("classes")
       .select("id, name, description, start_time, capacity_total, instructor_id, studio_id")
@@ -161,7 +167,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
       return;
     }
 
-    // Fetch studio names separately (studios has a public SELECT policy)
     const studioIds = [...new Set(classData.map((c) => c.studio_id))];
     const { data: studioData } = await supabase
       .from("studios")
@@ -173,7 +178,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
       studioMap[s.id] = { name: s.name, brand_primary: s.brand_primary };
     });
 
-    // Fetch booking counts
     const classIds = classData.map((c) => c.id);
     const { data: bookings } = await supabase
       .from("bookings")
@@ -224,7 +228,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
       email: (b.profiles as any)?.email ?? "",
     }));
 
-    // Sort: checked_in first, then confirmed, then waitlist
     const order: Record<string, number> = { checked_in: 0, confirmed: 1, waitlist: 2 };
     students.sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
 
@@ -264,7 +267,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
   };
 
   // SmartCover handlers
-
   const confirmCoverRequest = (cls: InstructorClass, e: React.MouseEvent) => {
     e.stopPropagation();
     setCoverRequestClass(cls);
@@ -291,15 +293,26 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
       }
 
       const count = data?.eligible_count ?? 0;
+      const isEscalated = data?.escalated === true;
+
       setCoverRequested((prev) => new Set(prev).add(coverRequestClass.id));
       setCoverRequestClass(null);
       setSmartCoverLoading(false);
-      toast({
-        title: "SmartCover Activated ⚡",
-        description: count > 0
-          ? `Notifying ${count} qualified instructor${count !== 1 ? "s" : ""}.`
-          : `No qualified instructors found. Update SmartCover profiles in Settings → Instructors.`,
-      });
+
+      if (isEscalated) {
+        // Zero matches → show escalation warning modal
+        setEscalationData({
+          className: data?.class_name ?? coverRequestClass.name,
+          studioName: data?.studio_name ?? coverRequestClass.studio_name,
+          startTime: data?.start_time ?? coverRequestClass.start_time,
+        });
+        setEscalationModalOpen(true);
+      } else {
+        toast({
+          title: "SmartCover Activated ⚡",
+          description: `Notifying ${count} qualified instructor${count !== 1 ? "s" : ""}.`,
+        });
+      }
     } catch {
       setSmartCoverLoading(false);
       toast({
@@ -314,7 +327,6 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
     setClaimingId(shift.id);
     setTimeout(() => {
       setOpenShifts((prev) => prev.filter((s) => s.id !== shift.id));
-      // Add claimed shift to My Schedule
       const now = new Date();
       const dayOffset = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(shift.day);
       const currentDay = now.getDay();
@@ -610,6 +622,54 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
               ) : (
                 <><RefreshCw className="mr-1.5 h-4 w-4" />Confirm Request</>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalation Warning Modal */}
+      <Dialog open={escalationModalOpen} onOpenChange={setEscalationModalOpen}>
+        <DialogContent className="border-destructive/50 bg-destructive/5">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle className="text-destructive text-lg">
+                No Eligible Subs Found
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-foreground/80 leading-relaxed">
+              There are no other instructors authorized for this location and certified for this class type.
+              An emergency alert has been sent to management, but{" "}
+              <span className="font-semibold text-foreground">
+                you are still responsible for this class until a manager intervenes.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          {escalationData && (
+            <div className="rounded-lg border border-destructive/20 bg-background p-3 space-y-1.5 text-sm">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium">{escalationData.className}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{format(new Date(escalationData.startTime), "EEE, MMM d · h:mm a")}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                <span>{escalationData.studioName}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEscalationModalOpen(false)}
+              className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              I Understand
             </Button>
           </DialogFooter>
         </DialogContent>
