@@ -5,6 +5,7 @@ import { fetchOrgDashboardData, OrgDashboardData } from "@/lib/studio-api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DollarSign, Users, CalendarCheck, Building2, TrendingUp, ArrowUpRight, Filter } from "lucide-react";
+import { DollarSign, Users, CalendarCheck, Building2, TrendingUp, ArrowUpRight, Filter, Trophy, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { formatDistanceToNow, subDays, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 
@@ -123,7 +124,7 @@ export default function OrgRevenue() {
 
   if (!data) return null;
 
-  const { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed, studios } = data;
+  const { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed, studios, topClasses, topPackages } = data;
 
   return (
     <div className="space-y-6">
@@ -188,6 +189,80 @@ export default function OrgRevenue() {
           value={totalBookings.toLocaleString()}
           icon={<CalendarCheck className="h-4 w-4" />}
         />
+      </div>
+
+      {/* ═══ INSIGHTS GRID: Top Classes & Best Selling Packages ═══ */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left: Top Classes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Trophy className="h-5 w-5 text-muted-foreground" />
+              Top Classes
+            </CardTitle>
+            <CardDescription>Ranked by total bookings · {TIMEFRAME_LABELS[selectedTimeframe].toLowerCase()}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topClasses.length > 0 ? (
+              <div className="space-y-4">
+                {topClasses.map((cls, i) => (
+                  <div key={cls.name} className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className="truncate text-sm font-medium text-foreground">{cls.name}</p>
+                        <span className="shrink-0 text-sm font-semibold text-foreground">{cls.totalBookings} bookings</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={cls.avgFillRate} className="h-2" />
+                        <span className="shrink-0 text-xs text-muted-foreground">{cls.avgFillRate}% fill</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">No class data in this period.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right: Best Selling Packages */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Package className="h-5 w-5 text-muted-foreground" />
+              Best Selling Packages
+            </CardTitle>
+            <CardDescription>Ranked by total revenue · {TIMEFRAME_LABELS[selectedTimeframe].toLowerCase()}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topPackages.length > 0 ? (
+              <div className="space-y-4">
+                {topPackages.map((pkg, i) => (
+                  <div key={pkg.name} className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="truncate text-sm font-medium text-foreground">{pkg.name}</p>
+                        <span className="shrink-0 text-sm font-bold text-foreground">
+                          ${pkg.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{pkg.unitsSold} units sold</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">No package data in this period.</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* ═══ BOTTOM STATS ═══ */}
