@@ -6,56 +6,31 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/* ── Name pools ── */
 const FIRST_NAMES = [
   "Ava","Liam","Sofia","Noah","Maya","Ethan","Chloe","Lucas","Isla","Mason",
   "Zara","Oliver","Luna","James","Mila","Logan","Aria","Jack","Ella","Ben",
+  "Harper","Leo","Nora","Owen","Lily","Henry","Grace","Finn","Ivy","Caleb",
+  "Ruby","Max","Stella","Jake","Hazel","Sam","Clara","Dylan","Piper","Ryan",
 ];
 const LAST_NAMES = [
   "Chen","Patel","Kim","Garcia","Nguyen","Muller","Costa","Ali","Singh","Torres",
   "Park","Brown","Lee","Taylor","Wilson","Davis","Clark","Hall","Young","Hill",
+  "Adams","Baker","Carter","Reed","Mitchell","Ross","Perry","Gray","Fox","Ward",
+  "Lane","Knight","Cole","Watts","Stone","Wells","Webb","Holt","West","Grant",
 ];
 
-const CLASS_TEMPLATES = [
-  { name: "Morning Flow", hour: 7, min: 0, capacity: 8 },
-  { name: "Power Tower", hour: 9, min: 30, capacity: 6 },
-  { name: "Advanced Reformer", hour: 11, min: 0, capacity: 8 },
-  { name: "Sculpt & Stretch", hour: 12, min: 30, capacity: 10 },
-  { name: "Beginner Reformer", hour: 14, min: 0, capacity: 10 },
-  { name: "Core Blast", hour: 15, min: 30, capacity: 8 },
-  { name: "Evening Restore", hour: 17, min: 0, capacity: 8 },
-  { name: "Total Body Tower", hour: 18, min: 30, capacity: 6 },
-  { name: "Pre-Natal Pilates", hour: 10, min: 0, capacity: 6 },
-  { name: "Jumpboard Cardio", hour: 8, min: 0, capacity: 8 },
-  { name: "Mat Foundations", hour: 16, min: 0, capacity: 12 },
-  { name: "Athletic Reformer", hour: 6, min: 30, capacity: 8 },
-  { name: "Reformer Express", hour: 12, min: 0, capacity: 8 },
+const CLASS_NAMES = [
+  "Morning Reformer Flow","Power Tower","Advanced Reformer","Sculpt & Stretch",
+  "Beginner Reformer","Core Blast","Evening Restore","Total Body Tower",
+  "Pre-Natal Pilates","Jumpboard Dynamics","Mat Foundations","Athletic Reformer",
+  "Reformer Express","HIIT Pilates","Barre Fusion","Stretch & Release",
+  "Tower Sculpt","Cardio Reformer","Pilates for Runners","Deep Core Restore",
 ];
 
-const INSTRUCTOR_NAMES = [
-  "Sarah Jenkins",
-  "Mike Ross",
-  "Emma Stone",
-];
+const INSTRUCTOR_NAMES = ["Sarah Jenkins","Mike Ross","Emma Stone"];
 
-const TX_TEMPLATES = [
-  { desc: "10-Class Pack", amount: 199 },
-  { desc: "Unlimited Monthly VIP", amount: 249 },
-  { desc: "Drop-in", amount: 35 },
-  { desc: "5-Class Intro Pack", amount: 125 },
-  { desc: "Private Session (1-on-1)", amount: 95 },
-  { desc: "10-Class Pack Refill (SMS)", amount: 199 },
-  { desc: "20-Class Bundle", amount: 349 },
-  { desc: "Workshop - Reformer Intensive", amount: 75 },
-  { desc: "Unlimited Monthly", amount: 189 },
-  { desc: "Gift Card Redemption", amount: 150 },
-];
-
-const PACKAGE_TEMPLATES = [
-  { name: "10-Class Pack", price: 199, credits: 10, expiration_days: 60 },
-  { name: "5-Class Intro", price: 125, credits: 5, expiration_days: 30 },
-  { name: "20-Class Bundle", price: 349, credits: 20, expiration_days: 90 },
-];
-
+/* ── Helpers ── */
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -78,14 +53,63 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Accept optional studio_id from request body
     const body = await req.json().catch(() => ({}));
     const customStudioId: string | null = body.studio_id ?? null;
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // ─── 1. Create 20 auth users + profiles ───
+    /* ═══════════════════════════════════════════════════════════
+       1. Resolve studios to seed
+    ═══════════════════════════════════════════════════════════ */
+    const studioIds: string[] = [];
+    let orgId: string | null = null;
+
+    if (customStudioId) {
+      const { data: studio } = await supabaseAdmin
+        .from("studios")
+        .select("id, organization_id")
+        .eq("id", customStudioId)
+        .maybeSingle();
+      if (!studio) throw new Error("Studio not found");
+      studioIds.push(customStudioId);
+      orgId = studio.organization_id;
+
+      // Also grab sibling studios in same org
+      if (orgId) {
+        const { data: siblings } = await supabaseAdmin
+          .from("studios")
+          .select("id")
+          .eq("organization_id", orgId)
+          .neq("id", customStudioId);
+        if (siblings) studioIds.push(...siblings.map((s) => s.id));
+      }
+    } else {
+      const { data: studios } = await supabaseAdmin
+        .from("studios")
+        .select("id, organization_id")
+        .limit(3);
+      if (studios?.length) {
+        studioIds.push(...studios.map((s) => s.id));
+        orgId = studios[0].organization_id;
+      }
+    }
+
+    if (studioIds.length === 0) throw new Error("No studios found to seed");
+
+    /* ═══════════════════════════════════════════════════════════
+       2. Clean previous demo data (bookings, transactions, classes)
+       — avoids infinite duplicates on re-seed
+    ═══════════════════════════════════════════════════════════ */
+    for (const sid of studioIds) {
+      await supabaseAdmin.from("bookings").delete().eq("studio_id", sid);
+      await supabaseAdmin.from("transactions").delete().eq("studio_id", sid);
+      await supabaseAdmin.from("classes").delete().eq("studio_id", sid);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       3. Create 40 auth users + profiles, link to org
+    ═══════════════════════════════════════════════════════════ */
     const studentIds: string[] = [];
 
     for (let i = 0; i < FIRST_NAMES.length; i++) {
@@ -120,40 +144,28 @@ Deno.serve(async (req) => {
         userId = authUser.user.id;
       }
 
-      await supabaseAdmin.from("profiles").update({ phone }).eq("id", userId);
+      // Update profile with org linkage and home studio
+      const homeStudioId = pick(studioIds);
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          phone,
+          organization_id: orgId,
+          home_studio_id: homeStudioId,
+        })
+        .eq("id", userId);
+
       studentIds.push(userId);
     }
 
     if (studentIds.length === 0) throw new Error("No students created");
 
-    // Determine which studios to seed
-    const studioIds: string[] = [];
-
-    if (customStudioId) {
-      // Verify studio exists
-      const { data: studio } = await supabaseAdmin
-        .from("studios")
-        .select("id")
-        .eq("id", customStudioId)
-        .maybeSingle();
-      if (studio) studioIds.push(customStudioId);
-      else throw new Error("Studio not found");
-    } else {
-      // Fallback: use first two studios the service can find
-      const { data: studios } = await supabaseAdmin
-        .from("studios")
-        .select("id")
-        .limit(2);
-      if (studios?.length) studioIds.push(...studios.map((s) => s.id));
-    }
-
-    if (studioIds.length === 0) throw new Error("No studios found to seed");
-
-    // ─── 2. For each studio: create instructors, memberships, classes, bookings, transactions ───
+    /* ═══════════════════════════════════════════════════════════
+       4. Per-studio: instructors, memberships, 30 days of classes
+    ═══════════════════════════════════════════════════════════ */
     let totalClasses = 0;
     let totalBookings = 0;
     let totalTransactions = 0;
-    let waitlistClassName = "none";
 
     for (const sid of studioIds) {
       // ── Instructors ──
@@ -192,112 +204,74 @@ Deno.serve(async (req) => {
           );
       }
 
-      // ── Packages ──
-      const packageIds: string[] = [];
-      for (const pkg of PACKAGE_TEMPLATES) {
-        const { data: existingPkg } = await supabaseAdmin
-          .from("packages")
-          .select("id")
-          .eq("studio_id", sid)
-          .eq("name", pkg.name)
-          .maybeSingle();
-
-        if (existingPkg) {
-          packageIds.push(existingPkg.id);
-        } else {
-          const { data: createdPkg, error: pkgErr } = await supabaseAdmin
-            .from("packages")
-            .insert({ ...pkg, studio_id: sid })
-            .select("id")
-            .single();
-          if (pkgErr) {
-            console.warn(`Package ${pkg.name}: ${pkgErr.message}`);
-            continue;
-          }
-          packageIds.push(createdPkg.id);
+      // ── 30 days of classes (2-3 per day) ──
+      const classRows: any[] = [];
+      for (let dayOffset = -30; dayOffset <= 0; dayOffset++) {
+        const classCount = randInt(2, 3);
+        for (let c = 0; c < classCount; c++) {
+          const d = addDays(today, dayOffset);
+          const hour = pick([7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18]);
+          const min = pick([0, 15, 30, 45]);
+          d.setHours(hour, min, 0, 0);
+          classRows.push({
+            id: crypto.randomUUID(),
+            name: pick(CLASS_NAMES),
+            studio_id: sid,
+            instructor_id: pick(instructorIds),
+            start_time: d.toISOString(),
+            capacity_total: randInt(8, 12),
+            description: `Demo class`,
+          });
         }
       }
 
-      // ── Classes ──
-      const dayOffsets = [-2, -1, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 5];
-      const classRows = CLASS_TEMPLATES.map((t, i) => {
-        const d = addDays(today, dayOffsets[i]);
-        d.setHours(t.hour, t.min, 0, 0);
-        return {
-          id: crypto.randomUUID(),
-          name: t.name,
-          studio_id: sid,
-          instructor_id: instructorIds[i % instructorIds.length] ?? null,
-          start_time: d.toISOString(),
-          capacity: t.capacity,
-          description: `${t.name} – ${t.capacity} spots`,
-        };
-      });
+      // Also add a few future classes (next 5 days)
+      for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
+        const classCount = randInt(2, 3);
+        for (let c = 0; c < classCount; c++) {
+          const d = addDays(today, dayOffset);
+          const hour = pick([7, 9, 11, 14, 17, 18]);
+          const min = pick([0, 30]);
+          d.setHours(hour, min, 0, 0);
+          classRows.push({
+            id: crypto.randomUUID(),
+            name: pick(CLASS_NAMES),
+            studio_id: sid,
+            instructor_id: pick(instructorIds),
+            start_time: d.toISOString(),
+            capacity_total: randInt(8, 12),
+            description: `Demo class`,
+          });
+        }
+      }
 
-      const { error: classErr } = await supabaseAdmin
-        .from("classes")
-        .insert(classRows);
-      if (classErr) console.warn(`Classes for ${sid}: ${classErr.message}`);
-      else totalClasses += classRows.length;
+      // Insert classes in batches
+      for (let i = 0; i < classRows.length; i += 50) {
+        const { error: classErr } = await supabaseAdmin
+          .from("classes")
+          .insert(classRows.slice(i, i + 50));
+        if (classErr) console.warn(`Classes for ${sid}: ${classErr.message}`);
+      }
+      totalClasses += classRows.length;
 
-      // ── Bookings ──
+      // ── Bookings: 5-10 per class ──
       const bookingRows: any[] = [];
-      const tomorrowClasses = classRows.filter((c) => {
-        const d = new Date(c.start_time);
-        return d >= addDays(today, 1) && d < addDays(today, 2);
-      });
-      const waitlistClass = tomorrowClasses[0] ?? null;
-      if (waitlistClass) waitlistClassName = waitlistClass.name;
-
       for (const cls of classRows) {
         const classDate = new Date(cls.start_time);
         const isPast = classDate < now;
-        const isWaitlistTarget =
-          waitlistClass && cls.id === waitlistClass.id;
         const shuffled = [...studentIds].sort(() => Math.random() - 0.5);
+        const fill = randInt(5, Math.min(10, shuffled.length));
 
-        if (isWaitlistTarget) {
-          for (
-            let j = 0;
-            j < cls.capacity + 2 && j < shuffled.length;
-            j++
-          ) {
-            bookingRows.push({
-              class_id: cls.id,
-              user_id: shuffled[j],
-              studio_id: sid,
-              status: j < cls.capacity ? "confirmed" : "waitlist",
-            });
-          }
-        } else if (isPast) {
-          const fill = Math.min(
-            randInt(Math.ceil(cls.capacity * 0.8), cls.capacity),
-            shuffled.length
-          );
-          for (let j = 0; j < fill; j++) {
-            bookingRows.push({
-              class_id: cls.id,
-              user_id: shuffled[j],
-              studio_id: sid,
-              status: Math.random() > 0.3 ? "checked_in" : "confirmed",
-            });
-          }
-        } else {
-          const fill = Math.min(
-            randInt(
-              Math.ceil(cls.capacity * 0.5),
-              Math.ceil(cls.capacity * 0.8)
-            ),
-            shuffled.length
-          );
-          for (let j = 0; j < fill; j++) {
-            bookingRows.push({
-              class_id: cls.id,
-              user_id: shuffled[j],
-              studio_id: sid,
-              status: "confirmed",
-            });
-          }
+        for (let j = 0; j < fill; j++) {
+          bookingRows.push({
+            class_id: cls.id,
+            user_id: shuffled[j],
+            studio_id: sid,
+            status: isPast
+              ? (Math.random() > 0.3 ? "checked_in" : "confirmed")
+              : (j < cls.capacity_total ? "confirmed" : "waitlist"),
+            created_at: cls.start_time, // same day as class
+          });
         }
       }
 
@@ -308,49 +282,73 @@ Deno.serve(async (req) => {
         if (bErr) console.warn("Booking batch:", bErr.message);
       }
       totalBookings += bookingRows.length;
-
-      // ── Student Passes ──
-      if (packageIds.length > 0) {
-        const passRows = studentIds.map((uid) => ({
-          user_id: uid,
-          studio_id: sid,
-          package_id: pick(packageIds),
-          credits_remaining: randInt(0, 12),
-          expires_at: addDays(now, randInt(14, 90)).toISOString(),
-        }));
-        const { error: passErr } = await supabaseAdmin
-          .from("student_passes")
-          .insert(passRows);
-        if (passErr) console.warn("Pass:", passErr.message);
-      }
-
-      // ── Transactions (Finance Data) ──
-      const txRows: any[] = [];
-      for (let i = 0; i < 35; i++) {
-        const template = pick(TX_TEMPLATES);
-        const daysAgo = randInt(0, 30);
-        const txDate = addDays(now, -daysAgo);
-        txDate.setHours(randInt(6, 20), randInt(0, 59), 0, 0);
-
-        txRows.push({
-          studio_id: sid,
-          user_id: pick(studentIds),
-          amount: template.amount,
-          description: template.desc,
-          payment_method: pick(["card", "card", "card", "transfer"] as const),
-          status: "completed",
-          created_at: txDate.toISOString(),
-        });
-      }
-
-      for (let i = 0; i < txRows.length; i += 50) {
-        const { error: txErr } = await supabaseAdmin
-          .from("transactions")
-          .insert(txRows.slice(i, i + 50));
-        if (txErr) console.warn("Transaction batch:", txErr.message);
-      }
-      totalTransactions += txRows.length;
     }
+
+    /* ═══════════════════════════════════════════════════════════
+       5. Transactions — revenue engine spread across 30 days
+       Distributed across all studios with backdated created_at
+    ═══════════════════════════════════════════════════════════ */
+    const txRows: any[] = [];
+
+    // Monthly Unlimited purchases: 15-20
+    const unlimitedCount = randInt(15, 20);
+    for (let i = 0; i < unlimitedCount; i++) {
+      const daysAgo = randInt(0, 30);
+      const txDate = addDays(now, -daysAgo);
+      txDate.setHours(randInt(6, 20), randInt(0, 59), 0, 0);
+      txRows.push({
+        studio_id: pick(studioIds),
+        user_id: pick(studentIds),
+        amount: 250,
+        description: "Monthly Unlimited",
+        payment_method: pick(["card", "card", "card", "transfer"]),
+        status: "completed",
+        created_at: txDate.toISOString(),
+      });
+    }
+
+    // 10-Class Pack purchases: 20-30
+    const packCount = randInt(20, 30);
+    for (let i = 0; i < packCount; i++) {
+      const daysAgo = randInt(0, 30);
+      const txDate = addDays(now, -daysAgo);
+      txDate.setHours(randInt(6, 20), randInt(0, 59), 0, 0);
+      txRows.push({
+        studio_id: pick(studioIds),
+        user_id: pick(studentIds),
+        amount: 199,
+        description: "10-Class Pack",
+        payment_method: pick(["card", "card", "transfer"]),
+        status: "completed",
+        created_at: txDate.toISOString(),
+      });
+    }
+
+    // Flash Sale drop-ins: 10-15
+    const flashCount = randInt(10, 15);
+    for (let i = 0; i < flashCount; i++) {
+      const daysAgo = randInt(0, 30);
+      const txDate = addDays(now, -daysAgo);
+      txDate.setHours(randInt(6, 20), randInt(0, 59), 0, 0);
+      txRows.push({
+        studio_id: pick(studioIds),
+        user_id: pick(studentIds),
+        amount: 35,
+        description: "Flash Sale Drop-in",
+        payment_method: "card",
+        status: "completed",
+        created_at: txDate.toISOString(),
+      });
+    }
+
+    // Insert all transactions in batches
+    for (let i = 0; i < txRows.length; i += 50) {
+      const { error: txErr } = await supabaseAdmin
+        .from("transactions")
+        .insert(txRows.slice(i, i + 50));
+      if (txErr) console.warn("Transaction batch:", txErr.message);
+    }
+    totalTransactions = txRows.length;
 
     return new Response(
       JSON.stringify({
@@ -359,12 +357,9 @@ Deno.serve(async (req) => {
         studentCount: studentIds.length,
         bookingCount: totalBookings,
         transactionCount: totalTransactions,
-        waitlistClassName,
         studioCount: studioIds.length,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     return new Response(
