@@ -271,6 +271,81 @@ export default function Schedule() {
     setSubmitting(false);
   };
 
+  // Override handlers for uncovered classes
+  const handleManualAssign = async () => {
+    if (!overrideClass || overrideInstructorId === "none") return;
+    setOverrideLoading(true);
+
+    // Update the class instructor
+    const { error: classErr } = await supabase
+      .from("classes")
+      .update({ instructor_id: overrideInstructorId })
+      .eq("id", overrideClass.id);
+
+    if (classErr) {
+      toast({ title: "Error", description: classErr.message, variant: "destructive" });
+      setOverrideLoading(false);
+      return;
+    }
+
+    // Update cover request status to manual_override
+    const cr = coverRequests[overrideClass.id];
+    if (cr) {
+      await supabase
+        .from("cover_requests")
+        .update({ status: "manual_override", resolved_by: user?.id, resolved_at: new Date().toISOString() })
+        .eq("id", cr.id);
+    }
+
+    toast({ title: "Sub Assigned ✅", description: "The class has been reassigned successfully." });
+    setOverrideClass(null);
+    setOverrideInstructorId("none");
+    setOverrideLoading(false);
+    fetchClasses();
+    fetchCoverRequests();
+  };
+
+  const handleCancelClass = async () => {
+    if (!overrideClass || !activeStudio) return;
+    setOverrideLoading(true);
+
+    // Cancel all bookings for this class and set status to cancelled
+    const { data: classBookings } = await supabase
+      .from("bookings")
+      .select("id, user_id")
+      .eq("class_id", overrideClass.id)
+      .in("status", ["confirmed", "waitlist"]);
+
+    if (classBookings && classBookings.length > 0) {
+      await supabase
+        .from("bookings")
+        .update({ status: "cancelled" as any })
+        .in("id", classBookings.map((b) => b.id));
+    }
+
+    // Delete the class
+    await supabase.from("classes").delete().eq("id", overrideClass.id);
+
+    // Resolve cover request
+    const cr = coverRequests[overrideClass.id];
+    if (cr) {
+      await supabase
+        .from("cover_requests")
+        .update({ status: "cancelled", resolved_by: user?.id, resolved_at: new Date().toISOString() })
+        .eq("id", cr.id);
+    }
+
+    const cancelledCount = classBookings?.length ?? 0;
+    toast({
+      title: "Class Cancelled",
+      description: `${cancelledCount} booking${cancelledCount !== 1 ? "s" : ""} have been cancelled. Credits should be refunded manually.`,
+    });
+    setOverrideClass(null);
+    setOverrideLoading(false);
+    fetchClasses();
+    fetchCoverRequests();
+  };
+
   if (!activeStudio) return null;
 
   return (
