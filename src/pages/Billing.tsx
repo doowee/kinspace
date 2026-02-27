@@ -69,6 +69,12 @@ export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    studioId: string;
+    studioName: string;
+    currentTier: SubscriptionTier;
+    newTier: SubscriptionTier;
+  } | null>(null);
 
   // Get org ID from first owner membership
   const ownerMembership = memberships.find((m) => m.role === "owner");
