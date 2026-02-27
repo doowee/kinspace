@@ -254,16 +254,30 @@ serve(async (req) => {
       const { org_id } = body;
       const { data: org } = await supabase
         .from("organizations")
-        .select("stripe_customer_id")
+        .select("stripe_customer_id, name")
         .eq("id", org_id)
         .single();
 
-      if (!org?.stripe_customer_id) {
-        throw new Error("No Stripe customer found for this organization");
+      if (!org) throw new Error("Organization not found");
+
+      let customerId = org.stripe_customer_id;
+
+      // Auto-create Stripe customer if missing
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: org.name || undefined,
+          metadata: { org_id, user_id: user.id },
+        });
+        customerId = customer.id;
+        await supabase
+          .from("organizations")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", org_id);
       }
 
       const session = await stripe.billingPortal.sessions.create({
-        customer: org.stripe_customer_id,
+        customer: customerId,
         return_url: req.headers.get("origin") || "https://kinspace.lovable.app/billing",
       });
 
