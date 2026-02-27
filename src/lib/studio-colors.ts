@@ -17,11 +17,10 @@ const STUDIO_COLORS = [
  * Consistent across renders — same ID always gets same color.
  */
 export function getStudioColor(studioId: string) {
-  let hash = 0;
-  for (let i = 0; i < studioId.length; i++) {
-    hash = ((hash << 5) - hash + studioId.charCodeAt(i)) | 0;
-  }
-  const index = Math.abs(hash) % STUDIO_COLORS.length;
+  // Use the first hex character of the UUID for better distribution
+  const hex = studioId.replace(/-/g, "");
+  const value = parseInt(hex.substring(0, 8), 16);
+  const index = value % STUDIO_COLORS.length;
   return STUDIO_COLORS[index];
 }
 
