@@ -388,3 +388,137 @@ export async function fetchFinanceData(studioId: string): Promise<FinanceData> {
 
   return { transactions, totalRevenue, ytdRevenue, memberCount, arpu, chartData };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Org Dashboard Data                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface OrgStudioBreakdown {
+  id: string;
+  name: string;
+  location: string | null;
+  revenue: number;
+  clients: number;
+  bookings: number;
+}
+
+export interface OrgNetworkFeedItem {
+  id: string;
+  studioName: string;
+  description: string;
+  studentName: string;
+  amount: number;
+  createdAt: string;
+  type: "transaction" | "booking";
+}
+
+export interface OrgDashboardData {
+  globalRevenue: number;
+  totalClients: number;
+  totalBookings: number;
+  studioBreakdowns: OrgStudioBreakdown[];
+  networkFeed: OrgNetworkFeedItem[];
+}
+
+export async function fetchOrgDashboardData(orgId: string): Promise<OrgDashboardData> {
+  const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+
+  // 1. Get all studios in this org
+  const { data: orgStudios } = await supabase
+    .from("studios")
+    .select("id, name, location")
+    .eq("organization_id", orgId);
+
+  const studios = orgStudios ?? [];
+  const studioIds = studios.map((s) => s.id);
+  const studioMap = new Map(studios.map((s) => [s.id, s]));
+
+  if (studioIds.length === 0) {
+    return { globalRevenue: 0, totalClients: 0, totalBookings: 0, studioBreakdowns: [], networkFeed: [] };
+  }
+
+  // 2. Fetch transactions, bookings, members in parallel
+  const [txRes, bookingsRes, membersRes] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("id, amount, created_at, description, status, studio_id, profiles(first_name, last_name, email)")
+      .in("studio_id", studioIds)
+      .eq("status", "completed")
+      .gte("created_at", thirtyDaysAgo)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("bookings")
+      .select("id, user_id, studio_id, created_at, status, classes(name)")
+      .in("studio_id", studioIds)
+      .in("status", ["confirmed", "checked_in"])
+      .gte("created_at", thirtyDaysAgo)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("studio_members")
+      .select("user_id, studio_id")
+      .in("studio_id", studioIds)
+      .eq("role", "student"),
+  ]);
+
+  const transactions = txRes.data ?? [];
+  const bookings = bookingsRes.data ?? [];
+  const members = membersRes.data ?? [];
+
+  // 3. Aggregate global KPIs
+  const globalRevenue = transactions.reduce((s, t) => s + Number(t.amount), 0);
+  const uniqueClients = new Set(members.map((m) => m.user_id));
+  const totalClients = uniqueClients.size;
+  const totalBookings = bookings.length;
+
+  // 4. Per-studio breakdowns
+  const studioRevMap: Record<string, number> = {};
+  const studioBookMap: Record<string, number> = {};
+  const studioClientSet: Record<string, Set<string>> = {};
+
+  for (const id of studioIds) {
+    studioRevMap[id] = 0;
+    studioBookMap[id] = 0;
+    studioClientSet[id] = new Set();
+  }
+  for (const t of transactions) studioRevMap[t.studio_id] += Number(t.amount);
+  for (const b of bookings) studioBookMap[b.studio_id]++;
+  for (const m of members) studioClientSet[m.studio_id]?.add(m.user_id);
+
+  const studioBreakdowns: OrgStudioBreakdown[] = studios
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      location: s.location,
+      revenue: studioRevMap[s.id] ?? 0,
+      clients: studioClientSet[s.id]?.size ?? 0,
+      bookings: studioBookMap[s.id] ?? 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // 5. Network feed (interleave latest transactions & bookings)
+  const feedTx: OrgNetworkFeedItem[] = transactions.slice(0, 15).map((t) => ({
+    id: t.id,
+    studioName: studioMap.get(t.studio_id)?.name ?? "Unknown",
+    description: t.description ?? "Payment",
+    studentName: profileName(t.profiles),
+    amount: Number(t.amount),
+    createdAt: t.created_at,
+    type: "transaction",
+  }));
+
+  const feedBookings: OrgNetworkFeedItem[] = bookings.slice(0, 15).map((b: any) => ({
+    id: b.id,
+    studioName: studioMap.get(b.studio_id)?.name ?? "Unknown",
+    description: b.classes?.name ?? "Class Booking",
+    studentName: "",
+    amount: 0,
+    createdAt: b.created_at,
+    type: "booking",
+  }));
+
+  const networkFeed = [...feedTx, ...feedBookings]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 20);
+
+  return { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed };
+}
