@@ -142,6 +142,7 @@ serve(async (req) => {
         studio_id,
         authorized_studios: authorized_studios ?? [],
         certified_class_types: certified_class_types ?? [],
+        pin_code: pin_code ?? null,
         display_order: 0,
       })
       .select("id")
