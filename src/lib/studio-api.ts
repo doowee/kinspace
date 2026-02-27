@@ -418,41 +418,63 @@ export interface OrgDashboardData {
   totalBookings: number;
   studioBreakdowns: OrgStudioBreakdown[];
   networkFeed: OrgNetworkFeedItem[];
+  studios: { id: string; name: string; location: string | null }[];
 }
 
-export async function fetchOrgDashboardData(orgId: string): Promise<OrgDashboardData> {
-  const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+export interface OrgDashboardFilters {
+  studioId?: string | null; // null or undefined = all locations
+  since?: string;           // ISO date string
+}
 
-  // 1. Get all studios in this org
+export async function fetchOrgDashboardData(
+  orgId: string,
+  filters?: OrgDashboardFilters
+): Promise<OrgDashboardData> {
+  // 1. Get all studios in this org (always fetch all for filter dropdown)
   const { data: orgStudios } = await supabase
     .from("studios")
     .select("id, name, location")
     .eq("organization_id", orgId);
 
-  const studios = orgStudios ?? [];
-  const studioIds = studios.map((s) => s.id);
-  const studioMap = new Map(studios.map((s) => [s.id, s]));
+  const allStudios = orgStudios ?? [];
+
+  // Determine which studio IDs to query
+  const targetStudios = filters?.studioId
+    ? allStudios.filter((s) => s.id === filters.studioId)
+    : allStudios;
+  const studioIds = targetStudios.map((s) => s.id);
+  const studioMap = new Map(allStudios.map((s) => [s.id, s]));
 
   if (studioIds.length === 0) {
-    return { globalRevenue: 0, totalClients: 0, totalBookings: 0, studioBreakdowns: [], networkFeed: [] };
+    return { globalRevenue: 0, totalClients: 0, totalBookings: 0, studioBreakdowns: [], networkFeed: [], studios: allStudios };
   }
 
+  const since = filters?.since ?? subDays(new Date(), 30).toISOString();
+
   // 2. Fetch transactions, bookings, members in parallel
+  let txQuery = supabase
+    .from("transactions")
+    .select("id, amount, created_at, description, status, studio_id, profiles(first_name, last_name, email)")
+    .in("studio_id", studioIds)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false });
+
+  let bookingsQuery = supabase
+    .from("bookings")
+    .select("id, user_id, studio_id, created_at, status, classes(name)")
+    .in("studio_id", studioIds)
+    .in("status", ["confirmed", "checked_in"])
+    .order("created_at", { ascending: false });
+
+  // Only apply date filter if not "all time" (since will be a very old date for all time)
+  if (since) {
+    txQuery = txQuery.gte("created_at", since);
+    bookingsQuery = bookingsQuery.gte("created_at", since);
+  }
+
   const [txRes, bookingsRes, membersRes] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("id, amount, created_at, description, status, studio_id, profiles(first_name, last_name, email)")
-      .in("studio_id", studioIds)
-      .eq("status", "completed")
-      .gte("created_at", thirtyDaysAgo)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("bookings")
-      .select("id, user_id, studio_id, created_at, status, classes(name)")
-      .in("studio_id", studioIds)
-      .in("status", ["confirmed", "checked_in"])
-      .gte("created_at", thirtyDaysAgo)
-      .order("created_at", { ascending: false }),
+    txQuery,
+    bookingsQuery,
     supabase
       .from("studio_members")
       .select("user_id, studio_id")
@@ -464,7 +486,7 @@ export async function fetchOrgDashboardData(orgId: string): Promise<OrgDashboard
   const bookings = bookingsRes.data ?? [];
   const members = membersRes.data ?? [];
 
-  // 3. Aggregate global KPIs
+  // 3. Aggregate KPIs
   const globalRevenue = transactions.reduce((s, t) => s + Number(t.amount), 0);
   const uniqueClients = new Set(members.map((m) => m.user_id));
   const totalClients = uniqueClients.size;
@@ -484,7 +506,7 @@ export async function fetchOrgDashboardData(orgId: string): Promise<OrgDashboard
   for (const b of bookings) studioBookMap[b.studio_id]++;
   for (const m of members) studioClientSet[m.studio_id]?.add(m.user_id);
 
-  const studioBreakdowns: OrgStudioBreakdown[] = studios
+  const studioBreakdowns: OrgStudioBreakdown[] = targetStudios
     .map((s) => ({
       id: s.id,
       name: s.name,
@@ -495,7 +517,7 @@ export async function fetchOrgDashboardData(orgId: string): Promise<OrgDashboard
     }))
     .sort((a, b) => b.revenue - a.revenue);
 
-  // 5. Network feed (interleave latest transactions & bookings)
+  // 5. Network feed
   const feedTx: OrgNetworkFeedItem[] = transactions.slice(0, 15).map((t) => ({
     id: t.id,
     studioName: studioMap.get(t.studio_id)?.name ?? "Unknown",
@@ -520,5 +542,5 @@ export async function fetchOrgDashboardData(orgId: string): Promise<OrgDashboard
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 20);
 
-  return { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed };
+  return { globalRevenue, totalClients, totalBookings, studioBreakdowns, networkFeed, studios: allStudios };
 }
