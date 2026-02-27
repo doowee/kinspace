@@ -193,6 +193,16 @@ export default function Students() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {s.home_studio_name ? (
+                          <Badge variant="outline" className="text-[10px] gap-1">
+                            <Home className="h-2.5 w-2.5" />
+                            {s.home_studio_name}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline" className="text-[10px]">{s.membership_tier ?? "Drop-in"}</Badge>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.total_bookings}</TableCell>
