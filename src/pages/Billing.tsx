@@ -394,7 +394,12 @@ export default function Billing() {
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Payouts Active
                       </Badge>
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={() => window.open(`https://dashboard.stripe.com/${studio.stripe_account_id}`, "_blank")}
+                      >
                         <ExternalLink className="h-3.5 w-3.5" />
                         Stripe Dashboard
                       </Button>
@@ -405,9 +410,23 @@ export default function Billing() {
                       <p className="text-xs text-muted-foreground mb-3">
                         Connect a bank account to receive client payouts for this location.
                       </p>
-                      <Button size="sm" className="gap-1.5">
-                        <LinkIcon className="h-3.5 w-3.5" />
-                        Connect Bank Account
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        disabled={connectingStudio === studio.id}
+                        onClick={() => handleConnectBank(studio.id)}
+                      >
+                        {connectingStudio === studio.id ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Connecting…
+                          </>
+                        ) : (
+                          <>
+                            <LinkIcon className="h-3.5 w-3.5" />
+                            Connect Bank Account
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}
