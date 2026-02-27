@@ -171,6 +171,7 @@ export type Database = {
           name: string
           owner_id: string | null
           stripe_account_id: string | null
+          stripe_subscription_id: string | null
           subscription_tier: string
           updated_at: string
         }
@@ -180,6 +181,7 @@ export type Database = {
           name: string
           owner_id?: string | null
           stripe_account_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_tier?: string
           updated_at?: string
         }
@@ -189,6 +191,7 @@ export type Database = {
           name?: string
           owner_id?: string | null
           stripe_account_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_tier?: string
           updated_at?: string
         }
