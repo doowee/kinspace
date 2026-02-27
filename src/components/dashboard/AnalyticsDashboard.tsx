@@ -64,6 +64,7 @@ const DATE_RANGE_DAYS: Record<string, number> = {
 export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNavigateToMarketing?: () => void }) {
   const { activeStudio } = useStudio();
   const viewAsRole = useViewAsRole();
+  const { isPro } = useSubscriptionTier();
   const [dateRange, setDateRange] = useState("month");
   const [instructor, setInstructor] = useState("all");
   const [chartGranularity, setChartGranularity] = useState("week");
