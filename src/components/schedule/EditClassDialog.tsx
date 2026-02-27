@@ -105,6 +105,14 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
             />
           </div>
           <div>
+            <Label htmlFor="edit-class-type">Class Type (for SmartCover)</Label>
+            <Input
+              id="edit-class-type"
+              value={classType}
+              onChange={(e) => setClassType(e.target.value)}
+              placeholder="e.g. reformer, mat, hiit"
+            />
+          <div>
             <Label>Instructor</Label>
             <Select value={instructorId} onValueChange={setInstructorId}>
               <SelectTrigger><SelectValue placeholder="Select instructor" /></SelectTrigger>
