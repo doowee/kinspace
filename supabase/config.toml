@@ -11,3 +11,5 @@ project_id = "rkwwoefndegyuoyoaukz"
     verify_jwt = false
   [functions.create-client-payment]
     verify_jwt = false
+  [functions.create-connect-account]
+    verify_jwt = false

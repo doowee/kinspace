@@ -68,6 +68,7 @@ export default function Billing() {
   const [studios, setStudios] = useState<StudioBilling[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [connectingStudio, setConnectingStudio] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     studioId: string;
@@ -80,6 +81,35 @@ export default function Billing() {
   const ownerMembership = memberships.find((m) => m.role === "owner");
   const orgId = (ownerMembership?.studios as any)?.organization_id ?? null;
 
+  // Handle Stripe Connect return redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connectSuccess = params.get("connect_success");
+    const studioId = params.get("studio_id");
+
+    if (connectSuccess === "true" && studioId) {
+      // Check connect status and update UI
+      supabase.functions.invoke("create-connect-account", {
+        body: { action: "check-status", studio_id: studioId },
+      }).then(({ data }) => {
+        if (data?.connected) {
+          setStudios((prev) =>
+            prev.map((s) =>
+              s.id === studioId ? { ...s, stripe_account_id: data.account_id } : s
+            )
+          );
+          toast({
+            title: "Bank account connected! ✅",
+            description: "This location is now set up to receive client payouts.",
+          });
+        }
+      });
+
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     const ownerStudioIds = memberships
       .filter((m) => m.role === "owner")
@@ -90,7 +120,7 @@ export default function Billing() {
       return;
     }
 
-    const fetch = async () => {
+    const fetchStudios = async () => {
       const { data } = await supabase
         .from("studios")
         .select("id, name, location, stripe_account_id, subscription_tier")
@@ -100,7 +130,7 @@ export default function Billing() {
       setLoading(false);
     };
 
-    fetch();
+    fetchStudios();
   }, [memberships]);
 
   // Calculate MRR
@@ -167,6 +197,24 @@ export default function Billing() {
       toast({
         title: "Could not open portal",
         description: error?.message || data?.error || "Stripe customer not found. Complete a subscription first.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConnectBank = async (studioId: string) => {
+    setConnectingStudio(studioId);
+    const { data, error } = await supabase.functions.invoke("create-connect-account", {
+      body: { action: "create-onboarding", studio_id: studioId },
+    });
+    setConnectingStudio(null);
+
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      toast({
+        title: "Could not start onboarding",
+        description: error?.message || data?.error || "Please try again.",
         variant: "destructive",
       });
     }
@@ -346,7 +394,12 @@ export default function Billing() {
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Payouts Active
                       </Badge>
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={() => window.open(`https://dashboard.stripe.com/${studio.stripe_account_id}`, "_blank")}
+                      >
                         <ExternalLink className="h-3.5 w-3.5" />
                         Stripe Dashboard
                       </Button>
@@ -357,9 +410,23 @@ export default function Billing() {
                       <p className="text-xs text-muted-foreground mb-3">
                         Connect a bank account to receive client payouts for this location.
                       </p>
-                      <Button size="sm" className="gap-1.5">
-                        <LinkIcon className="h-3.5 w-3.5" />
-                        Connect Bank Account
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        disabled={connectingStudio === studio.id}
+                        onClick={() => handleConnectBank(studio.id)}
+                      >
+                        {connectingStudio === studio.id ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Connecting…
+                          </>
+                        ) : (
+                          <>
+                            <LinkIcon className="h-3.5 w-3.5" />
+                            Connect Bank Account
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}
