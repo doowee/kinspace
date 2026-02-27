@@ -4,8 +4,6 @@ import { motion, AnimatePresence, useInView, type Variants, type Easing } from "
 import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 
 /* ─── Animation Presets ─── */
 const EASE: Easing = [0.25, 0.1, 0.25, 1];
