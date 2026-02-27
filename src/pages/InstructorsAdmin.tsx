@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
-import { useViewAsRole } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +14,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { GraduationCap, Search, Pencil, Plus, Trash2, MapPin, Award, X, Home, Loader2 } from "lucide-react";
+import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -36,14 +36,15 @@ interface InstructorRow {
   authorized_studios: string[];
   certified_class_types: string[];
   linked_email?: string | null;
+  is_active: boolean;
 }
 
 export default function InstructorsAdmin() {
   const { activeStudio, memberships } = useStudio();
-  const viewAsRole = useViewAsRole();
   const [instructors, setInstructors] = useState<InstructorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("active");
 
   // Org studios
   const [orgStudios, setOrgStudios] = useState<StudioOption[]>([]);
@@ -74,6 +75,12 @@ export default function InstructorsAdmin() {
   const [newCustomType, setNewCustomType] = useState("");
   const [provisioning, setProvisioning] = useState(false);
 
+  // Offboard state
+  const [offboardOpen, setOffboardOpen] = useState(false);
+  const [offboardTarget, setOffboardTarget] = useState<InstructorRow | null>(null);
+  const [offboardLoading, setOffboardLoading] = useState(false);
+  const [upcomingClassCount, setUpcomingClassCount] = useState(0);
+
   // Fetch org studios
   useEffect(() => {
     const fetch = async () => {
@@ -89,7 +96,6 @@ export default function InstructorsAdmin() {
     if (!activeStudio) { setLoading(false); return; }
     setLoading(true);
 
-    // Get org-wide instructors
     const { data: studioRow } = await supabase
       .from("studios").select("organization_id").eq("id", activeStudio.id).single();
     const orgId = studioRow?.organization_id;
@@ -102,7 +108,7 @@ export default function InstructorsAdmin() {
 
     const { data } = await supabase
       .from("instructors")
-      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types")
+      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active")
       .in("studio_id", studioIds)
       .order("name");
 
@@ -110,9 +116,9 @@ export default function InstructorsAdmin() {
       ...i,
       authorized_studios: i.authorized_studios ?? [],
       certified_class_types: i.certified_class_types ?? [],
+      is_active: i.is_active ?? true,
     }));
 
-    // Resolve linked emails
     const userIds = items.filter((i) => i.user_id).map((i) => i.user_id!);
     if (userIds.length > 0) {
       const { data: profiles } = await supabase.from("profiles").select("id, email").in("id", userIds);
@@ -128,12 +134,18 @@ export default function InstructorsAdmin() {
   useEffect(() => { fetchInstructors(); }, [activeStudio?.id]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return instructors;
+    const byStatus = instructors.filter((i) =>
+      activeTab === "active" ? i.is_active : !i.is_active
+    );
+    if (!search.trim()) return byStatus;
     const q = search.toLowerCase();
-    return instructors.filter((i) =>
+    return byStatus.filter((i) =>
       i.name.toLowerCase().includes(q) || i.linked_email?.toLowerCase().includes(q) || i.bio?.toLowerCase().includes(q)
     );
-  }, [instructors, search]);
+  }, [instructors, search, activeTab]);
+
+  const activeCount = instructors.filter((i) => i.is_active).length;
+  const deactivatedCount = instructors.filter((i) => !i.is_active).length;
 
   // Edit handlers
   const openEdit = (inst: InstructorRow) => {
@@ -221,11 +233,42 @@ export default function InstructorsAdmin() {
     setNewCustomType("");
   };
 
-  // Delete handler
-  const handleDelete = async (inst: InstructorRow) => {
-    const { error } = await supabase.from("instructors").delete().eq("id", inst.id);
-    if (error) toast.error("Failed to delete");
-    else { toast.success("Instructor removed"); fetchInstructors(); }
+  // Offboard handler
+  const openOffboard = async (inst: InstructorRow) => {
+    setOffboardTarget(inst);
+    setOffboardLoading(false);
+
+    // Query upcoming class count
+    const { count } = await supabase
+      .from("classes")
+      .select("id", { count: "exact", head: true })
+      .eq("instructor_id", inst.id)
+      .gt("start_time", new Date().toISOString());
+
+    setUpcomingClassCount(count ?? 0);
+    setOffboardOpen(true);
+  };
+
+  const handleOffboard = async () => {
+    if (!offboardTarget || !activeStudio) return;
+    setOffboardLoading(true);
+
+    const { data, error } = await supabase.functions.invoke("offboard-instructor", {
+      body: {
+        instructor_id: offboardTarget.id,
+        studio_id: activeStudio.id,
+      },
+    });
+
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Failed to offboard instructor");
+    } else {
+      toast.success(`${offboardTarget.name} has been offboarded. ${data.orphaned_classes} upcoming class(es) are now unassigned.`);
+      setOffboardOpen(false);
+      setOffboardTarget(null);
+      fetchInstructors();
+    }
+    setOffboardLoading(false);
   };
 
   if (!activeStudio) return null;
@@ -239,7 +282,7 @@ export default function InstructorsAdmin() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-sm gap-1.5 py-1.5 px-3">
-            <GraduationCap className="h-4 w-4" />{instructors.length} total
+            <GraduationCap className="h-4 w-4" />{activeCount} active
           </Badge>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />Add
@@ -247,99 +290,126 @@ export default function InstructorsAdmin() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <p className="text-sm text-muted-foreground text-center py-8 animate-pulse">Loading instructors…</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{search ? `No instructors matching "${search}"` : "No instructors found."}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Home Studio</TableHead>
-                    <TableHead>Certifications</TableHead>
-                    <TableHead>Locations</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((inst) => (
-                    <TableRow key={inst.id}>
-                      <TableCell>
-                        <div className="space-y-0.5">
-                          <span className="font-medium">{inst.name}</span>
-                          {inst.bio && <p className="text-xs text-muted-foreground line-clamp-1">{inst.bio}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {inst.home_studio_id && studioMap[inst.home_studio_id] ? (
-                          <Badge variant="outline" className="text-[10px] gap-1">
-                            <Home className="h-2.5 w-2.5" />
-                            {studioMap[inst.home_studio_id].name}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1 max-w-[200px]">
-                          {inst.certified_class_types.length > 0 ? (
-                            inst.certified_class_types.slice(0, 3).map((t) => (
-                              <Badge key={t} variant="secondary" className="text-[10px] capitalize">{t}</Badge>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="active" className="gap-1.5">
+            <Eye className="h-3.5 w-3.5" />Active ({activeCount})
+          </TabsTrigger>
+          <TabsTrigger value="deactivated" className="gap-1.5">
+            <EyeOff className="h-3.5 w-3.5" />Deactivated ({deactivatedCount})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-4">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loading ? (
+                <p className="text-sm text-muted-foreground text-center py-8 animate-pulse">Loading instructors…</p>
+              ) : filtered.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  {search ? `No instructors matching "${search}"` : activeTab === "active" ? "No active instructors." : "No deactivated instructors."}
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Home Studio</TableHead>
+                        <TableHead>Certifications</TableHead>
+                        <TableHead>Locations</TableHead>
+                        <TableHead>Email</TableHead>
+                        {activeTab === "active" && <TableHead className="text-right">Actions</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((inst) => (
+                        <TableRow key={inst.id} className={!inst.is_active ? "opacity-60" : ""}>
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{inst.name}</span>
+                                {!inst.is_active && (
+                                  <Badge variant="secondary" className="text-[10px]">Deactivated</Badge>
+                                )}
+                              </div>
+                              {inst.bio && <p className="text-xs text-muted-foreground line-clamp-1">{inst.bio}</p>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {inst.home_studio_id && studioMap[inst.home_studio_id] ? (
+                              <Badge variant="outline" className="text-[10px] gap-1">
+                                <Home className="h-2.5 w-2.5" />
+                                {studioMap[inst.home_studio_id].name}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {inst.certified_class_types.length > 0 ? (
+                                inst.certified_class_types.slice(0, 3).map((t) => (
+                                  <Badge key={t} variant="secondary" className="text-[10px] capitalize">{t}</Badge>
+                                ))
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                              {inst.certified_class_types.length > 3 && (
+                                <Badge variant="outline" className="text-[10px]">+{inst.certified_class_types.length - 3}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {inst.authorized_studios.length > 0 ? (
+                              <Badge variant="outline" className="text-[10px] gap-1">
+                                <MapPin className="h-2.5 w-2.5" />
+                                {inst.authorized_studios.length}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {inst.linked_email ? (
+                              <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          {activeTab === "active" && (
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(inst)}>
+                                  <Pencil className="h-3 w-3 mr-1" />Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                                  onClick={() => openOffboard(inst)}
+                                >
+                                  <UserX className="h-3 w-3" />Offboard
+                                </Button>
+                              </div>
+                            </TableCell>
                           )}
-                          {inst.certified_class_types.length > 3 && (
-                            <Badge variant="outline" className="text-[10px]">+{inst.certified_class_types.length - 3}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {inst.authorized_studios.length > 0 ? (
-                          <Badge variant="outline" className="text-[10px] gap-1">
-                            <MapPin className="h-2.5 w-2.5" />
-                            {inst.authorized_studios.length}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {inst.linked_email ? (
-                          <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(inst)}>
-                            <Pencil className="h-3 w-3 mr-1" />Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(inst)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* ── Edit Dialog ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -474,6 +544,38 @@ export default function InstructorsAdmin() {
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button onClick={handleProvision} disabled={provisioning || !newFirstName.trim() || !newLastName.trim() || !newEmail.trim()}>
               {provisioning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Provisioning…</> : "Save Instructor"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Offboard Confirmation Dialog ── */}
+      <Dialog open={offboardOpen} onOpenChange={setOffboardOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle className="font-display text-destructive">Offboard {offboardTarget?.name}</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              This will revoke their login access and unassign them from <strong>{upcomingClassCount}</strong> upcoming class{upcomingClassCount !== 1 ? "es" : ""}. Past classes will remain intact for payroll records.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm space-y-1.5">
+            <p className="font-medium text-destructive">This action will:</p>
+            <ul className="list-disc list-inside text-muted-foreground space-y-1 text-xs">
+              <li>Suspend their login credentials</li>
+              <li>Mark their profile as deactivated</li>
+              <li>Set {upcomingClassCount} upcoming class{upcomingClassCount !== 1 ? "es" : ""} to "Staff Needed"</li>
+              <li>Preserve all past class & payroll history</li>
+            </ul>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setOffboardOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleOffboard} disabled={offboardLoading} className="gap-1.5">
+              {offboardLoading ? <><Loader2 className="h-4 w-4 animate-spin" />Processing…</> : <><UserX className="h-4 w-4" />Confirm Offboard</>}
             </Button>
           </DialogFooter>
         </DialogContent>

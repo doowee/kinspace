@@ -15,3 +15,5 @@ project_id = "rkwwoefndegyuoyoaukz"
     verify_jwt = false
   [functions.provision-instructor]
     verify_jwt = false
+  [functions.offboard-instructor]
+    verify_jwt = false

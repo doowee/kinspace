@@ -109,6 +109,7 @@ export default function Schedule() {
     let query = supabase
       .from("instructors")
       .select("id, name")
+      .eq("is_active", true)
       .order("display_order");
 
     query = query.eq("studio_id", activeStudio.id);
@@ -483,15 +484,17 @@ export default function Schedule() {
               const isBooking = bookingClassId === cls.id;
               const fillPercent = Math.min((count / cls.capacity_total) * 100, 100);
               const isUncovered = !!coverRequests[cls.id] && coverRequests[cls.id].status === "escalated";
+              const isUnassigned = !cls.instructor_id && new Date(cls.start_time) > new Date();
 
               return (
                 <Card
                   key={cls.id}
                   className={cn(
                     "transition-all duration-300",
+                    isUnassigned && !isUncovered && "border-amber-400/60 bg-amber-50/40 dark:bg-amber-950/20 shadow-md shadow-amber-400/10 ring-1 ring-amber-400/30",
                     isUncovered && "border-destructive/60 bg-destructive/5 shadow-md shadow-destructive/10 ring-1 ring-destructive/20",
-                    isFull && !isUncovered && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
-                    isLow && !isFull && !isUncovered && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
+                    isFull && !isUncovered && !isUnassigned && "border-primary/40 bg-primary/[0.03] shadow-md shadow-primary/5",
+                    isLow && !isFull && !isUncovered && !isUnassigned && "border-orange-300/50 bg-orange-50/30 dark:border-orange-500/30 dark:bg-orange-950/10"
                   )}
                 >
                   <CardContent className="p-4 space-y-3">
@@ -517,10 +520,18 @@ export default function Schedule() {
                               Uncovered
                             </Badge>
                           )}
+                          {isUnassigned && !isUncovered && (
+                            <Badge className="gap-1 text-[10px] font-bold uppercase tracking-wide bg-amber-500 text-white border-amber-600 animate-pulse">
+                              <AlertTriangle className="h-3 w-3" />
+                              Staff Needed
+                            </Badge>
+                          )}
                         </div>
-                        {cls.instructors?.name && (
+                        {cls.instructors?.name ? (
                           <p className="text-xs text-muted-foreground">with {cls.instructors.name}</p>
-                        )}
+                        ) : isUnassigned ? (
+                          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Unassigned — tap to staff</p>
+                        ) : null}
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -534,6 +545,12 @@ export default function Schedule() {
                             <Button size="sm" variant="destructive" onClick={() => { setOverrideClass(cls); setOverrideInstructorId("none"); }} className="gap-1.5 text-xs">
                               <ShieldAlert className="h-3.5 w-3.5" />
                               Intervene
+                            </Button>
+                          )}
+                          {isUnassigned && !isUncovered && (
+                            <Button size="sm" variant="outline" onClick={() => { setOverrideClass(cls); setOverrideInstructorId("none"); }} className="gap-1.5 text-xs border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20">
+                              <UserPlus className="h-3.5 w-3.5" />
+                              Assign Staff
                             </Button>
                           )}
                           <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)} className="gap-1.5">
