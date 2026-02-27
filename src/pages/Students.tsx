@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Search, MessageCircle, Lock } from "lucide-react";
+import { Users, Search, MessageCircle, Lock, Home } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { format } from "date-fns";
 
@@ -26,6 +26,8 @@ interface StudentRow {
   membership_tier: string | null;
   total_bookings: number;
   last_booking_at: string | null;
+  home_studio_id: string | null;
+  home_studio_name: string | null;
 }
 
 export default function Students() {
@@ -74,8 +76,16 @@ export default function Students() {
       const userIds = [...new Set(members.map((m) => m.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, email, first_name, last_name, membership_tier")
+        .select("id, email, first_name, last_name, membership_tier, home_studio_id")
         .in("id", userIds);
+
+      // Resolve home studio names
+      const homeStudioIds = [...new Set((profiles ?? []).map((p: any) => p.home_studio_id).filter(Boolean))];
+      let studioNameMap: Record<string, string> = {};
+      if (homeStudioIds.length > 0) {
+        const { data: studioRows } = await supabase.from("studios").select("id, name").in("id", homeStudioIds);
+        (studioRows ?? []).forEach((s: any) => { studioNameMap[s.id] = s.name; });
+      }
 
       // Get booking counts across all org studios
       const { data: bookings } = await supabase
@@ -102,6 +112,8 @@ export default function Students() {
         membership_tier: p.membership_tier,
         total_bookings: bookingMap[p.id]?.count ?? 0,
         last_booking_at: bookingMap[p.id]?.last ?? null,
+        home_studio_id: p.home_studio_id ?? null,
+        home_studio_name: p.home_studio_id ? (studioNameMap[p.home_studio_id] ?? null) : null,
       }));
       rows.sort((a, b) => (a.first_name ?? a.email).localeCompare(b.first_name ?? b.email));
       setStudents(rows);
