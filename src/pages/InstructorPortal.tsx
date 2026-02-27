@@ -601,12 +601,15 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCoverRequestClass(null)}>
+            <Button variant="outline" onClick={() => setCoverRequestClass(null)} disabled={smartCoverLoading}>
               Cancel
             </Button>
-            <Button onClick={handleCoverConfirm}>
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              Confirm Request
+            <Button onClick={handleCoverConfirm} disabled={smartCoverLoading}>
+              {smartCoverLoading ? (
+                <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Finding instructors…</>
+              ) : (
+                <><RefreshCw className="mr-1.5 h-4 w-4" />Confirm Request</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
