@@ -356,6 +356,9 @@ export default function AnalyticsDashboard({ onNavigateToMarketing }: { onNaviga
         </Card>
       )}
 
+      {/* ── BI Insights Grid (Owner only) ───────────────────── */}
+      {isOwner && <BIInsightsGrid data={d} />}
+
       {/* ── Recent Transactions (Owner only) ────────────────── */}
       {isOwner && d.recentTransactions.length > 0 && (
         <Card>
