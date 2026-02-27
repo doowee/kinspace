@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
+import { studioColorClass } from "@/lib/studio-colors";
 import { useViewAsRole } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -193,8 +194,8 @@ export default function Students() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {s.home_studio_name ? (
-                          <Badge variant="outline" className="text-[10px] gap-1">
+                        {s.home_studio_name && s.home_studio_id ? (
+                          <Badge variant="outline" className={`text-[10px] gap-1 ${studioColorClass(s.home_studio_id)}`}>
                             <Home className="h-2.5 w-2.5" />
                             {s.home_studio_name}
                           </Badge>
