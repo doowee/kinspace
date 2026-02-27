@@ -546,6 +546,12 @@ export default function Schedule() {
                               Intervene
                             </Button>
                           )}
+                          {isUnassigned && !isUncovered && (
+                            <Button size="sm" variant="outline" onClick={() => { setOverrideClass(cls); setOverrideInstructorId("none"); }} className="gap-1.5 text-xs border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20">
+                              <UserPlus className="h-3.5 w-3.5" />
+                              Assign Staff
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => setViewStudentsClass(cls)} className="gap-1.5">
                             <UsersRound className="h-3.5 w-3.5" />
                             {count}
