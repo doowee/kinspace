@@ -17,3 +17,5 @@ project_id = "rkwwoefndegyuoyoaukz"
     verify_jwt = false
   [functions.offboard-instructor]
     verify_jwt = false
+  [functions.kiosk-pin-login]
+    verify_jwt = false

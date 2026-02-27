@@ -30,6 +30,8 @@ import CreateStudio from "./pages/CreateStudio";
 import InstructorPortal from "./pages/InstructorPortal";
 import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import StudentAuthGate from "./components/student/StudentAuthGate";
+import KioskLogin from "./pages/KioskLogin";
+import KioskLiveRoster from "./pages/KioskLiveRoster";
 import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
@@ -156,6 +158,27 @@ const App = () => {
                 <InstructorAuthGate>
                   <InstructorPortal />
                 </InstructorAuthGate>
+              }
+            />
+            {/* Kiosk Routes */}
+            <Route
+              path="/kiosk-login"
+              element={
+                <AuthGate>
+                  <StudioProvider>
+                    <KioskLogin />
+                  </StudioProvider>
+                </AuthGate>
+              }
+            />
+            <Route
+              path="/kiosk/live/:classId"
+              element={
+                <AuthGate>
+                  <StudioProvider>
+                    <KioskLiveRoster />
+                  </StudioProvider>
+                </AuthGate>
               }
             />
             <Route path="*" element={<NotFound />} />
