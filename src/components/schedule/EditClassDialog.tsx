@@ -65,10 +65,11 @@ export default function EditClassDialog({ open, onOpenChange, cls, instructors, 
       .update({
         name,
         description: description || null,
+        class_type: classType.trim().toLowerCase() || null,
         start_time: dt.toISOString(),
         capacity_total: parseInt(capacity) || 10,
         instructor_id: instructorId === "none" ? null : instructorId,
-      })
+      } as any)
       .eq("id", cls.id);
 
     if (error) {
