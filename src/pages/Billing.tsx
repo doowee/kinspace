@@ -68,6 +68,7 @@ export default function Billing() {
   const [studios, setStudios] = useState<StudioBilling[]>([]);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [connectingStudio, setConnectingStudio] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     studioId: string;
