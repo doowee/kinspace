@@ -160,6 +160,7 @@ export default function InstructorsAdmin() {
     setEditHomeStudio(inst.home_studio_id ?? "none");
     setEditAuthorized(inst.authorized_studios);
     setEditCerts(inst.certified_class_types);
+    setEditPin(inst.pin_code ?? "");
     setCustomType("");
     setEditOpen(true);
   };
@@ -187,6 +188,7 @@ export default function InstructorsAdmin() {
       home_studio_id: editHomeStudio === "none" ? null : editHomeStudio,
       authorized_studios: editAuthorized,
       certified_class_types: editCerts,
+      pin_code: editPin.trim() || null,
     } as any).eq("id", editTarget.id);
 
     if (error) toast.error("Failed to update");
@@ -197,7 +199,7 @@ export default function InstructorsAdmin() {
   // Provision handler
   const resetAddForm = () => {
     setNewFirstName(""); setNewLastName(""); setNewEmail("");
-    setNewAuthorized([]); setNewCerts([]); setNewCustomType("");
+    setNewAuthorized([]); setNewCerts([]); setNewCustomType(""); setNewPin("");
   };
 
   const handleProvision = async () => {
