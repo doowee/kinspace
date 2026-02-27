@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { studioColorClass } from "@/lib/studio-colors";
 import { toast } from "sonner";
 import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
@@ -344,7 +345,7 @@ export default function InstructorsAdmin() {
                           </TableCell>
                           <TableCell>
                             {inst.home_studio_id && studioMap[inst.home_studio_id] ? (
-                              <Badge variant="outline" className="text-[10px] gap-1">
+                              <Badge variant="outline" className={`text-[10px] gap-1 ${studioColorClass(inst.home_studio_id)}`}>
                                 <Home className="h-2.5 w-2.5" />
                                 {studioMap[inst.home_studio_id].name}
                               </Badge>
