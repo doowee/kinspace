@@ -383,6 +383,8 @@ export type Database = {
           owner_id: string
           primary_color: string | null
           slug: string
+          stripe_account_id: string | null
+          subscription_tier: string
           timezone: string
           updated_at: string
         }
@@ -404,6 +406,8 @@ export type Database = {
           owner_id: string
           primary_color?: string | null
           slug: string
+          stripe_account_id?: string | null
+          subscription_tier?: string
           timezone?: string
           updated_at?: string
         }
@@ -425,6 +429,8 @@ export type Database = {
           owner_id?: string
           primary_color?: string | null
           slug?: string
+          stripe_account_id?: string | null
+          subscription_tier?: string
           timezone?: string
           updated_at?: string
         }

@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useStudio } from "@/contexts/StudioContext";
 
 interface ProUpgradeOverlayProps {
   children: React.ReactNode;
@@ -8,10 +9,14 @@ interface ProUpgradeOverlayProps {
   label?: string;
 }
 
-export default function ProUpgradeOverlay({ children, locked, label = "Upgrade to Pro" }: ProUpgradeOverlayProps) {
+export default function ProUpgradeOverlay({ children, locked, label }: ProUpgradeOverlayProps) {
   const navigate = useNavigate();
+  const { activeStudio } = useStudio();
 
   if (!locked) return <>{children}</>;
+
+  const studioName = activeStudio?.name ?? "this location";
+  const displayLabel = label ?? `Upgrade ${studioName} to Pro`;
 
   return (
     <div className="relative">
@@ -26,10 +31,10 @@ export default function ProUpgradeOverlay({ children, locked, label = "Upgrade t
           <Lock className="h-5 w-5 text-primary" />
         </div>
         <Badge className="bg-primary text-primary-foreground text-xs px-3 py-1">
-          ✨ {label}
+          ✨ {displayLabel}
         </Badge>
-        <p className="text-xs text-muted-foreground max-w-[200px] text-center">
-          This feature is available on the Pro Engine plan.
+        <p className="text-xs text-muted-foreground max-w-[220px] text-center">
+          This feature is available on the Pro Engine plan for this location.
         </p>
       </button>
     </div>

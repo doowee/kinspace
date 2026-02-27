@@ -67,19 +67,11 @@ export default function Onboarding() {
     try {
       const studioId = await createStudioWithMembership(name, slug);
 
-      // Get the studio to find its org, then update tier
-      const { data: studio } = await supabase
+      // Update the studio's subscription tier directly
+      await supabase
         .from("studios")
-        .select("organization_id")
-        .eq("id", studioId)
-        .single();
-
-      if (studio?.organization_id) {
-        await supabase
-          .from("organizations")
-          .update({ subscription_tier: selectedTier } as any)
-          .eq("id", studio.organization_id);
-      }
+        .update({ subscription_tier: selectedTier } as any)
+        .eq("id", studioId);
 
       toast({ title: "Studio created!", description: `${name} is ready to go.` });
       navigate("/dashboard");
