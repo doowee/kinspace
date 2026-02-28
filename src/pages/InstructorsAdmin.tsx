@@ -85,16 +85,26 @@ export default function InstructorsAdmin() {
   const [offboardLoading, setOffboardLoading] = useState(false);
   const [upcomingClassCount, setUpcomingClassCount] = useState(0);
 
-  // Fetch org studios
+  // Fetch org studios — scoped to the active studio's organization
   useEffect(() => {
     const fetch = async () => {
-      const studioIds = memberships.map((m) => m.studio_id);
-      if (studioIds.length === 0) return;
-      const { data } = await supabase.from("studios").select("id, name, location").in("id", studioIds);
-      setOrgStudios((data ?? []) as StudioOption[]);
+      if (!activeStudio) return;
+      const { data: studioRow } = await supabase
+        .from("studios").select("organization_id").eq("id", activeStudio.id).single();
+      if (studioRow?.organization_id) {
+        const { data } = await supabase
+          .from("studios").select("id, name, location")
+          .eq("organization_id", studioRow.organization_id);
+        setOrgStudios((data ?? []) as StudioOption[]);
+      } else {
+        // Fallback: just show active studio
+        const { data } = await supabase
+          .from("studios").select("id, name, location").eq("id", activeStudio.id);
+        setOrgStudios((data ?? []) as StudioOption[]);
+      }
     };
     fetch();
-  }, [memberships]);
+  }, [activeStudio?.id]);
 
   const fetchInstructors = async () => {
     if (!activeStudio) { setLoading(false); return; }
