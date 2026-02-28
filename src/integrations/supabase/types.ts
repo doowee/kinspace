@@ -61,6 +61,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookings_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bookings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -122,6 +129,13 @@ export type Database = {
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
             referencedColumns: ["id"]
           },
         ]
@@ -192,6 +206,13 @@ export type Database = {
             referencedRelation: "studios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cover_requests_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       instructors: {
@@ -249,10 +270,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "instructors_home_studio_id_fkey"
+            columns: ["home_studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "instructors_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructors_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
             referencedColumns: ["id"]
           },
         ]
@@ -353,6 +388,13 @@ export type Database = {
             referencedRelation: "studios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "packages_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -416,6 +458,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "profiles_home_studio_id_fkey"
+            columns: ["home_studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "profiles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -455,6 +504,13 @@ export type Database = {
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_members_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
             referencedColumns: ["id"]
           },
           {
@@ -596,6 +652,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -606,7 +669,84 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      studios_public: {
+        Row: {
+          brand_background: string | null
+          brand_highlight: string | null
+          brand_primary: string | null
+          brand_secondary: string | null
+          brand_text: string | null
+          currency: string | null
+          id: string | null
+          late_cancel_fee: number | null
+          late_cancel_window_hours: number | null
+          location: string | null
+          logo_url: string | null
+          name: string | null
+          organization_id: string | null
+          owner_id: string | null
+          primary_color: string | null
+          slug: string | null
+          subscription_tier: string | null
+          timezone: string | null
+        }
+        Insert: {
+          brand_background?: string | null
+          brand_highlight?: string | null
+          brand_primary?: string | null
+          brand_secondary?: string | null
+          brand_text?: string | null
+          currency?: string | null
+          id?: string | null
+          late_cancel_fee?: number | null
+          late_cancel_window_hours?: number | null
+          location?: string | null
+          logo_url?: string | null
+          name?: string | null
+          organization_id?: string | null
+          owner_id?: string | null
+          primary_color?: string | null
+          slug?: string | null
+          subscription_tier?: string | null
+          timezone?: string | null
+        }
+        Update: {
+          brand_background?: string | null
+          brand_highlight?: string | null
+          brand_primary?: string | null
+          brand_secondary?: string | null
+          brand_text?: string | null
+          currency?: string | null
+          id?: string | null
+          late_cancel_fee?: number | null
+          late_cancel_window_hours?: number | null
+          location?: string | null
+          logo_url?: string | null
+          name?: string | null
+          organization_id?: string | null
+          owner_id?: string | null
+          primary_color?: string | null
+          slug?: string | null
+          subscription_tier?: string | null
+          timezone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studios_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studios_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       cancel_booking_logic: {
