@@ -39,10 +39,22 @@ serve(async (req) => {
     const body = await req.json();
     const { action, studio_id } = body;
 
+    // ── Shared authorization helper ──
+    const verifyOwnership = async (studioId: string) => {
+      const { data: role } = await supabase.rpc("get_studio_role", {
+        _user_id: user.id,
+        _studio_id: studioId,
+      });
+      if (role !== "owner") {
+        throw new Error("Only studio owners can manage Stripe Connect");
+      }
+    };
+
     // ── ACTION: create-onboarding ──
     // Creates Express account + onboarding link
     if (action === "create-onboarding") {
       if (!studio_id) throw new Error("Missing studio_id");
+      await verifyOwnership(studio_id);
 
       // Check if studio already has a connect account
       const { data: studio } = await supabase
@@ -91,6 +103,7 @@ serve(async (req) => {
     // Checks if a connected account has completed onboarding
     if (action === "check-status") {
       if (!studio_id) throw new Error("Missing studio_id");
+      await verifyOwnership(studio_id);
 
       const { data: studio } = await supabase
         .from("studios")
