@@ -150,10 +150,11 @@ Deno.serve(async (req) => {
       const email = `${FIRST_NAMES[i].toLowerCase()}.${LAST_NAMES[i].toLowerCase()}@demo.kinspace.app`;
       const phone = `555-0${String(100 + i).slice(-3)}`;
 
+      const randomPassword = crypto.randomUUID() + '!Aa1';
       const { data: authUser, error: authErr } =
         await supabaseAdmin.auth.admin.createUser({
           email,
-          password: "demo-password-123!",
+          password: randomPassword,
           email_confirm: true,
           user_metadata: {
             first_name: FIRST_NAMES[i],
