@@ -163,8 +163,11 @@ serve(async (req) => {
     );
   } catch (err: any) {
     console.error("provision-instructor error:", err);
+    const safeMessage = err.message?.includes("duplicate")
+      ? "An instructor with this email already exists."
+      : "Unable to provision instructor. Please try again.";
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: safeMessage }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
