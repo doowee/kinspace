@@ -7,6 +7,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple in-memory rate limiting per phone number
+const claimAttempts = new Map<string, { count: number; windowStart: number }>();
+const MAX_CLAIMS_PER_HOUR = 3;
+const WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isRateLimited(phone: string): boolean {
+  const now = Date.now();
+  const entry = claimAttempts.get(phone);
+  if (!entry || now - entry.windowStart > WINDOW_MS) {
+    claimAttempts.set(phone, { count: 1, windowStart: now });
+    return false;
+  }
+  if (entry.count >= MAX_CLAIMS_PER_HOUR) return true;
+  entry.count += 1;
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,7 +35,19 @@ serve(async (req) => {
     const from = formData.get("From")?.toString() || "";
     const body = formData.get("Body")?.toString() || "";
 
-    console.log(`Incoming SMS from ${from}: "${body}"`);
+    // Validate phone number format (E.164)
+    if (!/^\+[1-9]\d{1,14}$/.test(from)) {
+      console.log(`Invalid phone number format: ${from}`);
+      return twimlResponse("Invalid phone number.");
+    }
+
+    // Validate body length
+    if (body.length > 320) {
+      console.log(`Message body too long (${body.length} chars)`);
+      return twimlResponse("Message too long.");
+    }
+
+    console.log(`Incoming SMS from ${from}: "${body.substring(0, 50)}"`);
 
     // 2. Check for CLAIM keyword (case-insensitive)
     if (!body.toUpperCase().includes("CLAIM")) {
@@ -26,12 +55,17 @@ serve(async (req) => {
       return twimlResponse("Thanks for your message! Reply CLAIM to secure your spot.");
     }
 
-    // 3. Database lookup — find profile by phone number
+    // 3. Rate limiting
+    if (isRateLimited(from)) {
+      console.log(`Rate limited: ${from}`);
+      return twimlResponse("You've reached the maximum claims for this hour. Please try again later.");
+    }
+
+    // 4. Database lookup — find profile by phone number
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Normalize phone: Twilio sends +1XXXXXXXXXX format
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, stripe_customer_id, first_name")
@@ -53,7 +87,7 @@ serve(async (req) => {
       return twimlResponse("We don't have a payment method on file. Please contact the studio to set one up.");
     }
 
-    // 4. Stripe 1-Tap Charge — $35.00 USD
+    // 5. Stripe 1-Tap Charge — $35.00 USD
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")!;
     const amountCents = 3500; // $35.00
 
@@ -83,8 +117,7 @@ serve(async (req) => {
 
     console.log(`Stripe PaymentIntent ${paymentIntent.id} succeeded for ${profile.id}`);
 
-    // 5. Insert booking record (flash_sale source)
-    // MVP: use the most recent upcoming class for this studio as the target
+    // 6. Insert booking record (flash_sale source)
     const { data: upcomingClass } = await supabase
       .from("classes")
       .select("id, studio_id")
@@ -104,23 +137,14 @@ serve(async (req) => {
 
       if (bookingError) {
         console.error("Booking insert error:", bookingError);
-        // Payment succeeded, so still confirm — staff can reconcile manually
       }
 
-      // Update capacity
-      await supabase
-        .from("classes")
-        .update({ capacity_booked: upcomingClass.id }) // will fix below
-        .eq("id", upcomingClass.id);
-
-      // Actually increment capacity_booked via RPC or raw increment
       await supabase.rpc("increment_capacity_booked" as any, { _class_id: upcomingClass.id }).catch(() => {
-        // Fallback: just log, not critical for MVP
         console.log("capacity_booked increment skipped (no RPC)");
       });
     }
 
-    // 6. Record the transaction
+    // 7. Record the transaction
     if (upcomingClass) {
       await supabase.from("transactions").insert({
         user_id: profile.id,
@@ -133,7 +157,7 @@ serve(async (req) => {
       });
     }
 
-    // 7. Send confirmation SMS via Twilio
+    // 8. Send confirmation SMS via Twilio
     const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID")!;
     const twilioAuth = Deno.env.get("TWILIO_AUTH_TOKEN")!;
     const twilioFrom = Deno.env.get("TWILIO_PHONE_NUMBER")!;
@@ -154,7 +178,6 @@ serve(async (req) => {
       }
     );
 
-    // Return TwiML empty response (Twilio expects XML)
     return twimlResponse("");
   } catch (e) {
     console.error("handle-incoming-sms error:", e);
