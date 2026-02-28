@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,28 @@ function isRateLimited(phone: string): boolean {
   if (entry.count >= MAX_CLAIMS_PER_HOUR) return true;
   entry.count += 1;
   return false;
+}
+
+/**
+ * Validate Twilio webhook signature to prevent spoofed requests.
+ * Uses HMAC-SHA1 of the request URL + sorted POST params.
+ */
+async function validateTwilioSignature(
+  authToken: string,
+  signature: string,
+  url: string,
+  params: Record<string, string>
+): Promise<boolean> {
+  // Sort params alphabetically and concatenate key+value
+  const sortedKeys = Object.keys(params).sort();
+  let data = url;
+  for (const key of sortedKeys) {
+    data += key + params[key];
+  }
+
+  // HMAC-SHA1 then base64 encode
+  const mac = hmac("sha1", authToken, data, "utf8", "base64");
+  return mac === signature;
 }
 
 serve(async (req) => {
@@ -47,21 +70,49 @@ serve(async (req) => {
       return twimlResponse("Message too long.");
     }
 
+    // 2. Validate Twilio webhook signature
+    const twilioAuth = Deno.env.get("TWILIO_AUTH_TOKEN")!;
+    const twilioSignature = req.headers.get("x-twilio-signature") || "";
+    
+    if (!twilioSignature) {
+      console.error("Missing Twilio signature header");
+      return twimlResponse("Unauthorized.");
+    }
+
+    // Reconstruct the request URL and params for signature validation
+    const requestUrl = req.url;
+    const params: Record<string, string> = {};
+    formData.forEach((value, key) => {
+      params[key] = value.toString();
+    });
+
+    const isValid = await validateTwilioSignature(
+      twilioAuth,
+      twilioSignature,
+      requestUrl,
+      params
+    );
+
+    if (!isValid) {
+      console.error("Invalid Twilio webhook signature");
+      return twimlResponse("Unauthorized.");
+    }
+
     console.log(`Incoming SMS from ${from}: "${body.substring(0, 50)}"`);
 
-    // 2. Check for CLAIM keyword (case-insensitive)
+    // 3. Check for CLAIM keyword (case-insensitive)
     if (!body.toUpperCase().includes("CLAIM")) {
       console.log("Message does not contain CLAIM, ignoring.");
       return twimlResponse("Thanks for your message! Reply CLAIM to secure your spot.");
     }
 
-    // 3. Rate limiting
+    // 4. Rate limiting
     if (isRateLimited(from)) {
       console.log(`Rate limited: ${from}`);
       return twimlResponse("You've reached the maximum claims for this hour. Please try again later.");
     }
 
-    // 4. Database lookup — find profile by phone number
+    // 5. Database lookup — find profile by phone number
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -87,7 +138,65 @@ serve(async (req) => {
       return twimlResponse("We don't have a payment method on file. Please contact the studio to set one up.");
     }
 
-    // 5. Stripe 1-Tap Charge — $35.00 USD
+    // 6. Find the next upcoming class
+    const { data: upcomingClass } = await supabase
+      .from("classes")
+      .select("id, studio_id")
+      .gte("start_time", new Date().toISOString())
+      .order("start_time", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!upcomingClass) {
+      console.log("No upcoming classes found");
+      return twimlResponse("No upcoming classes available right now.");
+    }
+
+    // 7. Verify user is a member of this studio before charging
+    const { data: membership } = await supabase
+      .from("studio_members")
+      .select("id")
+      .eq("user_id", profile.id)
+      .eq("studio_id", upcomingClass.studio_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!membership) {
+      console.log(`User ${profile.id} is not a member of studio ${upcomingClass.studio_id}`);
+      return twimlResponse("You're not registered with this studio. Please contact them to sign up.");
+    }
+
+    // 8. Check capacity before charging (don't charge if class is full)
+    const { count: confirmedCount } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("class_id", upcomingClass.id)
+      .eq("status", "confirmed");
+
+    const { data: classInfo } = await supabase
+      .from("classes")
+      .select("capacity_total")
+      .eq("id", upcomingClass.id)
+      .single();
+
+    if (classInfo && (confirmedCount ?? 0) >= classInfo.capacity_total) {
+      return twimlResponse("Sorry, this class is full! Try again for the next one.");
+    }
+
+    // 9. Check for duplicate booking (idempotency)
+    const { data: existingBooking } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("user_id", profile.id)
+      .eq("class_id", upcomingClass.id)
+      .in("status", ["confirmed", "waitlist"])
+      .maybeSingle();
+
+    if (existingBooking) {
+      return twimlResponse("You're already booked for this class! See you there.");
+    }
+
+    // 10. Stripe 1-Tap Charge — $35.00 USD
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")!;
     const amountCents = 3500; // $35.00
 
@@ -110,56 +219,38 @@ serve(async (req) => {
     const paymentIntent = await paymentIntentRes.json();
 
     if (!paymentIntentRes.ok || paymentIntent.error) {
-      const errMsg = paymentIntent.error?.message || `Stripe error [${paymentIntentRes.status}]`;
-      console.error("Stripe charge failed:", errMsg);
+      console.error("Stripe charge failed:", paymentIntent.error?.message || "Unknown error");
       return twimlResponse("We couldn't process your payment. Please contact the studio.");
     }
 
     console.log(`Stripe PaymentIntent ${paymentIntent.id} succeeded for ${profile.id}`);
 
-    // 6. Insert booking record (flash_sale source)
-    const { data: upcomingClass } = await supabase
-      .from("classes")
-      .select("id, studio_id")
-      .gte("start_time", new Date().toISOString())
-      .order("start_time", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    // 11. Insert booking record (flash_sale source)
+    const { error: bookingError } = await supabase.from("bookings").insert({
+      user_id: profile.id,
+      class_id: upcomingClass.id,
+      studio_id: upcomingClass.studio_id,
+      booking_source: "flash_sale",
+      status: "confirmed",
+    });
 
-    if (upcomingClass) {
-      const { error: bookingError } = await supabase.from("bookings").insert({
-        user_id: profile.id,
-        class_id: upcomingClass.id,
-        studio_id: upcomingClass.studio_id,
-        booking_source: "flash_sale",
-        status: "confirmed",
-      });
-
-      if (bookingError) {
-        console.error("Booking insert error:", bookingError);
-      }
-
-      await supabase.rpc("increment_capacity_booked" as any, { _class_id: upcomingClass.id }).catch(() => {
-        console.log("capacity_booked increment skipped (no RPC)");
-      });
+    if (bookingError) {
+      console.error("Booking insert error:", bookingError);
     }
 
-    // 7. Record the transaction
-    if (upcomingClass) {
-      await supabase.from("transactions").insert({
-        user_id: profile.id,
-        studio_id: upcomingClass.studio_id,
-        amount: 35,
-        payment_method: "card",
-        status: "completed",
-        type: "flash_sale",
-        description: "Flash Drop — 1-tap SMS checkout",
-      });
-    }
+    // 12. Record the transaction
+    await supabase.from("transactions").insert({
+      user_id: profile.id,
+      studio_id: upcomingClass.studio_id,
+      amount: 35,
+      payment_method: "card",
+      status: "completed",
+      type: "flash_sale",
+      description: "Flash Drop — 1-tap SMS checkout",
+    });
 
-    // 8. Send confirmation SMS via Twilio
+    // 13. Send confirmation SMS via Twilio
     const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID")!;
-    const twilioAuth = Deno.env.get("TWILIO_AUTH_TOKEN")!;
     const twilioFrom = Deno.env.get("TWILIO_PHONE_NUMBER")!;
 
     await fetch(
