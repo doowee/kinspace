@@ -192,7 +192,7 @@ export default function AppLayout() {
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <a href="/org-revenue" className="flex items-center gap-2 cursor-pointer">
+                        <a href="/org-admin" className="flex items-center gap-2 cursor-pointer">
                           <Building2 className="h-4 w-4" />
                           Organization
                         </a>

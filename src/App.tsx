@@ -145,7 +145,7 @@ const App = () => {
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/students" element={<Students />} />
               <Route path="/instructors" element={<InstructorsAdmin />} />
-              <Route path="/org-revenue" element={<OrgRevenue />} />
+              <Route path="/org-admin" element={<OrgRevenue />} />
               <Route path="/finance" element={<Finance />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin/billing" element={<Billing />} />
