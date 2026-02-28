@@ -160,10 +160,14 @@ export default function Billing() {
     setSwitching(null);
 
     if (error || data?.error) {
-      await supabase
-        .from("studios")
-        .update({ subscription_tier: newTier } as any)
-        .eq("id", studioId);
+      setSwitching(null);
+      setConfirmModal(null);
+      toast({
+        title: "Subscription Update Failed",
+        description: data?.error || error?.message || "Please try again or contact support.",
+        variant: "destructive",
+      });
+      return;
     }
 
     setStudios((prev) =>
