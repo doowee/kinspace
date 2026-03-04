@@ -9,18 +9,18 @@ export const EASE: Easing = [0.25, 0.1, 0.25, 1];
 
 export const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } }
 };
 export const fadeLeft: Variants = {
   hidden: { opacity: 0, x: -40 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: EASE } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: EASE } }
 };
 export const fadeRight: Variants = {
   hidden: { opacity: 0, x: 40 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: EASE } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: EASE } }
 };
 export const stagger: Variants = {
-  visible: { transition: { staggerChildren: 0.12 } },
+  visible: { transition: { staggerChildren: 0.12 } }
 };
 export const VP = { once: true, margin: "-100px" as any };
 
@@ -32,32 +32,32 @@ export function DotGrid() {
       className="absolute inset-0 pointer-events-none opacity-[0.35]"
       style={{
         backgroundImage: "radial-gradient(hsl(var(--foreground) / 0.15) 1px, transparent 1px)",
-        backgroundSize: "24px 24px",
-      }}
-    />
-  );
+        backgroundSize: "24px 24px"
+      }} />);
+
+
 }
 
-export function AmbientGlow({ className = "" }: { className?: string }) {
+export function AmbientGlow({ className = "" }: {className?: string;}) {
   return (
     <div
       className={`absolute rounded-full blur-[120px] pointer-events-none ${className}`}
       style={{
         background:
-          "radial-gradient(circle, hsl(var(--sage) / 0.2) 0%, hsl(var(--terracotta) / 0.12) 50%, transparent 80%)",
-      }}
-    />
-  );
+        "radial-gradient(circle, hsl(var(--sage) / 0.2) 0%, hsl(var(--terracotta) / 0.12) 50%, transparent 80%)"
+      }} />);
+
+
 }
 
-export function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+export function GlassCard({ children, className = "" }: {children: React.ReactNode;className?: string;}) {
   return (
     <div
-      className={`rounded-2xl bg-card/80 backdrop-blur-md border border-card/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] ${className}`}
-    >
+      className={`rounded-2xl bg-card/80 backdrop-blur-md border border-card/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] ${className}`}>
+      
       {children}
-    </div>
-  );
+    </div>);
+
 }
 
 export function BrandName() {
@@ -65,36 +65,36 @@ export function BrandName() {
     <span className="font-display">
       <span className="font-bold">Kinspace</span>
       <span className="font-normal opacity-70">.Studio</span>
-    </span>
-  );
+    </span>);
+
 }
 
-export function SignupCTA({ buttonText = "Start Your Free Trial" }: { buttonText?: string }) {
+export function SignupCTA({ buttonText = "Start Your Free Trial" }: {buttonText?: string;}) {
   return (
-    <div className="flex justify-center w-full">
+    <div className="w-full flex items-start justify-start">
       <Button size="lg" className="h-12 px-8 whitespace-nowrap gap-2" asChild>
         <Link to="/auth">
           {buttonText} <ArrowRight className="h-4 w-4" />
         </Link>
       </Button>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ─── Site Header ─── */
 
 const NAV_LINKS = [
-  { to: "/features", label: "Features" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/auth", label: "Switch to Kinspace" },
-  { href: "#", label: "Support" },
-] as const;
+{ to: "/features", label: "Features" },
+{ to: "/pricing", label: "Pricing" },
+{ to: "/auth", label: "Switch to Kinspace" },
+{ href: "#", label: "Support" }] as
+const;
 
-export function SiteHeader({ activePath = "/" }: { activePath?: string }) {
+export function SiteHeader({ activePath = "/" }: {activePath?: string;}) {
   const linkClass = (path: string) =>
-    path === activePath
-      ? "text-foreground font-semibold transition-colors"
-      : "text-foreground/70 hover:text-foreground transition-colors";
+  path === activePath ?
+  "text-foreground font-semibold transition-colors" :
+  "text-foreground/70 hover:text-foreground transition-colors";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
@@ -108,15 +108,15 @@ export function SiteHeader({ activePath = "/" }: { activePath?: string }) {
         {/* Center: nav links (desktop) */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
           {NAV_LINKS.map((link) =>
-            "to" in link && link.to ? (
-              <Link key={link.label} to={link.to} className={linkClass(link.to)}>
+          "to" in link && link.to ?
+          <Link key={link.label} to={link.to} className={linkClass(link.to)}>
                 {link.label}
-              </Link>
-            ) : (
-              <a key={link.label} href={(link as any).href ?? "#"} className="text-foreground/70 hover:text-foreground transition-colors">
+              </Link> :
+
+          <a key={link.label} href={(link as any).href ?? "#"} className="text-foreground/70 hover:text-foreground transition-colors">
                 {link.label}
               </a>
-            )
+
           )}
         </nav>
 
@@ -141,15 +141,15 @@ export function SiteHeader({ activePath = "/" }: { activePath?: string }) {
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             <nav className="flex flex-col gap-4 mt-8 text-sm font-medium">
               {NAV_LINKS.map((link) =>
-                "to" in link && link.to ? (
-                  <Link key={link.label} to={link.to} className="py-2 hover:text-primary transition-colors">
+              "to" in link && link.to ?
+              <Link key={link.label} to={link.to} className="py-2 hover:text-primary transition-colors">
                     {link.label}
-                  </Link>
-                ) : (
-                  <a key={link.label} href={(link as any).href ?? "#"} className="py-2 hover:text-primary transition-colors">
+                  </Link> :
+
+              <a key={link.label} href={(link as any).href ?? "#"} className="py-2 hover:text-primary transition-colors">
                     {link.label}
                   </a>
-                )
+
               )}
               <hr className="border-border my-2" />
               <Link to="/auth" className="py-2 hover:text-primary transition-colors">Log in</Link>
@@ -160,6 +160,6 @@ export function SiteHeader({ activePath = "/" }: { activePath?: string }) {
           </SheetContent>
         </Sheet>
       </div>
-    </header>
-  );
+    </header>);
+
 }
