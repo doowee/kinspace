@@ -11,7 +11,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Users, Plus, Trash2, Pencil, X, MapPin, Award, Loader2 } from "lucide-react";
+import { Users, Plus, Trash2, Pencil, X, MapPin, Award, Loader2, Phone, MessageCircle } from "lucide-react";
+import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -30,6 +31,7 @@ interface Instructor {
   display_order: number;
   studio_id: string | null;
   linked_email?: string | null;
+  phone: string | null;
   authorized_studios: string[];
   certified_class_types: string[];
 }
@@ -44,6 +46,7 @@ export default function InstructorsTab() {
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [newAuthorizedStudios, setNewAuthorizedStudios] = useState<string[]>([]);
   const [newCertifiedTypes, setNewCertifiedTypes] = useState<string[]>([]);
   const [newCustomType, setNewCustomType] = useState("");
@@ -54,10 +57,15 @@ export default function InstructorsTab() {
   const [editTarget, setEditTarget] = useState<Instructor | null>(null);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [editAuthorizedStudios, setEditAuthorizedStudios] = useState<string[]>([]);
   const [editCertifiedTypes, setEditCertifiedTypes] = useState<string[]>([]);
   const [customType, setCustomType] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // DM state
+  const [dmOpen, setDmOpen] = useState(false);
+  const [dmTarget, setDmTarget] = useState<{ name: string; email: string } | null>(null);
 
   // Org studios for multi-select
   const [orgStudios, setOrgStudios] = useState<StudioOption[]>([]);
@@ -68,7 +76,7 @@ export default function InstructorsTab() {
 
     const { data } = await supabase
       .from("instructors")
-      .select("id, name, bio, photo_url, user_id, display_order, studio_id, authorized_studios, certified_class_types")
+      .select("id, name, bio, photo_url, user_id, display_order, studio_id, authorized_studios, certified_class_types, phone")
       .eq("studio_id", activeStudio.id)
       .order("display_order");
 
@@ -76,6 +84,7 @@ export default function InstructorsTab() {
       ...i,
       authorized_studios: i.authorized_studios ?? [],
       certified_class_types: i.certified_class_types ?? [],
+      phone: i.phone ?? null,
     }));
 
     const userIds = items.filter((i) => i.user_id).map((i) => i.user_id!);
@@ -109,12 +118,8 @@ export default function InstructorsTab() {
 
   // ── Provision Instructor (new flow) ──
   const resetAddForm = () => {
-    setNewFirstName("");
-    setNewLastName("");
-    setNewEmail("");
-    setNewAuthorizedStudios([]);
-    setNewCertifiedTypes([]);
-    setNewCustomType("");
+    setNewFirstName(""); setNewLastName(""); setNewEmail(""); setNewPhone("");
+    setNewAuthorizedStudios([]); setNewCertifiedTypes([]); setNewCustomType("");
   };
 
   const handleProvisionInstructor = async () => {
@@ -129,6 +134,7 @@ export default function InstructorsTab() {
         studio_id: activeStudio.id,
         authorized_studios: newAuthorizedStudios,
         certified_class_types: newCertifiedTypes,
+        phone: newPhone.trim() || null,
       },
     });
 
@@ -175,6 +181,7 @@ export default function InstructorsTab() {
     setEditTarget(inst);
     setEditName(inst.name);
     setEditBio(inst.bio ?? "");
+    setEditPhone(inst.phone ?? "");
     setEditAuthorizedStudios(inst.authorized_studios);
     setEditCertifiedTypes(inst.certified_class_types);
     setCustomType("");
@@ -207,6 +214,7 @@ export default function InstructorsTab() {
     const { error } = await supabase.from("instructors").update({
       name: editName.trim(),
       bio: editBio.trim() || null,
+      phone: editPhone.trim() || null,
       authorized_studios: editAuthorizedStudios,
       certified_class_types: editCertifiedTypes,
     } as any).eq("id", editTarget.id);
@@ -214,6 +222,12 @@ export default function InstructorsTab() {
     if (error) toast.error("Failed to update instructor");
     else { toast.success("Instructor updated"); setEditDialogOpen(false); fetchInstructors(); }
     setSaving(false);
+  };
+
+  // DM handler
+  const openDm = (inst: Instructor) => {
+    setDmTarget({ name: inst.name, email: inst.linked_email || "" });
+    setDmOpen(true);
   };
 
   if (loading) return <div className="animate-pulse text-muted-foreground py-8 text-center">Loading instructors...</div>;
@@ -238,9 +252,16 @@ export default function InstructorsTab() {
                   <div className="min-w-0 space-y-0.5">
                     <p className="font-medium text-sm">{inst.name}</p>
                     {inst.bio && <p className="text-xs text-muted-foreground line-clamp-1">{inst.bio}</p>}
-                    {inst.linked_email && (
-                      <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {inst.linked_email && (
+                        <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
+                      )}
+                      {inst.phone && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                          <Phone className="h-2.5 w-2.5" />{inst.phone}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {inst.authorized_studios.length > 0 && (
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
@@ -257,6 +278,9 @@ export default function InstructorsTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-4">
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => openDm(inst)} title="Message">
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="sm" className="text-xs" onClick={() => openEditDialog(inst)}>
                       <Pencil className="h-3.5 w-3.5 mr-1" />Edit
                     </Button>
@@ -293,6 +317,12 @@ export default function InstructorsTab() {
             <div>
               <Label htmlFor="new-email">Email Address</Label>
               <Input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="sarah@example.com" />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <Label htmlFor="new-phone" className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-primary" />Phone</Label>
+              <Input id="new-phone" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+1 (555) 123-4567" className="mt-1" />
             </div>
 
             {/* Authorized Locations */}
@@ -406,6 +436,10 @@ export default function InstructorsTab() {
                 <textarea id="edit-bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={2}
                   className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
               </div>
+              <div>
+                <Label htmlFor="edit-phone" className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-primary" />Phone</Label>
+                <Input id="edit-phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+1 (555) 123-4567" className="mt-1" />
+              </div>
             </div>
 
             {/* Authorized Locations */}
@@ -493,6 +527,16 @@ export default function InstructorsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Direct Message Drawer ── */}
+      {dmTarget && (
+        <DirectMessageDrawer
+          open={dmOpen}
+          onOpenChange={setDmOpen}
+          studentName={dmTarget.name}
+          studentEmail={dmTarget.email}
+        />
+      )}
     </div>
   );
 }

@@ -51,6 +51,7 @@ serve(async (req) => {
       authorized_studios,
       certified_class_types,
       pin_code,
+      phone,
     } = await req.json();
 
     if (!first_name || !last_name || !email || !studio_id) {
@@ -143,6 +144,7 @@ serve(async (req) => {
         authorized_studios: authorized_studios ?? [],
         certified_class_types: certified_class_types ?? [],
         pin_code: pin_code ?? null,
+        phone: phone ?? null,
         display_order: 0,
       })
       .select("id")

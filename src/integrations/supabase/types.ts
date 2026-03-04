@@ -205,6 +205,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          phone: string | null
           photo_url: string | null
           pin_code: string | null
           studio_id: string | null
@@ -220,6 +221,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          phone?: string | null
           photo_url?: string | null
           pin_code?: string | null
           studio_id?: string | null
@@ -235,6 +237,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          phone?: string | null
           photo_url?: string | null
           pin_code?: string | null
           studio_id?: string | null

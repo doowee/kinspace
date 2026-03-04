@@ -1,67 +1,41 @@
 
 
-# Plan: Instructor Contact Info and Messaging
+## Instructor Data + UI Updates
 
-## Overview
-Three changes: (1) generate emails and provision accounts for the 3 instructors without emails, (2) add a phone field to instructors, and (3) add a "Message" button on each instructor row to open the existing DirectMessageDrawer.
+### 1. Insert Dummy Instructors
 
----
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-## 1. Add `phone` column to `instructors` table
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-Run a migration to add a nullable `phone` text column:
-```sql
-ALTER TABLE public.instructors ADD COLUMN phone text;
-```
+No photo URLs for now (left null).
 
-## 2. Generate emails and link accounts for unlinked instructors
+### 2. Public Booking Page -- Show Instructor Info
 
-For the 3 instructors without accounts (Marco Rivera, Priya Sharma, Jordan Lee in studio `11111111-...`), call the `provision-instructor` edge function for each one with generated emails based on their names (e.g., `marco.rivera@mypilatesempire.studio`, `priya.sharma@mypilatesempire.studio`, `jordan.lee@mypilatesempire.studio`). Since these are placeholder accounts, we can use a simple naming convention. Alternatively, I can generate random emails at a placeholder domain -- I'll ask you to confirm the email pattern.
+**File: `src/pages/BookingPage.tsx`**
 
-Actually, since these instructors need real auth accounts and the provision flow sends invite emails, I'll generate realistic placeholder emails and provision them. The edge function will create auth users and link them.
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-## 3. Update the UI
+No changes needed here -- it already works once instructors are linked to classes.
 
-### InstructorsAdmin.tsx (main instructors page)
-- **Fetch phone**: Add `phone` to the instructor select query
-- **Display phone column**: Add a "Phone" column in the table next to Email
-- **Add phone to Add form**: Add a phone input field in the provision dialog
-- **Add phone to Edit form**: Add a phone input field in the edit dialog
-- **Save phone**: Include phone in the update/provision calls
-- **Message button**: Add a `MessageCircle` icon button in the Actions column that opens `DirectMessageDrawer` with the instructor's name and email
+### 3. Create Class Form -- Instructor Dropdown
 
-### InstructorsTab.tsx (settings tab)
-- Mirror the same phone field additions in the add/edit dialogs
-- Add phone display in the instructor list
-- Add message button
+**File: `src/pages/Schedule.tsx`**
 
-### provision-instructor edge function
-- Accept an optional `phone` field and save it to the instructor record
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
 
-## 4. Wire up DirectMessageDrawer
-- Import `DirectMessageDrawer` into `InstructorsAdmin.tsx`
-- Add state for `dmOpen` and `dmTarget` (instructor name + email)
-- The existing drawer already supports owner vs instructor role-based messaging
+### Technical Details
 
----
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
 
-## Technical Details
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
 
-**Migration:**
-```sql
-ALTER TABLE public.instructors ADD COLUMN phone text;
-```
-
-**Files to modify:**
-- `src/pages/InstructorsAdmin.tsx` -- add phone column, message button, DM drawer
-- `src/components/settings/InstructorsTab.tsx` -- add phone field to add/edit forms
-- `supabase/functions/provision-instructor/index.ts` -- accept phone param, save to instructor record
-
-**New interface field:**
-```typescript
-interface InstructorRow {
-  // ... existing fields
-  phone: string | null;
-}
-```
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 

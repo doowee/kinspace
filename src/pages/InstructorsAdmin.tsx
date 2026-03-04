@@ -17,7 +17,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { studioColorClass } from "@/lib/studio-colors";
 import { toast } from "sonner";
-import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff, Fingerprint, Shuffle } from "lucide-react";
+import { GraduationCap, Search, Pencil, Plus, MapPin, Award, X, Home, Loader2, UserX, AlertTriangle, Eye, EyeOff, Fingerprint, Shuffle, Phone, MessageCircle } from "lucide-react";
+import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 
 const COMMON_CLASS_TYPES = ["reformer", "mat", "jumpboard", "hiit", "barre", "tower", "cadillac", "chair", "prenatal", "sculpt"];
 
@@ -37,6 +38,7 @@ interface InstructorRow {
   authorized_studios: string[];
   certified_class_types: string[];
   linked_email?: string | null;
+  phone: string | null;
   is_active: boolean;
   pin_code: string | null;
 }
@@ -65,6 +67,7 @@ export default function InstructorsAdmin() {
   const [editAuthorized, setEditAuthorized] = useState<string[]>([]);
   const [editCerts, setEditCerts] = useState<string[]>([]);
   const [editPin, setEditPin] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [customType, setCustomType] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +76,7 @@ export default function InstructorsAdmin() {
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [newAuthorized, setNewAuthorized] = useState<string[]>([]);
   const [newCerts, setNewCerts] = useState<string[]>([]);
   const [newCustomType, setNewCustomType] = useState("");
@@ -84,6 +88,10 @@ export default function InstructorsAdmin() {
   const [offboardTarget, setOffboardTarget] = useState<InstructorRow | null>(null);
   const [offboardLoading, setOffboardLoading] = useState(false);
   const [upcomingClassCount, setUpcomingClassCount] = useState(0);
+
+  // DM state
+  const [dmOpen, setDmOpen] = useState(false);
+  const [dmTarget, setDmTarget] = useState<{ name: string; email: string } | null>(null);
 
   // Fetch org studios — scoped to the active studio's organization
   useEffect(() => {
@@ -97,7 +105,6 @@ export default function InstructorsAdmin() {
           .eq("organization_id", studioRow.organization_id);
         setOrgStudios((data ?? []) as StudioOption[]);
       } else {
-        // Fallback: just show active studio
         const { data } = await supabase
           .from("studios").select("id, name, location").eq("id", activeStudio.id);
         setOrgStudios((data ?? []) as StudioOption[]);
@@ -122,7 +129,7 @@ export default function InstructorsAdmin() {
 
     const { data } = await supabase
       .from("instructors")
-      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active, pin_code")
+      .select("id, name, bio, user_id, studio_id, home_studio_id, authorized_studios, certified_class_types, is_active, pin_code, phone")
       .in("studio_id", studioIds)
       .order("name");
 
@@ -132,6 +139,7 @@ export default function InstructorsAdmin() {
       certified_class_types: i.certified_class_types ?? [],
       is_active: i.is_active ?? true,
       pin_code: i.pin_code ?? null,
+      phone: i.phone ?? null,
     }));
 
     const userIds = items.filter((i) => i.user_id).map((i) => i.user_id!);
@@ -155,7 +163,7 @@ export default function InstructorsAdmin() {
     if (!search.trim()) return byStatus;
     const q = search.toLowerCase();
     return byStatus.filter((i) =>
-      i.name.toLowerCase().includes(q) || i.linked_email?.toLowerCase().includes(q) || i.bio?.toLowerCase().includes(q)
+      i.name.toLowerCase().includes(q) || i.linked_email?.toLowerCase().includes(q) || i.phone?.toLowerCase().includes(q) || i.bio?.toLowerCase().includes(q)
     );
   }, [instructors, search, activeTab]);
 
@@ -171,6 +179,7 @@ export default function InstructorsAdmin() {
     setEditAuthorized(inst.authorized_studios);
     setEditCerts(inst.certified_class_types);
     setEditPin(inst.pin_code ?? "");
+    setEditPhone(inst.phone ?? "");
     setCustomType("");
     setEditOpen(true);
   };
@@ -199,6 +208,7 @@ export default function InstructorsAdmin() {
       authorized_studios: editAuthorized,
       certified_class_types: editCerts,
       pin_code: editPin.trim() || null,
+      phone: editPhone.trim() || null,
     } as any).eq("id", editTarget.id);
 
     if (error) toast.error("Failed to update");
@@ -208,7 +218,7 @@ export default function InstructorsAdmin() {
 
   // Provision handler
   const resetAddForm = () => {
-    setNewFirstName(""); setNewLastName(""); setNewEmail("");
+    setNewFirstName(""); setNewLastName(""); setNewEmail(""); setNewPhone("");
     setNewAuthorized([]); setNewCerts([]); setNewCustomType(""); setNewPin("");
   };
 
@@ -224,6 +234,7 @@ export default function InstructorsAdmin() {
         authorized_studios: newAuthorized,
         certified_class_types: newCerts,
         pin_code: newPin.trim() || null,
+        phone: newPhone.trim() || null,
       },
     });
     if (error || data?.error) {
@@ -255,14 +266,11 @@ export default function InstructorsAdmin() {
   const openOffboard = async (inst: InstructorRow) => {
     setOffboardTarget(inst);
     setOffboardLoading(false);
-
-    // Query upcoming class count
     const { count } = await supabase
       .from("classes")
       .select("id", { count: "exact", head: true })
       .eq("instructor_id", inst.id)
       .gt("start_time", new Date().toISOString());
-
     setUpcomingClassCount(count ?? 0);
     setOffboardOpen(true);
   };
@@ -270,14 +278,9 @@ export default function InstructorsAdmin() {
   const handleOffboard = async () => {
     if (!offboardTarget || !activeStudio) return;
     setOffboardLoading(true);
-
     const { data, error } = await supabase.functions.invoke("offboard-instructor", {
-      body: {
-        instructor_id: offboardTarget.id,
-        studio_id: activeStudio.id,
-      },
+      body: { instructor_id: offboardTarget.id, studio_id: activeStudio.id },
     });
-
     if (error || data?.error) {
       toast.error(data?.error || error?.message || "Failed to offboard instructor");
     } else {
@@ -287,6 +290,12 @@ export default function InstructorsAdmin() {
       fetchInstructors();
     }
     setOffboardLoading(false);
+  };
+
+  // DM handler
+  const openDm = (inst: InstructorRow) => {
+    setDmTarget({ name: inst.name, email: inst.linked_email || "" });
+    setDmOpen(true);
   };
 
   if (!activeStudio) return null;
@@ -323,7 +332,7 @@ export default function InstructorsAdmin() {
             <CardHeader className="pb-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, email, or phone…" className="pl-9" />
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -342,7 +351,7 @@ export default function InstructorsAdmin() {
                         <TableHead>Home Studio</TableHead>
                         <TableHead>Certifications</TableHead>
                         <TableHead>Locations</TableHead>
-                        <TableHead>Email</TableHead>
+                        <TableHead>Contact</TableHead>
                         {activeTab === "active" && <TableHead className="text-right">Actions</TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -395,15 +404,26 @@ export default function InstructorsAdmin() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {inst.linked_email ? (
-                              <span className="text-[10px] text-muted-foreground">{inst.linked_email}</span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
+                            <div className="space-y-0.5">
+                              {inst.linked_email && (
+                                <span className="block text-[10px] text-muted-foreground">{inst.linked_email}</span>
+                              )}
+                              {inst.phone && (
+                                <span className="block text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-2.5 w-2.5" />{inst.phone}
+                                </span>
+                              )}
+                              {!inst.linked_email && !inst.phone && (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </div>
                           </TableCell>
                           {activeTab === "active" && (
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openDm(inst)} title="Message">
+                                  <MessageCircle className="h-3 w-3" />
+                                </Button>
                                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(inst)}>
                                   <Pencil className="h-3 w-3 mr-1" />Edit
                                 </Button>
@@ -440,6 +460,10 @@ export default function InstructorsAdmin() {
             <div className="space-y-3">
               <div><Label>Name</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
               <div><Label>Bio</Label><textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={2} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" /></div>
+              <div>
+                <Label className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-primary" />Phone</Label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+1 (555) 123-4567" className="mt-1" />
+              </div>
               <div>
                 <Label className="flex items-center gap-1.5"><Fingerprint className="h-3.5 w-3.5 text-primary" />4-Digit Kiosk PIN</Label>
                 <div className="flex gap-2 mt-1">
@@ -526,6 +550,10 @@ export default function InstructorsAdmin() {
               <div><Label>Last Name</Label><Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} placeholder="Johnson" /></div>
             </div>
             <div><Label>Email Address</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="sarah@example.com" /></div>
+            <div>
+              <Label className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-primary" />Phone</Label>
+              <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+1 (555) 123-4567" className="mt-1" />
+            </div>
             <div>
               <Label className="flex items-center gap-1.5"><Fingerprint className="h-3.5 w-3.5 text-primary" />4-Digit Kiosk PIN</Label>
               <div className="flex gap-2 mt-1">
@@ -616,6 +644,16 @@ export default function InstructorsAdmin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Direct Message Drawer ── */}
+      {dmTarget && (
+        <DirectMessageDrawer
+          open={dmOpen}
+          onOpenChange={setDmOpen}
+          studentName={dmTarget.name}
+          studentEmail={dmTarget.email}
+        />
+      )}
     </div>
   );
 }
