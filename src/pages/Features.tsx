@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DotGrid, AmbientGlow, GlassCard, BrandName, SignupCTA,
+  DotGrid, AmbientGlow, GlassCard, BrandName, SignupCTA, SiteHeader,
   fadeUp, stagger, EASE, VP,
 } from "@/components/landing/shared";
 
@@ -230,22 +230,7 @@ export default function Features() {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/kinspace-logo.png" alt="Kinspace" className="h-8 w-8" />
-            <span className="text-xl"><BrandName /></span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/">Home</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link to="/auth">Get Started</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <SiteHeader activePath="/features" />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
@@ -276,14 +261,8 @@ export default function Features() {
           >
             From scheduling and payments to AI-powered revenue recovery — Kinspace.Studio is the all-in-one operating system built exclusively for boutique fitness.
           </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: EASE }}
-            className="flex justify-center"
-          >
-            <SignupCTA buttonText="Start Your Free Trial" />
-          </motion.div>
+
+
         </div>
       </section>
 
