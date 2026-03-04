@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,15 +34,19 @@ async function validateTwilioSignature(
   url: string,
   params: Record<string, string>
 ): Promise<boolean> {
-  // Sort params alphabetically and concatenate key+value
   const sortedKeys = Object.keys(params).sort();
   let data = url;
   for (const key of sortedKeys) {
     data += key + params[key];
   }
 
-  // HMAC-SHA1 then base64 encode
-  const mac = hmac("sha1", authToken, data, "utf8", "base64");
+  // HMAC-SHA1 using Web Crypto API
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", encoder.encode(authToken), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+  const mac = btoa(String.fromCharCode(...new Uint8Array(sig)));
   return mac === signature;
 }
 
