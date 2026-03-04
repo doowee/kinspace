@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
-import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star } from "lucide-react";
+import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star, Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
 import {
