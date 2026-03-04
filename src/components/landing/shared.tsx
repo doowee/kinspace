@@ -69,16 +69,13 @@ export function BrandName() {
   );
 }
 
-export function SignupCTA({ buttonText = "Get Started Free" }: { buttonText?: string }) {
+export function SignupCTA({ buttonText = "Start Your Free Trial" }: { buttonText?: string }) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+    <div className="flex justify-center w-full">
       <Button size="lg" className="h-12 px-8 whitespace-nowrap gap-2" asChild>
         <Link to="/auth">
           {buttonText} <ArrowRight className="h-4 w-4" />
         </Link>
-      </Button>
-      <Button variant="outline" size="lg" className="h-12 px-6 whitespace-nowrap" asChild>
-        <Link to="/auth">Sign In</Link>
       </Button>
     </div>
   );

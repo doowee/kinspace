@@ -1,23 +1,41 @@
 
 
-# Plan: Update CTAs Across Features and Index Pages
+## Instructor Data + UI Updates
 
-## Changes
+### 1. Insert Dummy Instructors
 
-### 1. `src/components/landing/shared.tsx` — Remove Sign In button from `SignupCTA`
-- Remove the outline "Sign In" button, keep only the primary button
-- Center-align the remaining button (change flex container)
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-### 2. `src/pages/Features.tsx` — Add SignupCTA back to hero, update footer CTA
-- Add `<SignupCTA />` back into the hero section (after the subtitle, around line 264)
-- Footer CTA (line 357): Change button text to "Start Your Free Trial" — the Sign In button disappears automatically from the shared component fix
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-### 3. `src/pages/Index.tsx` — Update hero and footer CTAs
-- Hero (line 546): Already uses SignupCTA — Sign In button removal happens automatically
-- Footer CTA (line 650): Change button text to "Start Your Free Trial"
+No photo URLs for now (left null).
 
-### Summary of visible changes
-- **Sign In button removed** from all `SignupCTA` instances (hero banners + footer CTA cards)
-- **Features hero** gets a CTA button back: "Start Your Free Trial"
-- **Footer CTA cards** on both pages show a single centered "Start Your Free Trial" button instead of two buttons
+### 2. Public Booking Page -- Show Instructor Info
+
+**File: `src/pages/BookingPage.tsx`**
+
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+
+No changes needed here -- it already works once instructors are linked to classes.
+
+### 3. Create Class Form -- Instructor Dropdown
+
+**File: `src/pages/Schedule.tsx`**
+
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+
+### Technical Details
+
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 
