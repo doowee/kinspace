@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
-import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star } from "lucide-react";
+import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star, Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
 import {
@@ -521,21 +523,53 @@ export default function Index() {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
         </div>
 
-        {/* Nav — transparent, layered on top */}
+        {/* Nav — Momence-style */}
         <header className="relative z-50">
           <div className="container flex h-16 items-center justify-between">
+            {/* Left: Logo */}
             <div className="flex items-center gap-2">
               <img src="/kinspace-logo.png" alt="Kinspace" className="h-8 w-8" />
               <span className="text-xl"><BrandName /></span>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
-                <Link to="/features">Features</Link>
-              </Button>
-              <Button variant="outline" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
-                <Link to="/auth">Sign In</Link>
+
+            {/* Center: nav links (desktop) */}
+            <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-foreground/70">
+              <Link to="/features" className="hover:text-foreground transition-colors">Features</Link>
+              <Link to="/features" className="hover:text-foreground transition-colors">Pricing</Link>
+              <Link to="/auth" className="hover:text-foreground transition-colors">Switch to Kinspace</Link>
+              <a href="#" className="hover:text-foreground transition-colors">Support</a>
+            </nav>
+
+            {/* Right: auth actions (desktop) */}
+            <div className="hidden md:flex items-center gap-5">
+              <Link to="/auth" className="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">Log in</Link>
+              <Button variant="outline" size="sm" className="rounded-full border-foreground/20 hover:bg-foreground/5" asChild>
+                <Link to="/auth">Start free trial</Link>
               </Button>
             </div>
+
+            {/* Mobile hamburger */}
+            <Sheet>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon" className="text-foreground/70">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-64">
+                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                <nav className="flex flex-col gap-4 mt-8 text-sm font-medium">
+                  <Link to="/features" className="py-2 hover:text-primary transition-colors">Features</Link>
+                  <Link to="/features" className="py-2 hover:text-primary transition-colors">Pricing</Link>
+                  <Link to="/auth" className="py-2 hover:text-primary transition-colors">Switch to Kinspace</Link>
+                  <a href="#" className="py-2 hover:text-primary transition-colors">Support</a>
+                  <hr className="border-border my-2" />
+                  <Link to="/auth" className="py-2 hover:text-primary transition-colors">Log in</Link>
+                  <Button variant="outline" size="sm" className="rounded-full mt-2" asChild>
+                    <Link to="/auth">Start free trial</Link>
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </header>
 
