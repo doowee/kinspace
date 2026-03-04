@@ -69,9 +69,9 @@ export function BrandName() {
 
 }
 
-export function SignupCTA({ buttonText = "Start Your Free Trial", align = "left" }: {buttonText?: string; align?: "left" | "center";}) {
+export function SignupCTA({ buttonText = "Start Your Free Trial", align = "left" }: {buttonText?: string;align?: "left" | "center";}) {
   return (
-    <div className={`w-full flex ${align === "center" ? "justify-center" : "justify-start"}`}>
+    <div className="">
       <Button size="lg" className="h-12 px-8 whitespace-nowrap gap-2" asChild>
         <Link to="/auth">
           {buttonText} <ArrowRight className="h-4 w-4" />
