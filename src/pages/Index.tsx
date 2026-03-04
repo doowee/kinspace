@@ -647,7 +647,7 @@ export default function Index() {
             <p className="text-muted-foreground leading-relaxed">Start managing your studio smarter today. No credit card required.
             </p>
             <div className="flex justify-center">
-              <SignupCTA buttonText="Start Your Free Trial" />
+              <SignupCTA buttonText="Start Your Free Trial" align="center" />
             </div>
           </GlassCard>
         </div>
