@@ -1,114 +1,41 @@
 
 
-# Plan: Public Features Page (`/features`)
+## Instructor Data + UI Updates
 
-## Overview
-Create a marketing-style `/features` page targeting prospective studio owners. It will showcase all built features with polished visuals and highlight upcoming enhancements. The page reuses the existing design system from `Index.tsx` (GlassCard, animations, DotGrid, AmbientGlow, BrandName, SignupCTA).
+### 1. Insert Dummy Instructors
 
-## Route
-- Add `/features` route in `App.tsx` pointing to a new `src/pages/Features.tsx`
-- Add a "Features" link in the landing page nav header
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-## Page Structure
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-### 1. Hero Section
-- Headline: "Everything you need to run a modern studio"
-- Subline emphasizing the all-in-one platform
-- CTA button linking to `/auth`
+No photo URLs for now (left null).
 
-### 2. Built Features Grid (categorized sections with icons and descriptions)
+### 2. Public Booking Page -- Show Instructor Info
 
-**Scheduling & Classes**
-- Visual calendar with day/week view
-- Class creation with instructor assignment
-- Capacity management and fill-rate tracking
-- Waitlist with auto-promotion
-- Manual booking by staff
-- Edit/cancel classes
+**File: `src/pages/BookingPage.tsx`**
 
-**Client Management**
-- Student roster with search
-- Client profiles and booking history
-- Credit/wallet balance tracking
-- Package purchases and management
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-**Instructor Management**
-- Instructor roster scoped by organization
-- Phone and email contact info
-- Direct messaging from admin
-- Instructor provisioning (invite via email)
-- Instructor portal (separate login)
+No changes needed here -- it already works once instructors are linked to classes.
 
-**Finance & Payments**
-- Revenue dashboard with charts
-- Record manual payments
-- Payment history and tracking
-- Stripe Connect payouts
-- Package/credit-based billing
+### 3. Create Class Form -- Instructor Dropdown
 
-**SMS Commerce (Pro)**
-- Smart Waitlist auto-text
-- 1-Tap SMS class pack refills
-- Flash Deals for empty spots
-- Two-way SMS communication
-- Communication log
+**File: `src/pages/Schedule.tsx`**
 
-**AI Agent Suite (Pro)**
-- AI Marketing Hub — auto-draft promo emails
-- BI Insights — plain-English analytics queries
-- Revenue Agent — automated monetization
-- Support Agent (coming soon)
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
 
-**Multi-Studio & Organization**
-- Multi-location management under one org
-- Studio switcher in admin
-- Org-level revenue dashboard
-- Role-based access (Owner / Front Desk)
+### Technical Details
 
-**Branding & White-Label**
-- Custom logo, colors, and theme
-- White-labeled booking page per studio
-- Dynamic favicon
-- Custom studio slug URLs
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
 
-**Kiosk Mode**
-- PIN-based kiosk login
-- Live class roster display
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
 
-**Client Booking App**
-- Public booking page per studio
-- Public packages page
-- Student auth gate (login/signup)
-- Student dashboard, wallet, profile
-
-**Billing & Subscription**
-- SaaS subscription tiers (Standard/Pro)
-- Stripe integration for billing
-- Plan comparison and upgrade flow
-
-### 3. Roadmap / Coming Soon Section
-- Support Agent (AI concierge)
-- Automated class reminders (built but can highlight)
-- Advanced retention analytics
-- Mobile app wrapper
-- Marketplace integrations
-- Multi-language support
-
-### 4. Footer CTA
-- Reuse the existing SignupCTA pattern from Index.tsx
-
-## Technical Details
-
-**Files to create:**
-- `src/pages/Features.tsx` — main features page using existing animation utilities, GlassCard, etc. Extract shared components from Index.tsx into a shared file or duplicate the small helpers.
-
-**Files to modify:**
-- `src/App.tsx` — add `/features` route
-- `src/pages/Index.tsx` — add "Features" link to the nav bar, and export shared UI components (BrandName, SignupCTA, GlassCard, DotGrid, AmbientGlow) so Features.tsx can reuse them
-
-**Design approach:**
-- Each category rendered as an animated section with an icon, title, and a grid of feature cards
-- Each feature card has a checkmark icon (built) or a "Coming Soon" badge
-- Framer Motion fade-in animations matching the landing page style
-- Responsive: 1 column mobile, 2-3 columns desktop
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 

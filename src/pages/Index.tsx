@@ -1,94 +1,20 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence, useInView, type Variants, type Easing } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { ArrowRight, Check, X, Zap, Shield, Globe, Users, Lock, Sparkles, RefreshCw, Star } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { Button } from "@/components/ui/button";
-
-/* ─── Animation Presets ─── */
-const EASE: Easing = [0.25, 0.1, 0.25, 1];
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } }
-};
-const fadeLeft: Variants = {
-  hidden: { opacity: 0, x: -40 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: EASE } }
-};
-const fadeRight: Variants = {
-  hidden: { opacity: 0, x: 40 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: EASE } }
-};
-const stagger: Variants = {
-  visible: { transition: { staggerChildren: 0.12 } }
-};
-const VP = { once: true, margin: "-100px" as any };
-
-/* ─── Shared UI ─── */
-
-function DotGrid() {
-  return (
-    <div
-      className="absolute inset-0 pointer-events-none opacity-[0.35]"
-      style={{
-        backgroundImage: "radial-gradient(hsl(var(--foreground) / 0.15) 1px, transparent 1px)",
-        backgroundSize: "24px 24px"
-      }} />);
-
-
-}
-
-function AmbientGlow({ className = "" }: {className?: string;}) {
-  return (
-    <div
-      className={`absolute rounded-full blur-[120px] pointer-events-none ${className}`}
-      style={{
-        background: "radial-gradient(circle, hsl(var(--sage) / 0.2) 0%, hsl(var(--terracotta) / 0.12) 50%, transparent 80%)"
-      }} />);
-
-
-}
-
-function GlassCard({ children, className = "" }: {children: React.ReactNode;className?: string;}) {
-  return (
-    <div className={`rounded-2xl bg-card/80 backdrop-blur-md border border-card/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] ${className}`}>
-      {children}
-    </div>);
-
-}
-
-function BrandName() {
-  return (
-    <span className="font-display">
-      <span className="font-bold">Kinspace</span>
-      <span className="font-normal opacity-70">.Studio</span>
-    </span>);
-
-}
-
-function SignupCTA({ buttonText = "Get Started Free" }: {buttonText?: string;}) {
-  return (
-    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-      <Button size="lg" className="h-12 px-8 whitespace-nowrap gap-2" asChild>
-        <Link to="/auth">
-          {buttonText} <ArrowRight className="h-4 w-4" />
-        </Link>
-      </Button>
-      <Button variant="outline" size="lg" className="h-12 px-6 whitespace-nowrap" asChild>
-        <Link to="/auth">Sign In</Link>
-      </Button>
-    </div>
-  );
-}
+import {
+  DotGrid, AmbientGlow, GlassCard, BrandName, SignupCTA,
+  fadeUp, fadeLeft, fadeRight, stagger, EASE, VP,
+} from "@/components/landing/shared";
 
 /* ─── Social Proof Marquee ─── */
 
 const STUDIOS = [
-"Uptown Pilates", "Flow State", "The Daily Reformer", "CoreHaus",
-"Align Studio", "Barre & Beyond", "Reforma", "The Movement Lab",
-"Stretch Studio", "Pure Reform", "Body Kinetic", "Studio Vibe"];
-
+  "Uptown Pilates", "Flow State", "The Daily Reformer", "CoreHaus",
+  "Align Studio", "Barre & Beyond", "Reforma", "The Movement Lab",
+  "Stretch Studio", "Pure Reform", "Body Kinetic", "Studio Vibe"];
 
 function Marquee() {
   return (
@@ -126,7 +52,6 @@ function WaitlistSMSMockup() {
         </div>
       </div>
     </GlassCard>);
-
 }
 
 function RefillSMSMockup() {
@@ -143,7 +68,6 @@ function RefillSMSMockup() {
         </div>
       </div>
     </GlassCard>);
-
 }
 
 function StackedSMSMockups() {
@@ -179,7 +103,6 @@ function StackedSMSMockups() {
         </div>
       </div>
     </div>);
-
 }
 
 /* ─── Bento Feature Mockups ─── */
@@ -415,13 +338,6 @@ function HeroMockup() {
 /* ─── Feature Block ─── */
 function FeatureBlock({
   eyebrow, title, body, bullets, mockup, reverse
-
-
-
-
-
-
-
 }: {eyebrow?: string;title: string;body?: string;bullets: {icon: React.ReactNode;label: string;text: string;}[];mockup: React.ReactNode;reverse?: boolean;}) {
   return (
     <motion.div
@@ -458,8 +374,6 @@ function FeatureBlock({
 }
 
 /* ─── Compare the Engine ─── */
-
-
 
 const COMPARE_COLUMNS = [
   {
@@ -614,9 +528,14 @@ export default function Index() {
               <img src="/kinspace-logo.png" alt="Kinspace" className="h-8 w-8" />
               <span className="text-xl"><BrandName /></span>
             </div>
-            <Button variant="outline" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
+                <Link to="/features">Features</Link>
+              </Button>
+              <Button variant="outline" size="sm" className="bg-background/20 backdrop-blur-sm border-foreground/20 hover:bg-background/40" asChild>
+                <Link to="/auth">Sign In</Link>
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -624,10 +543,14 @@ export default function Index() {
         <div className="container relative flex-1 flex items-center py-16 lg:py-24">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20 w-full">
             <motion.div initial="hidden" animate="visible" variants={stagger} className="flex-1 space-y-6">
-              <motion.p variants={fadeLeft} className="text-xs font-medium tracking-[0.2em] uppercase text-muted-foreground">NEXT-GENERATION STUDIO SOFTWARE
+              <motion.p variants={fadeLeft} className="text-xs font-medium tracking-[0.2em] uppercase text-muted-foreground">
+
+                NEXT-GENERATION STUDIO SOFTWARE
 
               </motion.p>
-              <motion.h1 variants={fadeLeft} className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] text-foreground">The frictionless operating system for boutique fitness.
+              <motion.h1 variants={fadeLeft} className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] text-foreground">
+
+                The frictionless operating system for boutique fitness.
 
               </motion.h1>
               <motion.p variants={fadeLeft} className="text-lg text-muted-foreground max-w-lg leading-relaxed">Kinspace.Studio works quietly in the background to recover lost revenue, automate your staff, and keep your clients entirely within your own branded ecosystem..
@@ -751,5 +674,4 @@ export default function Index() {
         </div>
       </footer>
     </div>);
-
 }
