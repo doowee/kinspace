@@ -359,7 +359,7 @@ export default function Features() {
               Join studios that are growing faster with less effort. No credit card required.
             </p>
             <div className="flex justify-center">
-              <SignupCTA buttonText="Create Your Studio" />
+              <SignupCTA buttonText="Create Your Studio" align="center" />
             </div>
           </GlassCard>
         </div>
