@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, Trash2, Package, Repeat } from "lucide-react";
+import { Plus, Trash2, Package, Repeat, Pencil } from "lucide-react";
 
 type ProductType = "pack" | "subscription";
 type AccessScope = "single_studio" | "all_studios";
@@ -35,6 +35,7 @@ export default function ProductsTab() {
   const { activeStudio } = useStudio();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -81,6 +82,27 @@ export default function ProductsTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingProduct) return;
+      const row: Record<string, unknown> = {
+        name,
+        price: parseFloat(price) || 0,
+        point_value: productType === "pack" ? parseInt(pointValue) || null : null,
+        access_scope: productType === "subscription" ? accessScope : null,
+      };
+      const { error } = await supabase.from("products").update(row as any).eq("id", editingProduct.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", studioId] });
+      toast.success("Product updated");
+      resetForm();
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("products").delete().eq("id", id);
@@ -108,6 +130,17 @@ export default function ProductsTab() {
     setProductType("pack");
     setPointValue("");
     setAccessScope("single_studio");
+    setEditingProduct(null);
+  };
+
+  const openEdit = (p: Product) => {
+    setEditingProduct(p);
+    setName(p.name);
+    setPrice(String(p.price));
+    setProductType(p.product_type);
+    setPointValue(p.point_value ? String(p.point_value) : "");
+    setAccessScope(p.access_scope || "single_studio");
+    setOpen(true);
   };
 
   if (!studioId) return null;
@@ -169,7 +202,14 @@ export default function ProductsTab() {
                       onCheckedChange={(val) => toggleActiveMutation.mutate({ id: p.id, is_active: val })}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(p)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -186,11 +226,13 @@ export default function ProductsTab() {
       </CardContent>
 
       {/* Create Product Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Product</DialogTitle>
-            <DialogDescription>Add a class pack or unlimited subscription to your studio menu.</DialogDescription>
+            <DialogTitle>{editingProduct ? "Edit Product" : "Create Product"}</DialogTitle>
+            <DialogDescription>
+              {editingProduct ? "Update the product details below." : "Add a class pack or unlimited subscription to your studio menu."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -201,18 +243,20 @@ export default function ProductsTab() {
               <Label>Price (USD)</Label>
               <Input type="number" min="0" step="0.01" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Product Type</Label>
-              <Select value={productType} onValueChange={(v) => setProductType(v as ProductType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pack">Class Pack</SelectItem>
-                  <SelectItem value="subscription">Unlimited Subscription</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!editingProduct && (
+              <div className="space-y-2">
+                <Label>Product Type</Label>
+                <Select value={productType} onValueChange={(v) => setProductType(v as ProductType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pack">Class Pack</SelectItem>
+                    <SelectItem value="subscription">Unlimited Subscription</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {productType === "pack" && (
               <div className="space-y-2">
                 <Label>Credits (Points) Granted</Label>
@@ -235,9 +279,12 @@ export default function ProductsTab() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!name || !price || createMutation.isPending}>
-              {createMutation.isPending ? "Saving…" : "Save Product"}
+            <Button variant="outline" onClick={() => { resetForm(); setOpen(false); }}>Cancel</Button>
+            <Button
+              onClick={() => editingProduct ? updateMutation.mutate() : createMutation.mutate()}
+              disabled={!name || !price || createMutation.isPending || updateMutation.isPending}
+            >
+              {(createMutation.isPending || updateMutation.isPending) ? "Saving…" : editingProduct ? "Update Product" : "Save Product"}
             </Button>
           </DialogFooter>
         </DialogContent>
