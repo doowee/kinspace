@@ -32,6 +32,7 @@ import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import StudentAuthGate from "./components/student/StudentAuthGate";
 import KioskLogin from "./pages/KioskLogin";
 import KioskLiveRoster from "./pages/KioskLiveRoster";
+import KioskSchedule from "./pages/KioskSchedule";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
@@ -173,6 +174,16 @@ const App = () => {
                 <AuthGate>
                   <StudioProvider>
                     <KioskLogin />
+                  </StudioProvider>
+                </AuthGate>
+              }
+            />
+            <Route
+              path="/kiosk/schedule"
+              element={
+                <AuthGate>
+                  <StudioProvider>
+                    <KioskSchedule />
                   </StudioProvider>
                 </AuthGate>
               }
