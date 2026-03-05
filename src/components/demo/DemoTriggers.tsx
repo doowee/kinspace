@@ -31,7 +31,7 @@ export default function DemoTriggers() {
   const handleSeedDemoData = async () => {
     try {
       toast({ title: "Seeding…", description: "Creating demo data, please wait." });
-      const result = await seedDemoData(studioId);
+      const result = await seedDemoData("11111111-1111-1111-1111-111111111111");
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["finance"] });
       toast({
