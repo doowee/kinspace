@@ -1,41 +1,61 @@
 
 
-## Instructor Data + UI Updates
+# Plan: Kiosk Instructor Schedule Dashboard
 
-### 1. Insert Dummy Instructors
+## Problem
+After PIN login, the kiosk jumps directly to a single class's live roster. There's no way to browse the day's full schedule or navigate to other dates.
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+## Solution
+Add a new intermediate page (`KioskSchedule`) between PIN login and the live roster. The login flow changes from:
+- **Before**: PIN → Live Roster (single class)
+- **After**: PIN → Schedule Dashboard (browse days, see all classes) → tap "Open Roster" → Live Roster
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+## Changes
 
-No photo URLs for now (left null).
+### 1. New Page: `src/pages/KioskSchedule.tsx`
 
-### 2. Public Booking Page -- Show Instructor Info
+**Props via URL params**: `instructor` (id), `name` (instructor name), `studioId`
 
-**File: `src/pages/BookingPage.tsx`**
+**State**: `selectedDate` (defaults to today)
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+**Section A — Header & Date Navigation**:
+- Prominent date display ("Today, Mar 5" or "Thursday, Mar 6")
+- `<` / `>` buttons to go prev/next day
+- Calendar icon opens a `Popover` + `Calendar` (shadcn DatePicker) for jumping to any date
+- Instructor name + logout button
 
-No changes needed here -- it already works once instructors are linked to classes.
+**Section B — "Up Next" Hero Card** (conditional):
+- Only shows when `selectedDate === today` AND there's a future class today
+- Larger card with accent border, class name, time, bold "Open Roster" button
+- Links to `/kiosk/live/:classId`
 
-### 3. Create Class Form -- Instructor Dropdown
+**Section C — Daily Itinerary**:
+- Fetches all classes for this instructor on `selectedDate` from the `classes` table
+- Each row: time, class name, capacity badge ("X/Y Booked"), "View Roster" button
+- Past classes get dimmed text + "Completed" badge
+- Empty state: "No classes scheduled for this day. Enjoy the rest!"
 
-**File: `src/pages/Schedule.tsx`**
+**Data fetching**: Query `classes` table filtered by `instructor_id`, `studio_id`, and date range (`startOfDay` to `endOfDay` of `selectedDate`). Join bookings count via a separate query.
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+### 2. Edit: `src/pages/KioskLogin.tsx`
 
-### Technical Details
+After successful PIN login, navigate to the new schedule page instead of directly to a class roster:
+```
+navigate(`/kiosk/schedule?instructor=${id}&name=${name}&studioId=${studioId}`)
+```
+Remove the "No upcoming classes found" dead-end — the schedule page handles empty days gracefully.
 
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+### 3. Edit: `src/App.tsx`
 
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+Add route: `/kiosk/schedule` → `KioskSchedule` (wrapped in AuthGate + StudioProvider, same as other kiosk routes).
 
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+### 4. Edge Function: `kiosk-pin-login/index.ts`
+
+Keep returning `next_class` (used by the schedule page to highlight "Up Next"), but the navigation decision moves to the client. Add `studio_id` to the response so the schedule page can query classes.
+
+| File | Action |
+|------|--------|
+| `src/pages/KioskSchedule.tsx` | **Create** — full schedule dashboard |
+| `src/pages/KioskLogin.tsx` | **Edit** — navigate to `/kiosk/schedule` instead of `/kiosk/live/:classId` |
+| `src/App.tsx` | **Edit** — add `/kiosk/schedule` route |
 
