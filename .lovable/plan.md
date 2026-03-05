@@ -1,97 +1,41 @@
 
 
-# Analysis: Existing Infrastructure Already Covers This
+## Instructor Data + UI Updates
 
-After reviewing the codebase, **most of what you're requesting already exists**:
+### 1. Insert Dummy Instructors
 
-| Requested | Current Status |
-|-----------|---------------|
-| `create-checkout-session` edge function | **Already exists** as `create-credit-checkout` — handles pack checkout with Stripe |
-| `stripe-webhook` for fulfillment | **Already exists** as `stripe-credit-webhook` — increments `class_points`, logs transactions |
-| UI checkout trigger on `/credits` | **Already exists** — Buy buttons with loading spinners, redirect to Stripe, success banner |
-| `transactions` audit table | **Already exists** — webhook already inserts into `transactions` |
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-## What's Missing / Needs Upgrading
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-The current system only handles **packs** (one-time `mode: "payment"`). It does NOT handle **subscriptions**. Here's the gap:
+No photo URLs for now (left null).
 
-### 1. `create-credit-checkout` → Upgrade to unified `create-checkout-session`
+### 2. Public Booking Page -- Show Instructor Info
 
-- Currently uses hardcoded `PACKS` map with `price_data` (inline prices)
-- Needs to: accept a `productId`, fetch from `products` table, determine `mode` from `product_type`
-- Use `stripe_price_id` from the `products` table instead of inline `price_data`
+**File: `src/pages/BookingPage.tsx`**
 
-### 2. `stripe-credit-webhook` → Upgrade to handle subscriptions
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-- Currently only handles packs (increments `class_points`)
-- Needs to: also handle `product_type === 'subscription'` by inserting into `user_subscriptions`
-- Should also listen for `customer.subscription.updated` and `customer.subscription.deleted` to keep `user_subscriptions` status in sync
+No changes needed here -- it already works once instructors are linked to classes.
 
-### 3. `/credits` UI → Fetch products from DB instead of hardcoded array
+### 3. Create Class Form -- Instructor Dropdown
 
-- Currently uses hardcoded `PACKS` array
-- Should fetch active products from `products` table for the user's home studio
-- Display both packs and subscriptions with appropriate labeling
+**File: `src/pages/Schedule.tsx`**
 
-### 4. Config: Add webhook to `config.toml`
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
 
-- `stripe-credit-webhook` needs `verify_jwt = false` (it's a Stripe webhook, not user-authenticated)
-- New unified function needs registration too
+### Technical Details
 
----
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
 
-## Plan
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
 
-### Step 1: Create `create-checkout-session` edge function
-
-Replace `create-credit-checkout` with a new unified function:
-
-- Accepts `{ productId }` in body
-- Authenticates user via JWT claims
-- Fetches product from `products` table using service role client
-- If `product_type === 'subscription'` → `mode: "subscription"`, use `stripe_price_id`
-- If `product_type === 'pack'` → `mode: "payment"`, use `stripe_price_id`
-- Includes `user_id`, `product_id`, `product_type`, `point_value` in session metadata
-- Returns checkout URL
-
-### Step 2: Create `stripe-webhook` edge function
-
-Replace `stripe-credit-webhook` with a unified webhook:
-
-- Verifies Stripe signature using `STRIPE_WEBHOOK_SECRET` secret
-- Handles `checkout.session.completed`:
-  - Reads `product_type` from metadata
-  - **Pack**: increment `class_points` via RPC, insert transaction
-  - **Subscription**: insert into `user_subscriptions` with product_id, studio_id, status='active', current_period_end from Stripe subscription
-- Handles `customer.subscription.updated`: update `user_subscriptions` status and period end
-- Handles `customer.subscription.deleted`: set `user_subscriptions` status to 'cancelled'
-
-### Step 3: Update `/credits` UI
-
-- Fetch products from `products` table (where `is_active = true` and studio matches user's home studio)
-- Render packs and subscriptions dynamically
-- Wire "Buy" buttons to call `create-checkout-session` with `productId`
-- Keep existing loading/spinner/success banner logic
-
-### Step 4: Config updates
-
-- Add `verify_jwt = false` for `stripe-webhook` and `create-checkout-session` entries in `config.toml`
-- Note: `create-checkout-session` validates JWT manually in code
-
-### Step 5: Secret requirement
-
-- A `STRIPE_WEBHOOK_SECRET` secret is needed for the webhook. Will use `add_secret` tool to request it.
-
----
-
-## Files
-
-| File | Action |
-|------|--------|
-| `supabase/functions/create-checkout-session/index.ts` | **Create** |
-| `supabase/functions/stripe-webhook/index.ts` | **Create** |
-| `src/pages/Credits.tsx` | **Edit** — fetch products from DB, call new function |
-| `supabase/config.toml` | **Edit** — add new function entries |
-
-No database migration needed — `products`, `user_subscriptions`, and `transactions` tables already exist with correct schemas.
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 
