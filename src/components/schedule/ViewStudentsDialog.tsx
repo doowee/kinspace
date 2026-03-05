@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Zap, Megaphone } from "lucide-react";
 import MessageClassDrawer from "@/components/communication/MessageClassDrawer";
+import AIClassFiller from "@/components/schedule/AIClassFiller";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 
 interface FlashSaleStudent {
   name: string;
