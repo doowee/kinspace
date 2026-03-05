@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Users, Clock, AlertTriangle, Trophy, MapPin, Shield, LogOut } from "lucide-react";
+import { CheckCircle2, Users, Clock, AlertTriangle, Trophy, MapPin, Shield, LogOut, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface RosterStudent {
@@ -17,6 +19,7 @@ interface RosterStudent {
   last_name: string | null;
   home_studio_id: string | null;
   injury_notes: string | null;
+  staff_notes: string | null;
   total_bookings: number;
 }
 
@@ -42,6 +45,10 @@ export default function KioskLiveRoster() {
   const idleTimerRef = useRef<number | null>(null);
   const lastActivityRef = useRef(Date.now());
 
+  const [notesStudent, setNotesStudent] = useState<RosterStudent | null>(null);
+  const [editStaffNotes, setEditStaffNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+
   const fetchClassAndRoster = useCallback(async () => {
     if (!classId) return;
     setLoading(true);
@@ -63,7 +70,7 @@ export default function KioskLiveRoster() {
     // Fetch bookings with profile data
     const { data: bookings } = await supabase
       .from("bookings")
-      .select("id, status, user_id, profiles:user_id(first_name, last_name, home_studio_id, injury_notes)")
+      .select("id, status, user_id, profiles:user_id(first_name, last_name, home_studio_id, injury_notes, staff_notes)")
       .eq("class_id", classId)
       .in("status", ["confirmed", "checked_in", "waitlist"]);
 
@@ -94,6 +101,7 @@ export default function KioskLiveRoster() {
       last_name: b.profiles?.last_name ?? null,
       home_studio_id: b.profiles?.home_studio_id ?? null,
       injury_notes: b.profiles?.injury_notes ?? null,
+      staff_notes: b.profiles?.staff_notes ?? null,
       total_bookings: countMap[b.user_id] ?? 0,
     }));
 
@@ -175,6 +183,35 @@ export default function KioskLiveRoster() {
   const isMilestone = (s: RosterStudent) => MILESTONES.includes(s.total_bookings);
   const hasInjury = (s: RosterStudent) => !!s.injury_notes;
 
+  const openNotes = (student: RosterStudent) => {
+    setNotesStudent(student);
+    setEditStaffNotes(student.staff_notes ?? "");
+  };
+
+  const saveStaffNotes = async () => {
+    if (!notesStudent) return;
+    setSavingNotes(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ staff_notes: editStaffNotes } as any)
+      .eq("id", notesStudent.user_id);
+
+    if (error) {
+      toast.error("Failed to save notes");
+      setSavingNotes(false);
+      return;
+    }
+
+    setRoster((prev) =>
+      prev.map((s) =>
+        s.user_id === notesStudent.user_id ? { ...s, staff_notes: editStaffNotes } : s
+      )
+    );
+    toast.success("Notes saved");
+    setSavingNotes(false);
+    setNotesStudent(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -241,6 +278,14 @@ export default function KioskLiveRoster() {
                       : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-md"
                   )}
                 >
+                  {/* Notes button */}
+                  <div
+                    className="absolute top-3 left-3"
+                    onClick={(e) => { e.stopPropagation(); openNotes(student); }}
+                  >
+                    <FileText className={cn("h-5 w-5", student.staff_notes ? "text-primary" : "text-muted-foreground/40")} />
+                  </div>
+
                   {/* Check indicator */}
                   {isCheckedIn && (
                     <div className="absolute top-3 right-3">
@@ -250,7 +295,7 @@ export default function KioskLiveRoster() {
 
                   {/* Name */}
                   <p className={cn(
-                    "text-2xl font-bold font-display leading-tight mb-3",
+                    "text-2xl font-bold font-display leading-tight mb-3 mt-4",
                     isCheckedIn ? "text-emerald-700 dark:text-emerald-300" : "text-foreground"
                   )}>
                     {displayName(student)}
@@ -303,6 +348,50 @@ export default function KioskLiveRoster() {
           </div>
         )}
       </main>
+
+      {/* Notes Sheet */}
+      <Sheet open={!!notesStudent} onOpenChange={(open) => { if (!open) setNotesStudent(null); }}>
+        <SheetContent side="right" className="w-[400px] sm:w-[440px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {notesStudent ? displayName(notesStudent) : "Student"} — Notes
+            </SheetTitle>
+            <SheetDescription>View injury info and manage internal observations.</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Injury Notes — Read Only */}
+            <div>
+              <label className="text-sm font-semibold text-destructive flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="h-4 w-4" /> Injury & Modification Notes
+              </label>
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-foreground">
+                {notesStudent?.injury_notes || (
+                  <span className="text-muted-foreground italic">No reported injuries.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Staff Notes — Editable */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-2 block">
+                Instructor Observations (Internal)
+              </label>
+              <Textarea
+                value={editStaffNotes}
+                onChange={(e) => setEditStaffNotes(e.target.value)}
+                placeholder="Add observations about this student…"
+                className="min-h-[120px]"
+              />
+            </div>
+
+            <Button onClick={saveStaffNotes} disabled={savingNotes} className="w-full">
+              {savingNotes ? "Saving…" : "Save Notes"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
