@@ -5,11 +5,34 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import InstructorLanding from "./InstructorLanding";
 
+// Safe import for studio theme context
+let useStudioThemeSafe: () => { studio: any; loading: boolean; notFound: boolean } | null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require("@/components/StudioThemeProvider");
+  useStudioThemeSafe = mod.useStudioTheme;
+} catch {
+  useStudioThemeSafe = null;
+}
+
 type GateStatus = "loading" | "unauthenticated" | "instructor" | "owner" | "student";
 
 export default function InstructorAuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<GateStatus>("loading");
+
+  // Safely try to get studio context
+  let studioInfo: { id: string; name: string; logo_url: string | null } | null = null;
+  try {
+    if (useStudioThemeSafe) {
+      const ctx = useStudioThemeSafe();
+      if (ctx?.studio) {
+        studioInfo = { id: ctx.studio.id, name: ctx.studio.name, logo_url: ctx.studio.logo_url };
+      }
+    }
+  } catch {
+    // Not inside a StudioThemeProvider — that's fine
+  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -20,7 +43,6 @@ export default function InstructorAuthGate({ children }: { children: React.React
     }
 
     const checkRole = async () => {
-      // Check studio_members for this user's highest role
       const { data: memberships, error } = await supabase
         .from("studio_members")
         .select("role")
@@ -33,7 +55,6 @@ export default function InstructorAuthGate({ children }: { children: React.React
       }
 
       if (!memberships || memberships.length === 0) {
-        // No memberships at all — treat as student / redirect
         setStatus("student");
         return;
       }
@@ -46,7 +67,6 @@ export default function InstructorAuthGate({ children }: { children: React.React
       }
 
       if (roles.has("instructor") || roles.has("front_desk")) {
-        // Greet instructor
         const { data: profile } = await supabase
           .from("profiles")
           .select("first_name")
@@ -59,7 +79,6 @@ export default function InstructorAuthGate({ children }: { children: React.React
         return;
       }
 
-      // Only student role
       setStatus("student");
     };
 
@@ -75,7 +94,7 @@ export default function InstructorAuthGate({ children }: { children: React.React
   }
 
   if (status === "unauthenticated") {
-    return <InstructorLanding />;
+    return <InstructorLanding studio={studioInfo} />;
   }
 
   if (status === "owner") {
@@ -86,6 +105,5 @@ export default function InstructorAuthGate({ children }: { children: React.React
     return <Navigate to="/dashboard" replace />;
   }
 
-  // status === "instructor"
   return <>{children}</>;
 }

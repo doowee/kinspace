@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,11 +6,34 @@ import { toast } from "@/hooks/use-toast";
 import StudentLanding from "./StudentLanding";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Safe import — useStudioTheme may not be available outside StudioThemeProvider
+let useStudioThemeSafe: () => { studio: any; loading: boolean; notFound: boolean } | null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require("@/components/StudioThemeProvider");
+  useStudioThemeSafe = mod.useStudioTheme;
+} catch {
+  useStudioThemeSafe = null;
+}
+
 type GateStatus = "loading" | "unauthenticated" | "student" | "instructor" | "owner";
 
 export default function StudentAuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<GateStatus>("loading");
+
+  // Safely try to get studio context (only available inside StudioThemeProvider)
+  let studioInfo: { id: string; name: string; logo_url: string | null } | null = null;
+  try {
+    if (useStudioThemeSafe) {
+      const ctx = useStudioThemeSafe();
+      if (ctx?.studio) {
+        studioInfo = { id: ctx.studio.id, name: ctx.studio.name, logo_url: ctx.studio.logo_url };
+      }
+    }
+  } catch {
+    // Not inside a StudioThemeProvider — that's fine
+  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -74,7 +97,7 @@ export default function StudentAuthGate({ children }: { children: React.ReactNod
   }
 
   if (status === "unauthenticated") {
-    return <StudentLanding />;
+    return <StudentLanding studio={studioInfo} />;
   }
 
   if (status === "owner") {
