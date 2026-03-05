@@ -615,6 +615,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      book_class_with_credit: {
+        Args: { p_class_id: string; p_studio_id: string }
+        Returns: string
+      }
       cancel_booking_logic: {
         Args: { _booking_id: string; _user_id: string }
         Returns: string
