@@ -171,6 +171,31 @@ const App = () => {
             </Route>
             <Route path="/book/:studio_slug" element={<ThemedBookingPage />} />
             <Route path="/book/:studio_slug/packages" element={<ThemedPackagesPage />} />
+            {/* Branded student routes */}
+            <Route
+              path="/s/:studio_slug"
+              element={
+                <StudioBrandedLandingWrapper>
+                  <StudentAuthGate>
+                    <StudentLayout />
+                  </StudentAuthGate>
+                </StudioBrandedLandingWrapper>
+              }
+            >
+              <Route index element={<BookClass />} />
+              <Route path="credits" element={<Credits />} />
+            </Route>
+            {/* Branded staff route */}
+            <Route
+              path="/s/:studio_slug/staff"
+              element={
+                <StudioBrandedLandingWrapper>
+                  <InstructorAuthGate>
+                    <InstructorPortal />
+                  </InstructorAuthGate>
+                </StudioBrandedLandingWrapper>
+              }
+            />
             <Route
               path="/instructor-portal"
               element={
