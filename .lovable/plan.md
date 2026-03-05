@@ -1,41 +1,44 @@
 
 
-## Instructor Data + UI Updates
+# Plan: Instructor Notes Modal on Kiosk Roster
 
-### 1. Insert Dummy Instructors
+## Problem
+Instructors can see injury badges but have no way to read injury details in full or write internal observations about students from the roster view.
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+## Database Change
+Add a `staff_notes` column to the `profiles` table:
+```sql
+ALTER TABLE public.profiles ADD COLUMN staff_notes text;
+```
+No RLS changes needed — instructors can already update profiles via the existing co-members SELECT policy, and the `profiles` UPDATE policy is user-only, so we need a new RLS policy allowing studio staff (owners/instructors) to update `staff_notes`.
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+Actually, looking at the existing RLS: only users can update their own profile. We need a new UPDATE policy for staff:
+```sql
+CREATE POLICY "Staff can update student staff_notes"
+ON public.profiles FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM studio_members sm1
+    JOIN studio_members sm2 ON sm1.studio_id = sm2.studio_id
+    WHERE sm1.user_id = auth.uid()
+      AND sm2.user_id = profiles.id
+      AND sm1.role IN ('owner', 'instructor')
+  )
+);
+```
 
-No photo URLs for now (left null).
+## UI Changes — Single File: `src/pages/KioskLiveRoster.tsx`
 
-### 2. Public Booking Page -- Show Instructor Info
+1. **Add `staff_notes` to data model**: Update `RosterStudent` interface, fetch query, and mapping to include `staff_notes` from profiles.
 
-**File: `src/pages/BookingPage.tsx`**
+2. **Add 📝 Notes button** on each student card (top-left or bottom-right), with `e.stopPropagation()` to prevent triggering check-in.
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+3. **Sheet (side drawer)** opens when tapped, containing:
+   - **Section 1 — Injury & Modification Notes (Read-Only)**: Amber/red background block showing `injury_notes` or "No reported injuries."
+   - **Section 2 — Internal Staff Notes (Editable)**: `<Textarea>` bound to local state, pre-filled with existing `staff_notes`.
+   - **Save Notes button**: Calls `supabase.from("profiles").update({ staff_notes }).eq("id", student.user_id)`. On success: optimistic roster update, close sheet, success toast.
 
-No changes needed here -- it already works once instructors are linked to classes.
+4. **Imports to add**: `Sheet`, `SheetContent`, `SheetHeader`, `SheetTitle`, `SheetDescription` from shadcn, `Textarea`, `FileText` or `StickyNote` icon from lucide.
 
-### 3. Create Class Form -- Instructor Dropdown
-
-**File: `src/pages/Schedule.tsx`**
-
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
-
-### Technical Details
-
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
-
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
-
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+## No changes to existing badge logic.
 
