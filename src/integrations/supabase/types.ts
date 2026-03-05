@@ -358,6 +358,53 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          access_scope: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          point_value: number | null
+          price: number
+          product_type: string
+          studio_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_scope?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          point_value?: number | null
+          price?: number
+          product_type: string
+          studio_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_scope?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          point_value?: number | null
+          price?: number
+          product_type?: string
+          studio_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -603,6 +650,61 @@ export type Database = {
           },
           {
             foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          id: string
+          product_id: string
+          status: string
+          studio_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          product_id: string
+          status?: string
+          studio_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          product_id?: string
+          status?: string
+          studio_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
