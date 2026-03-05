@@ -19,6 +19,7 @@ interface RosterStudent {
   last_name: string | null;
   home_studio_id: string | null;
   injury_notes: string | null;
+  staff_notes: string | null;
   total_bookings: number;
 }
 
