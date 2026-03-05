@@ -278,6 +278,14 @@ export default function KioskLiveRoster() {
                       : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-md"
                   )}
                 >
+                  {/* Notes button */}
+                  <div
+                    className="absolute top-3 left-3"
+                    onClick={(e) => { e.stopPropagation(); openNotes(student); }}
+                  >
+                    <FileText className={cn("h-5 w-5", student.staff_notes ? "text-primary" : "text-muted-foreground/40")} />
+                  </div>
+
                   {/* Check indicator */}
                   {isCheckedIn && (
                     <div className="absolute top-3 right-3">
@@ -287,7 +295,7 @@ export default function KioskLiveRoster() {
 
                   {/* Name */}
                   <p className={cn(
-                    "text-2xl font-bold font-display leading-tight mb-3",
+                    "text-2xl font-bold font-display leading-tight mb-3 mt-4",
                     isCheckedIn ? "text-emerald-700 dark:text-emerald-300" : "text-foreground"
                   )}>
                     {displayName(student)}
@@ -340,6 +348,50 @@ export default function KioskLiveRoster() {
           </div>
         )}
       </main>
+
+      {/* Notes Sheet */}
+      <Sheet open={!!notesStudent} onOpenChange={(open) => { if (!open) setNotesStudent(null); }}>
+        <SheetContent side="right" className="w-[400px] sm:w-[440px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {notesStudent ? displayName(notesStudent) : "Student"} — Notes
+            </SheetTitle>
+            <SheetDescription>View injury info and manage internal observations.</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Injury Notes — Read Only */}
+            <div>
+              <label className="text-sm font-semibold text-destructive flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="h-4 w-4" /> Injury & Modification Notes
+              </label>
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-foreground">
+                {notesStudent?.injury_notes || (
+                  <span className="text-muted-foreground italic">No reported injuries.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Staff Notes — Editable */}
+            <div>
+              <label className="text-sm font-semibold text-foreground mb-2 block">
+                Instructor Observations (Internal)
+              </label>
+              <Textarea
+                value={editStaffNotes}
+                onChange={(e) => setEditStaffNotes(e.target.value)}
+                placeholder="Add observations about this student…"
+                className="min-h-[120px]"
+              />
+            </div>
+
+            <Button onClick={saveStaffNotes} disabled={savingNotes} className="w-full">
+              {savingNotes ? "Saving…" : "Save Notes"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
