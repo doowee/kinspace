@@ -51,12 +51,9 @@ export default function KioskLogin() {
           toast.error("Invalid PIN. Try again.");
         } else {
           toast.success(`Welcome, ${data.instructor_name}!`);
-          if (data.next_class) {
-            navigate(`/kiosk/live/${data.next_class.id}?instructor=${data.instructor_id}&name=${encodeURIComponent(data.instructor_name)}`);
-          } else {
-            toast.info("No upcoming classes found.");
-            setPin("");
-          }
+          navigate(
+            `/kiosk/schedule?instructor=${data.instructor_id}&name=${encodeURIComponent(data.instructor_name)}&studioId=${activeStudio.id}`
+          );
         }
       } catch {
         toast.error("Connection error");
