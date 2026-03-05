@@ -33,6 +33,7 @@ serve(async (req) => {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
     const credits = parseInt(session.metadata?.credits ?? "0", 10);
+    const pack = session.metadata?.pack ?? "credit";
 
     if (!userId || credits <= 0) {
       console.error("Invalid metadata:", session.metadata);
@@ -45,48 +46,18 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Increment class_points
-    const { error: updateError } = await supabase.rpc("increment_class_points", {
+    // Atomically increment class_points
+    const { error: rpcError } = await supabase.rpc("increment_class_points", {
       _user_id: userId,
       _amount: credits,
     });
 
-    // Fallback: direct update if RPC doesn't exist yet
-    if (updateError) {
-      console.warn("RPC fallback, using direct update:", updateError.message);
-      const { error: directError } = await supabase
-        .from("profiles")
-        .update({ class_points: credits }) // This is a fallback - ideally use RPC
-        .eq("id", userId);
-
-      if (directError) {
-        console.error("Failed to update class_points:", directError);
-        return new Response("Failed to update credits", { status: 500 });
-      }
-
-      // We need to do an increment, not a set. Use raw SQL via RPC or a proper increment.
-      // Actually, let's just use the SQL increment directly:
-      const { error: incError } = await supabase
-        .from("profiles")
-        .update({})
-        .eq("id", userId);
-
-      // The safest approach without a custom RPC is to read + write
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("class_points")
-        .eq("id", userId)
-        .single();
-
-      if (profile) {
-        await supabase
-          .from("profiles")
-          .update({ class_points: (profile.class_points ?? 0) + credits })
-          .eq("id", userId);
-      }
+    if (rpcError) {
+      console.error("Failed to increment class_points:", rpcError);
+      return new Response("Failed to update credits", { status: 500 });
     }
 
-    // Insert audit transaction - need a studio_id; use the user's home_studio_id
+    // Insert audit transaction using user's home_studio_id
     const { data: profile } = await supabase
       .from("profiles")
       .select("home_studio_id")
@@ -101,7 +72,7 @@ serve(async (req) => {
         payment_method: "card",
         status: "completed",
         type: "class_pack",
-        description: `${session.metadata?.pack ?? "credit"} purchase (${credits} credits)`,
+        description: `${pack} purchase (${credits} credits)`,
       });
     }
 

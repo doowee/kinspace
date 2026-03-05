@@ -155,34 +155,32 @@ export default function BookingPage() {
     setBookingClassId(cls.id);
 
     try {
-      // Check capacity
-      const { count } = await supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("class_id", cls.id)
-        .eq("status", "confirmed");
-
-      const isFull = (count ?? 0) >= cls.capacity;
-      const bookingStatus = isFull ? "waitlist" : "confirmed";
-
-      const { error: bookError } = await supabase.from("bookings").insert({
-        studio_id: studio.id,
-        user_id: user.id,
-        class_id: cls.id,
-        status: bookingStatus,
+      const { data: result, error: rpcError } = await supabase.rpc("book_class_with_credit", {
+        p_class_id: cls.id,
+        p_studio_id: studio.id,
       });
-      if (bookError) throw bookError;
+
+      if (rpcError) {
+        // Check for insufficient credits
+        if (rpcError.message?.includes("Insufficient credits")) {
+          setNoCreditsOpen(true);
+          return;
+        }
+        throw rpcError;
+      }
+
+      const isWaitlisted = (result as string)?.includes("Waitlisted");
 
       toast({
-        title: isFull ? "Added to Waitlist" : "Success! You are booked",
-        description: isFull
-          ? `You've been added to the waitlist for ${cls.name}.`
-          : `You're confirmed for ${cls.name}.`,
+        title: isWaitlisted ? "Added to Waitlist" : "Success! You are booked",
+        description: isWaitlisted
+          ? `You've been added to the waitlist for ${cls.name}. 1 credit held.`
+          : `You're confirmed for ${cls.name}. 1 credit deducted.`,
       });
 
-      setUserBookedClassIds((prev) => new Map([...prev, [cls.id, bookingStatus]]));
+      setUserBookedClassIds((prev) => new Map([...prev, [cls.id, isWaitlisted ? "waitlist" : "confirmed"]]));
       setDetailClass(null);
-      if (!isFull) setSuccessClass(cls);
+      if (!isWaitlisted) setSuccessClass(cls);
     } catch (err: any) {
       toast({
         title: "Booking failed",
@@ -582,10 +580,10 @@ export default function BookingPage() {
               className="w-full gap-2"
               onClick={() => {
                 setNoCreditsOpen(false);
-                setCheckoutOpen(true);
+                navigate("/credits");
               }}
             >
-              Buy 10-Class Pack — $199
+              Buy Credits
             </Button>
             <Button
               variant="outline"
