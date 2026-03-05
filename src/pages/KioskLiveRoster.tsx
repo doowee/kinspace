@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Users, Clock, AlertTriangle, Trophy, MapPin, Shield, LogOut } from "lucide-react";
+import { CheckCircle2, Users, Clock, AlertTriangle, Trophy, MapPin, Shield, LogOut, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface RosterStudent {
