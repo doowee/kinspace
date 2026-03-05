@@ -213,6 +213,7 @@ export default function KioskLiveRoster() {
   };
 
   if (loading) {
+    return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground text-xl animate-pulse">Loading roster…</p>
       </div>
