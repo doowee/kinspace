@@ -1,31 +1,41 @@
 
 
-# Plan: Wire Seed to Downtown-Only + Fix Production
+## Instructor Data + UI Updates
 
-## Problem
-1. The current `seed-demo-data` function seeds **all sibling studios** in the org when given a studio ID — it should only seed the Downtown studio (`11111111-1111-1111-1111-111111111111`).
-2. The "Seed Demo Studio" button passes `activeStudio.id` (whatever studio is selected), but should always target Downtown.
-3. Production: the function exists but needs to be invoked there after publishing.
+### 1. Insert Dummy Instructors
 
-## Changes
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-### 1. Edge Function: `supabase/functions/seed-demo-data/index.ts`
-- **Remove sibling studio expansion** (lines 112-119): When a `studio_id` is passed, only seed that one studio — don't fetch and seed siblings.
-- Change lines 101-129 to simply use the provided `customStudioId` without expanding to org siblings.
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-### 2. Client: `src/components/demo/DemoTriggers.tsx`
-- Hardcode the Downtown studio ID (`11111111-1111-1111-1111-111111111111`) in the seed call instead of using `activeStudio.id`, ensuring the seed always targets Downtown regardless of which studio is selected.
+No photo URLs for now (left null).
 
-### 3. Deploy & Invoke on Both Environments
-- Deploy the updated edge function
-- Invoke on test to verify
-- User publishes to push to production
-- Invoke on production
+### 2. Public Booking Page -- Show Instructor Info
 
-## Files Modified
+**File: `src/pages/BookingPage.tsx`**
 
-| File | Change |
-|------|--------|
-| `supabase/functions/seed-demo-data/index.ts` | Remove sibling studio expansion logic |
-| `src/components/demo/DemoTriggers.tsx` | Hardcode Downtown studio ID in seed call |
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+
+No changes needed here -- it already works once instructors are linked to classes.
+
+### 3. Create Class Form -- Instructor Dropdown
+
+**File: `src/pages/Schedule.tsx`**
+
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+
+### Technical Details
+
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 

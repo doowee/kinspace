@@ -107,16 +107,6 @@ Deno.serve(async (req) => {
       if (!studio) throw new Error("Studio not found");
       studioIds.push(customStudioId);
       orgId = studio.organization_id;
-
-      // Also grab sibling studios in same org
-      if (orgId) {
-        const { data: siblings } = await supabaseAdmin
-          .from("studios")
-          .select("id")
-          .eq("organization_id", orgId)
-          .neq("id", customStudioId);
-        if (siblings) studioIds.push(...siblings.map((s) => s.id));
-      }
     } else {
       const { data: studios } = await supabaseAdmin
         .from("studios")
