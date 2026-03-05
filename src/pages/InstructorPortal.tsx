@@ -22,6 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CalendarDays, Clock, Users, ChevronRight, CheckCircle2, LogOut, RefreshCw, ArrowRightLeft, Loader2, AlertTriangle } from "lucide-react";
+import { isSameDay } from "date-fns";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -429,7 +430,7 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
           </TabsList>
 
           {/* ── My Schedule Tab ─────────────────────────────── */}
-          <TabsContent value="schedule" className="mt-4 space-y-3">
+          <TabsContent value="schedule" className="mt-4 space-y-4">
             <h2 className="font-display text-lg font-semibold flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
               My Upcoming Classes
@@ -442,50 +443,64 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
                 </CardContent>
               </Card>
             ) : (
-              allMyClasses.map((cls) => {
-                const isFull = cls.booked_count >= cls.capacity;
-                const isCoverRequested = coverRequested.has(cls.id);
-                const isClaimed = cls.id.startsWith("claimed-");
-                return (
-                  <Card
-                    key={cls.id}
-                    className="transition-all hover:shadow-md active:scale-[0.99]"
-                  >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div
-                        className="space-y-1 min-w-0 flex-1 cursor-pointer"
-                        onClick={() => openRoster(cls)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm">{cls.name}</p>
-                          {isCoverRequested && (
-                            <Badge className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-800 border-amber-300">
-                              Coverage Requested
-                            </Badge>
-                          )}
-                          {isClaimed && (
-                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
-                              Claimed
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <CalendarDays className="h-3 w-3" />
-                            {format(new Date(cls.start_time), "EEE, MMM d")}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(cls.start_time), "h:mm a")}
-                          </span>
-                          {cls.studio_name && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0 shrink-0 font-medium"
-                              style={{
-                                borderColor: studioColorMap[cls.studio_name],
-                                color: studioColorMap[cls.studio_name],
-                                backgroundColor: `${studioColorMap[cls.studio_name]}15`,
+              (() => {
+                const groups: { date: Date; items: InstructorClass[] }[] = [];
+                allMyClasses.forEach((cls) => {
+                  const d = new Date(cls.start_time);
+                  const last = groups[groups.length - 1];
+                  if (last && isSameDay(last.date, d)) {
+                    last.items.push(cls);
+                  } else {
+                    groups.push({ date: d, items: [cls] });
+                  }
+                });
+                return groups.map((group) => (
+                  <div key={group.date.toISOString()} className="space-y-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {format(group.date, "EEEE, MMMM d")}
+                    </h4>
+                    {group.items.map((cls) => {
+                      const isFull = cls.booked_count >= cls.capacity;
+                      const isCoverRequested = coverRequested.has(cls.id);
+                      const isClaimed = cls.id.startsWith("claimed-");
+                      return (
+                        <Card
+                          key={cls.id}
+                          className="transition-all hover:shadow-md active:scale-[0.99]"
+                        >
+                          <CardContent className="p-3 flex items-center gap-3">
+                            {/* Prominent time block */}
+                            <div className="flex flex-col items-center justify-center w-16 shrink-0 rounded-md bg-primary/10 py-2">
+                              <span className="text-lg font-bold text-primary leading-tight">{format(new Date(cls.start_time), "h:mm")}</span>
+                              <span className="text-[10px] font-medium uppercase text-primary/70">{format(new Date(cls.start_time), "a")}</span>
+                            </div>
+                            {/* Details */}
+                            <div
+                              className="min-w-0 flex-1 space-y-1 cursor-pointer"
+                              onClick={() => openRoster(cls)}
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-semibold text-sm">{cls.name}</p>
+                                {isCoverRequested && (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-800 border-amber-300">
+                                    Coverage Requested
+                                  </Badge>
+                                )}
+                                {isClaimed && (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                                    Claimed
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                {cls.studio_name && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-1.5 py-0 shrink-0 font-medium"
+                                    style={{
+                                      borderColor: studioColorMap[cls.studio_name],
+                                      color: studioColorMap[cls.studio_name],
+                                      backgroundColor: `${studioColorMap[cls.studio_name]}15`,
                               }}
                             >
                               {cls.studio_name}
