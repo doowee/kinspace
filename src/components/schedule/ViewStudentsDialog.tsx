@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Zap, Megaphone } from "lucide-react";
 import MessageClassDrawer from "@/components/communication/MessageClassDrawer";
+import AIClassFiller from "@/components/schedule/AIClassFiller";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 
 interface FlashSaleStudent {
   name: string;
@@ -42,6 +44,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
   const [flashSaleStudents, setFlashSaleStudents] = useState<FlashSaleStudent[]>([]);
   const { triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
   const { activeRole } = useStudio();
+  const { isPro } = useSubscriptionTier();
 
   // Listen for flash-deal-sold events from the AI Marketing Hub
   useEffect(() => {
@@ -210,6 +213,15 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
                 </div>
               </div>
             )}
+
+            <AIClassFiller
+              classId={classId!}
+              className={className}
+              capacity={capacity}
+              bookedCount={confirmed.length}
+              classStartTime={classStartTime}
+              isPro={isPro}
+            />
 
             {showChainButton && (
               <Button

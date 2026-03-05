@@ -1,54 +1,41 @@
 
 
-# Plan: Premium AI Class Filler in ViewStudentsDialog
+## Instructor Data + UI Updates
 
-## Overview
-Add a 4-step "AI Class Filler" section to `ViewStudentsDialog` — the modal that opens when an owner clicks the student count button on a class card. The feature is gated by the existing `useSubscriptionTier` hook (`isPro`).
+### 1. Insert Dummy Instructors
 
-## Where It Lives
-`src/components/schedule/AIClassFiller.tsx` — new standalone component rendered inside `ViewStudentsDialog.tsx`.
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-## Component: AIClassFiller
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-**Props**: `classId`, `className`, `capacity`, `bookedCount`, `classStartTime`, `isPro`
+No photo URLs for now (left null).
 
-**Visibility condition**: `bookedCount < capacity` AND class is within next 48 hours.
+### 2. Public Booking Page -- Show Instructor Info
 
-**Accent theme**: Soft purple/violet — `violet-500` for borders, badges, buttons.
+**File: `src/pages/BookingPage.tsx`**
 
-### If NOT Pro (locked state)
-- Grayed-out card with padlock icon and blurred content
-- Click triggers a toast: "Upgrade to Premium to let our AI automatically fill your empty reformer beds."
-- Reuses pattern from existing `ProUpgradeOverlay` but inline
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-### If Pro (unlocked state)
-4-step interactive flow inside a Card with violet accent border:
+No changes needed here -- it already works once instructors are linked to classes.
 
-1. **Step 1 — Select Target Segment**: Three selectable cards (radio-style) with icons:
-   - "The Fan Club" — previous students of this instructor/class
-   - "Slipping Away" — active package, no bookings in 14 days  
-   - "Drop-ins" — past visitors with no active package
+### 3. Create Class Form -- Instructor Dropdown
 
-2. **Step 2 — Select Offer/Tone**: `Select` dropdown with three options:
-   - "Friendly Reminder"
-   - "Last-Minute 10% Discount"
-   - "Bring a Friend Pass"
+**File: `src/pages/Schedule.tsx`**
 
-3. **Step 3 — Generate & Preview**: "Generate Campaign" button → 2s skeleton loader → mocked email + SMS preview in a bordered card. Content varies by segment + tone selection.
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
 
-4. **Step 4 — Deploy**: Primary violet button "🚀 Deploy to [X] Students" → confetti animation (CSS keyframes) + success toast "AI Agent deployed! Watch the bookings roll in."
+### Technical Details
 
-## Changes
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
 
-| File | Action |
-|------|--------|
-| `src/components/schedule/AIClassFiller.tsx` | **Create** — self-contained AI filler component |
-| `src/components/schedule/ViewStudentsDialog.tsx` | **Edit** — import and render AIClassFiller below roster, pass props including isPro from `useSubscriptionTier` |
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
 
-## Technical Notes
-- Mock student count for deploy button: random 4–12 based on segment
-- Confetti: lightweight CSS animation (absolute positioned dots) — no external library
-- All data is mocked/simulated — no backend calls for generation
-- Uses existing shadcn components: Card, Select, Button, Badge, Skeleton
-- `useSubscriptionTier` already exists and returns `isPro`
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 
