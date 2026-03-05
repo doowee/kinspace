@@ -31,7 +31,7 @@ interface ClassRow {
   name: string;
   start_time: string;
   capacity_total: number;
-  capacity_booked: number;
+  booked_count: number;
   class_type: string | null;
 }
 
