@@ -80,8 +80,26 @@ export default function KioskLiveRoster() {
       return;
     }
 
-    // Fetch historical booking counts for each user
-    const userIds = [...new Set(bookings.map((b: any) => b.user_id))];
+    // Fetch studio members who are NOT students (instructors/owners/admins) to exclude them
+    const { data: staffMembers } = await supabase
+      .from("studio_members")
+      .select("user_id")
+      .eq("studio_id", cls.studio_id)
+      .in("role", ["owner", "instructor", "admin"]);
+
+    const staffUserIds = new Set((staffMembers ?? []).map((m: any) => m.user_id));
+
+    // Filter out staff from the bookings list — only keep students
+    const studentBookings = bookings.filter((b: any) => !staffUserIds.has(b.user_id));
+
+    if (studentBookings.length === 0) {
+      setRoster([]);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch historical booking counts for each student
+    const userIds = [...new Set(studentBookings.map((b: any) => b.user_id))];
     const { data: historicalBookings } = await supabase
       .from("bookings")
       .select("user_id")
@@ -93,7 +111,7 @@ export default function KioskLiveRoster() {
       countMap[b.user_id] = (countMap[b.user_id] || 0) + 1;
     });
 
-    const students: RosterStudent[] = bookings.map((b: any) => ({
+    const students: RosterStudent[] = studentBookings.map((b: any) => ({
       booking_id: b.id,
       user_id: b.user_id,
       status: b.status,
@@ -171,6 +189,7 @@ export default function KioskLiveRoster() {
     }
   };
 
+  const bookedCount = roster.filter((s) => s.status === "confirmed" || s.status === "checked_in").length;
   const checkedInCount = roster.filter((s) => s.status === "checked_in").length;
   const displayName = (s: RosterStudent) => {
     const first = s.first_name ?? "";
@@ -237,13 +256,23 @@ export default function KioskLiveRoster() {
               <span className="text-xs">Instructor: {instructorName}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center">
-              <div className="text-4xl font-bold font-display text-primary tabular-nums">
-                {checkedInCount} <span className="text-muted-foreground text-2xl">/ {classInfo?.capacity_total ?? 0}</span>
+          <div className="flex items-center gap-3">
+            {/* Metric A: Booked */}
+            <div className="rounded-xl border bg-muted/50 px-4 py-2 text-center min-w-[100px]">
+              <div className="text-3xl font-bold font-display text-foreground tabular-nums">
+                {bookedCount}<span className="text-muted-foreground text-lg">/{classInfo?.capacity_total ?? 0}</span>
               </div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Checked In</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Booked</p>
             </div>
+
+            {/* Metric B: Checked In */}
+            <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 text-center min-w-[100px]">
+              <div className="text-3xl font-bold font-display text-primary tabular-nums">
+                {checkedInCount}<span className="text-muted-foreground text-lg">/{bookedCount}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Checked In</p>
+            </div>
+
             <Button
               variant="ghost"
               size="icon"
