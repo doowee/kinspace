@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Check, Zap, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 import {
   SiteHeader,
   SignupCTA,

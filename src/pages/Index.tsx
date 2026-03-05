@@ -9,6 +9,7 @@ import {
   DotGrid, AmbientGlow, GlassCard, BrandName, SignupCTA, SiteHeader,
   fadeUp, fadeLeft, fadeRight, stagger, EASE, VP,
 } from "@/components/landing/shared";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 
 /* ─── Social Proof Marquee ─── */
 

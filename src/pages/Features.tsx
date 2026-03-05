@@ -11,6 +11,7 @@ import {
   DotGrid, AmbientGlow, GlassCard, BrandName, SignupCTA, SiteHeader,
   fadeUp, stagger, EASE, VP,
 } from "@/components/landing/shared";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 
 /* ─── Feature Data ─── */
 
