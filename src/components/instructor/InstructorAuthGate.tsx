@@ -4,16 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import InstructorLanding from "./InstructorLanding";
-
-// Safe import for studio theme context
-let useStudioThemeSafe: () => { studio: any; loading: boolean; notFound: boolean } | null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require("@/components/StudioThemeProvider");
-  useStudioThemeSafe = mod.useStudioTheme;
-} catch {
-  useStudioThemeSafe = null;
-}
+import { useStudioThemeMaybe } from "@/components/StudioThemeProvider";
 
 type GateStatus = "loading" | "unauthenticated" | "instructor" | "owner" | "student";
 
@@ -21,18 +12,10 @@ export default function InstructorAuthGate({ children }: { children: React.React
   const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<GateStatus>("loading");
 
-  // Safely try to get studio context
-  let studioInfo: { id: string; name: string; logo_url: string | null } | null = null;
-  try {
-    if (useStudioThemeSafe) {
-      const ctx = useStudioThemeSafe();
-      if (ctx?.studio) {
-        studioInfo = { id: ctx.studio.id, name: ctx.studio.name, logo_url: ctx.studio.logo_url };
-      }
-    }
-  } catch {
-    // Not inside a StudioThemeProvider — that's fine
-  }
+  const themeCtx = useStudioThemeMaybe();
+  const studioInfo = themeCtx?.studio
+    ? { id: themeCtx.studio.id, name: themeCtx.studio.name, logo_url: themeCtx.studio.logo_url }
+    : null;
 
   useEffect(() => {
     if (authLoading) return;

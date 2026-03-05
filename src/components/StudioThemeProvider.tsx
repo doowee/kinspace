@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface StudioBrand {
+export interface StudioBrand {
   id: string;
   name: string;
   slug: string;
@@ -22,13 +22,16 @@ interface StudioThemeContextType {
   notFound: boolean;
 }
 
-const StudioThemeContext = createContext<StudioThemeContextType>({
-  studio: null,
-  loading: true,
-  notFound: false,
-});
+const StudioThemeContext = createContext<StudioThemeContextType | null>(null);
 
 export function useStudioTheme() {
+  const ctx = useContext(StudioThemeContext);
+  if (!ctx) throw new Error("useStudioTheme must be used inside StudioThemeProvider");
+  return ctx;
+}
+
+/** Safe version that returns null when outside provider */
+export function useStudioThemeMaybe(): StudioThemeContextType | null {
   return useContext(StudioThemeContext);
 }
 
@@ -76,15 +79,6 @@ interface Props {
   children: React.ReactNode;
 }
 
-/**
- * StudioThemeProvider
- * ---
- * 1. If a `slug` prop is provided (or `:slug` URL param exists), fetch that studio's branding.
- * 2. If the user is logged in (student) and no slug is present, fetch branding from their
- *    most-recently-booked "home studio".
- * 3. Inject CSS variables onto :root so the entire UI adapts.
- * 4. Falls back to default Kinspace colours when no studio is resolved.
- */
 export default function StudioThemeProvider({ slug: slugProp, children }: Props) {
   const params = useParams<{ slug?: string; studio_slug?: string }>();
   const { user } = useAuth();
@@ -95,10 +89,8 @@ export default function StudioThemeProvider({ slug: slugProp, children }: Props)
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // ---- Fetch by slug ----
   useEffect(() => {
     if (!resolvedSlug) {
-      // No slug — try home studio for logged-in students
       if (user) {
         fetchHomeStudio(user.id);
       } else {
@@ -122,7 +114,6 @@ export default function StudioThemeProvider({ slug: slugProp, children }: Props)
     fetchBySlug();
   }, [resolvedSlug, user?.id]);
 
-  // ---- Fetch home studio (most recent booking) ----
   const fetchHomeStudio = async (userId: string) => {
     setLoading(true);
     const { data: bookings } = await supabase
@@ -150,7 +141,6 @@ export default function StudioThemeProvider({ slug: slugProp, children }: Props)
     setLoading(false);
   };
 
-  // ---- Inject / clean up CSS variables ----
   useEffect(() => {
     const root = document.documentElement;
     const vars: string[] = [];

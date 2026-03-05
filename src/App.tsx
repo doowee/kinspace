@@ -31,6 +31,7 @@ import CreateStudio from "./pages/CreateStudio";
 import InstructorPortal from "./pages/InstructorPortal";
 import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import StudentAuthGate from "./components/student/StudentAuthGate";
+import StudioBrandedLandingWrapper from "./components/StudioBrandedLandingWrapper";
 import KioskLogin from "./pages/KioskLogin";
 import KioskLiveRoster from "./pages/KioskLiveRoster";
 import KioskSchedule from "./pages/KioskSchedule";
