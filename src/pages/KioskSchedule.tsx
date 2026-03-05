@@ -58,14 +58,55 @@ export default function KioskSchedule() {
 
       const { data } = await supabase
         .from("classes")
-        .select("id, name, start_time, capacity_total, capacity_booked, class_type")
+        .select("id, name, start_time, capacity_total, class_type")
         .eq("instructor_id", instructorId)
         .eq("studio_id", studioId)
         .gte("start_time", dayStart)
         .lte("start_time", dayEnd)
         .order("start_time", { ascending: true });
 
-      setClasses(data ?? []);
+      if (!data || data.length === 0) {
+        setClasses([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch actual booking counts for these classes (students only)
+      const classIds = data.map((c) => c.id);
+
+      // Get staff user_ids to exclude
+      const { data: staffMembers } = await supabase
+        .from("studio_members")
+        .select("user_id")
+        .eq("studio_id", studioId)
+        .in("role", ["owner", "instructor", "admin"]);
+
+      const staffIds = new Set((staffMembers ?? []).map((m: any) => m.user_id));
+
+      const { data: bookings } = await supabase
+        .from("bookings")
+        .select("class_id, user_id")
+        .in("class_id", classIds)
+        .in("status", ["confirmed", "checked_in"]);
+
+      // Count only non-staff bookings per class
+      const countMap: Record<string, number> = {};
+      (bookings ?? []).forEach((b: any) => {
+        if (!staffIds.has(b.user_id)) {
+          countMap[b.class_id] = (countMap[b.class_id] || 0) + 1;
+        }
+      });
+
+      const rows: ClassRow[] = data.map((c) => ({
+        id: c.id,
+        name: c.name,
+        start_time: c.start_time,
+        capacity_total: c.capacity_total,
+        booked_count: countMap[c.id] ?? 0,
+        class_type: c.class_type,
+      }));
+
+      setClasses(rows);
       setLoading(false);
     };
 
