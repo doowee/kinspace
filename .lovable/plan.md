@@ -1,41 +1,125 @@
 
 
-## Instructor Data + UI Updates
+# Money Engine: Credit Gate + Stripe Checkout
 
-### 1. Insert Dummy Instructors
+## Overview
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+Build a transactionally safe credit-based booking system and a student-facing credit purchase flow via Stripe Checkout.
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+## Discrepancies Resolved
 
-No photo URLs for now (left null).
+| Requested | Actual | Resolution |
+|-----------|--------|------------|
+| `class_credits` column | `class_points` exists (int, default 0) | **Use `class_points`** — no schema change |
+| `/pricing` for students | `/pricing` = SaaS landing page | **New `/credits` route** |
+| `cancel_booking_logic` refunds to `student_passes` | Table was dropped | **Fix to refund `class_points`** |
+| `create-credit-checkout` with `verify_jwt = false` | Security risk | **Keep `verify_jwt = false` in config** (required for signing-keys), **validate auth in code** via `getClaims()` |
 
-### 2. Public Booking Page -- Show Instructor Info
+## Security Model
 
-**File: `src/pages/BookingPage.tsx`**
+- **`create-credit-checkout`**: `verify_jwt = false` in config, auth validated in code via `supabase.auth.getClaims(token)` — user identity extracted server-side, never trusted from body
+- **`stripe-credit-webhook`**: `verify_jwt = false`, validates `Stripe-Signature` header via `stripe.webhooks.constructEventAsync()`
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+---
 
-No changes needed here -- it already works once instructors are linked to classes.
+## Part 1: Database Migrations
 
-### 3. Create Class Form -- Instructor Dropdown
+### Migration A: `book_class_with_credit` RPC
 
-**File: `src/pages/Schedule.tsx`**
+```sql
+CREATE OR REPLACE FUNCTION public.book_class_with_credit(p_class_id UUID, p_studio_id UUID)
+RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+DECLARE
+  _user_id UUID; _credits INTEGER; _capacity INTEGER; _confirmed INTEGER; _status booking_status;
+BEGIN
+  _user_id := auth.uid();
+  IF _user_id IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF;
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+  SELECT class_points INTO _credits FROM profiles WHERE id = _user_id FOR UPDATE;
+  IF _credits < 1 THEN RAISE EXCEPTION 'Insufficient credits'; END IF;
 
-### Technical Details
+  SELECT capacity_total INTO _capacity FROM classes WHERE id = p_class_id FOR UPDATE;
+  SELECT COUNT(*) INTO _confirmed FROM bookings WHERE class_id = p_class_id AND status = 'confirmed';
 
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+  _status := CASE WHEN _confirmed >= _capacity THEN 'waitlist'::booking_status ELSE 'confirmed'::booking_status END;
 
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+  UPDATE profiles SET class_points = class_points - 1 WHERE id = _user_id;
+  INSERT INTO bookings (user_id, class_id, studio_id, status) VALUES (_user_id, p_class_id, p_studio_id, _status);
 
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+  RETURN CASE WHEN _status = 'waitlist' THEN 'Waitlisted — credit held' ELSE 'Booked successfully' END;
+END; $$;
+```
+
+### Migration B: Fix `cancel_booking_logic`
+
+Replace the `student_passes` refund block with:
+```sql
+UPDATE profiles SET class_points = class_points + 1 WHERE id = _user_id;
+```
+
+---
+
+## Part 2: Edge Functions
+
+### `create-credit-checkout/index.ts`
+- Auth: Extract token from `Authorization` header → `supabase.auth.getClaims(token)` → get `userId` and `email`
+- Accept `{ pack: "drop_in" | "5_pack" | "10_pack" }` from body
+- Map to hardcoded prices: Drop-In $25/1cr, 5-Pack $100/5cr, 10-Pack $175/10cr
+- Create Stripe Checkout session (`mode: "payment"`) with `credits` + `user_id` in metadata
+- Return checkout URL
+- Success/cancel URLs → `/credits?payment=success` / `/credits?payment=cancelled`
+
+### `stripe-credit-webhook/index.ts`
+- Validate `Stripe-Signature` via `stripe.webhooks.constructEventAsync()`
+- On `checkout.session.completed`: read `credits` + `user_id` from metadata
+- Increment `profiles.class_points` via service role client
+- Insert audit row into `transactions` table
+
+---
+
+## Part 3: UI Changes
+
+### New: `src/pages/Credits.tsx`
+- Show current `class_points` balance at top
+- Three pricing cards (Drop-In, 5-Pack, 10-Pack) with Buy buttons
+- Buy button calls `supabase.functions.invoke("create-credit-checkout")` → redirects to Stripe
+- Success banner when `?payment=success` in URL
+- Loading spinner during redirect
+
+### Edit: `src/pages/BookingPage.tsx`
+- Replace direct `bookings.insert()` in `handleBook` (lines 153-195) with `supabase.rpc("book_class_with_credit", { p_class_id, p_studio_id })`
+- Catch `"Insufficient credits"` error → open `noCreditsOpen` dialog
+- Update no-credits dialog to link to `/credits` instead of hardcoded $199 pack
+
+### Edit: `src/pages/Wallet.tsx`
+- Add "Buy Credits" CTA button linking to `/credits`
+
+### Edit: `src/App.tsx`
+- Add `/credits` route inside the `StudentAuthGate` block alongside `/book-class`
+
+---
+
+## Part 4: Config
+
+Add to `supabase/config.toml`:
+```toml
+[functions.create-credit-checkout]
+  verify_jwt = false
+[functions.stripe-credit-webhook]
+  verify_jwt = false
+```
+
+---
+
+## Files Summary
+
+| File | Action |
+|------|--------|
+| 2 SQL migrations | **Create** — `book_class_with_credit` RPC + fix `cancel_booking_logic` |
+| `supabase/functions/create-credit-checkout/index.ts` | **Create** |
+| `supabase/functions/stripe-credit-webhook/index.ts` | **Create** |
+| `src/pages/Credits.tsx` | **Create** |
+| `src/pages/BookingPage.tsx` | **Edit** — wire RPC + update no-credits dialog |
+| `src/pages/Wallet.tsx` | **Edit** — add Buy Credits CTA |
+| `src/App.tsx` | **Edit** — add `/credits` route |
 
