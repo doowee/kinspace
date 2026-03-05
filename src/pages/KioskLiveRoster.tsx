@@ -211,7 +211,8 @@ export default function KioskLiveRoster() {
     setSavingNotes(false);
     setNotesStudent(null);
   };
-    return (
+
+  if (loading) {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground text-xl animate-pulse">Loading roster…</p>
       </div>
