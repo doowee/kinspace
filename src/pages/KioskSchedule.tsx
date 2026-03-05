@@ -215,7 +215,7 @@ export default function KioskSchedule() {
                       {format(new Date(upNextClass.start_time), "h:mm a")}
                       <span className="mx-1">·</span>
                       <Users className="h-4 w-4" />
-                      {upNextClass.capacity_booked}/{upNextClass.capacity_total} Booked
+                      {upNextClass.booked_count}/{upNextClass.capacity_total} Booked
                     </p>
                   </div>
                   <Button
@@ -263,7 +263,7 @@ export default function KioskSchedule() {
                         <p className="font-medium text-foreground">{cls.name}</p>
                         <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                           <Users className="h-3.5 w-3.5" />
-                          {cls.capacity_booked}/{cls.capacity_total} Booked
+                          {cls.booked_count}/{cls.capacity_total} Booked
                           {isPast && (
                             <Badge variant="secondary" className="ml-2 text-xs">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
