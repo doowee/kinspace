@@ -214,6 +214,15 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
               </div>
             )}
 
+            <AIClassFiller
+              classId={classId!}
+              className={className}
+              capacity={capacity}
+              bookedCount={confirmed.length}
+              classStartTime={classStartTime}
+              isPro={isPro}
+            />
+
             {showChainButton && (
               <Button
                 variant="outline"
