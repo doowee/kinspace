@@ -1,41 +1,61 @@
 
 
-## Instructor Data + UI Updates
+# Students CRM: Access Status & Billing Upgrade
 
-### 1. Insert Dummy Instructors
+## Overview
+Replace the static "Tier" column with live access data from `user_subscriptions` + `profiles.class_points`, add a Billing & Access section to the detail sheet, and enable manual point adjustments.
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+## 1. Data Fetching Changes
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+In `fetchStudents`, add two new queries:
 
-No photo URLs for now (left null).
+- **Subscriptions**: Fetch `user_subscriptions` (status = 'active') joined with `products` (for `name`) for all student `userIds`. Build a map: `userId → { productName, status, currentPeriodEnd }`.
+- **Class Points**: Already available — add `class_points` to the profiles select.
 
-### 2. Public Booking Page -- Show Instructor Info
+Update the `StudentRow` interface:
+- Remove `membership_tier`
+- Add `class_points: number`, `subscription_name: string | null`, `subscription_status: string | null`, `subscription_period_end: string | null`
 
-**File: `src/pages/BookingPage.tsx`**
+## 2. Table Column: "Tier" → "Access Status"
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+Replace the current Tier column header and cell:
 
-No changes needed here -- it already works once instructors are linked to classes.
+- **If `subscription_name`**: Gold badge (`bg-yellow-500/15 text-yellow-700 border-yellow-300`) with `🏆 {subscription_name}`
+- **Else if `class_points >= 1`**: Blue badge (`bg-blue-500/15 text-blue-700 border-blue-300`) with `{class_points} Points`
+- **Else**: Gray badge (`bg-muted text-muted-foreground`) with `No Active Access`
 
-### 3. Create Class Form -- Instructor Dropdown
+## 3. Student Detail Sheet: "Billing & Access" Section
 
-**File: `src/pages/Schedule.tsx`**
+Insert a new section between the badges/stats and Demographics:
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+### Access Card
+- Show subscription details if active: Plan name, renewal date (`format(currentPeriodEnd, "MMM d, yyyy")`), status badge
+- Show point balance with an inline `+` button for manual adjustments
 
-### Technical Details
+### Add Points Dialog
+- Small `+` icon button next to points display
+- On click, show an inline input (number) + "Add" button
+- Calls `supabase.rpc('increment_class_points', { _user_id, _amount })` (RPC already exists)
+- Optimistically updates the student row and shows a success toast
 
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+### Transaction History
+- A collapsible section or expandable area
+- Fetches from `transactions` table where `user_id = selectedStudent.user_id` and `studio_id IN studioIds`
+- Displays: date, description, amount, payment method, status
+- Also fetches recent bookings (last 10) for that user to show class history
 
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+## 4. Files Changed
 
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+| File | Action |
+|------|--------|
+| `src/pages/Students.tsx` | **Edit** — all changes in this single file |
+
+No database migrations needed — all tables and RPCs already exist.
+
+## 5. Key Implementation Details
+
+- The `increment_class_points` RPC is `SECURITY DEFINER` and already exists, so staff can add points without needing direct profile update access
+- Subscriptions are fetched via the owner's RLS policy on `user_subscriptions` (`Owners can manage studio subscriptions`)
+- Transactions are fetched via the owner/instructor SELECT policy on `transactions`
+- The `class_points` field on profiles is already in the SELECT via `Co-members can view limited profile info` policy
 
