@@ -368,6 +368,8 @@ export type Database = {
           point_value: number | null
           price: number
           product_type: string
+          stripe_price_id: string | null
+          stripe_product_id: string | null
           studio_id: string | null
           updated_at: string
         }
@@ -380,6 +382,8 @@ export type Database = {
           point_value?: number | null
           price?: number
           product_type: string
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           studio_id?: string | null
           updated_at?: string
         }
@@ -392,6 +396,8 @@ export type Database = {
           point_value?: number | null
           price?: number
           product_type?: string
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           studio_id?: string | null
           updated_at?: string
         }
