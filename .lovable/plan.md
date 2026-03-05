@@ -1,41 +1,26 @@
 
 
-## Instructor Data + UI Updates
+# Plan: AI Marketing Agent — Fixes
 
-### 1. Insert Dummy Instructors
+## Issues to Fix
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+1. **Duplicate icons**: Line 146 has both `<Sparkles>` icon and `🪄` emoji — remove the emoji, keep only `✨` (Sparkles icon) per brand guidelines
+2. **Rename**: "AI Class Filler" → "AI Marketing Agent" everywhere (header, locked state, toast messages)
+3. **Collapsible**: Wrap the segment/steps content in a `Collapsible` from shadcn — clicking the header row toggles it open/closed, starts collapsed
+4. **Remove "Bring a Friend Pass"**: Not viable due to strict machine limits — replace with "Priority Waitlist Bump" or simply remove it
+5. **50% off, no code**: Change "Last-Minute 10% Discount" to "Last-Minute 50% Off" and remove the promo code reference from the mock content ("Use code LASTSPOT")
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+## Changes — Single File
 
-No photo URLs for now (left null).
+**`src/components/schedule/AIClassFiller.tsx`**
 
-### 2. Public Booking Page -- Show Instructor Info
-
-**File: `src/pages/BookingPage.tsx`**
-
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
-
-No changes needed here -- it already works once instructors are linked to classes.
-
-### 3. Create Class Form -- Instructor Dropdown
-
-**File: `src/pages/Schedule.tsx`**
-
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
-
-### Technical Details
-
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
-
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
-
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+| Area | Change |
+|------|--------|
+| Line 128, 146 | Remove `🪄` emoji, keep `Sparkles` icon only. Rename label to "✨ AI Marketing Agent" |
+| Lines 7, 140-150 | Import `Collapsible`/`CollapsibleTrigger`/`CollapsibleContent`, wrap header as trigger + steps as content, default closed |
+| Line 28 | Replace `"Bring a Friend Pass"` with e.g. `"Priority Waitlist Bump"` |
+| Line 27 | Change `"Last-Minute 10% Discount"` → `"Last-Minute 50% Off"` |
+| Lines 42-43 | Update mock content: remove "Use code LASTSPOT", change 10% → 50%, update friend-pass copy to match new option |
+| Line 47 | Update email subject from "10% off" to "50% off" |
+| Locked state (128) | Same rename to "AI Marketing Agent" |
 
