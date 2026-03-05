@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Plus, Trash2, Package, Repeat } from "lucide-react";
+import { Plus, Trash2, Package, Repeat, Pencil } from "lucide-react";
 
 type ProductType = "pack" | "subscription";
 type AccessScope = "single_studio" | "all_studios";
