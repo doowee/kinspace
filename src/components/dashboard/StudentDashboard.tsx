@@ -23,6 +23,7 @@ interface Booking {
   status: string;
   class_name: string;
   start_time: string;
+  created_at: string;
 }
 
 export default function StudentDashboard() {
@@ -33,6 +34,7 @@ export default function StudentDashboard() {
   const [classPoints, setClassPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [waitlistPositions, setWaitlistPositions] = useState<Map<string, number>>(new Map());
 
   // Cancel dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -48,7 +50,7 @@ export default function StudentDashboard() {
       supabase.from("profiles").select("first_name, class_points").eq("id", user.id).single(),
       supabase
         .from("bookings")
-        .select("id, class_id, status, classes(name, start_time)")
+        .select("id, class_id, status, created_at, classes(name, start_time)")
         .eq("user_id", user.id)
         .eq("studio_id", activeStudio.id)
         .in("status", ["confirmed", "waitlist"])
@@ -62,11 +64,36 @@ export default function StudentDashboard() {
       id: b.id,
       class_id: b.class_id,
       status: b.status,
+      created_at: b.created_at,
       class_name: b.classes?.name ?? "Unknown Class",
       start_time: b.classes?.start_time ?? "",
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     setBookings(mapped);
+
+    // Compute waitlist positions for waitlisted bookings
+    const waitlisted = mapped.filter((b) => b.status === "waitlist");
+    if (waitlisted.length > 0) {
+      const posMap = new Map<string, number>();
+      const classIds = [...new Set(waitlisted.map((b) => b.class_id))];
+      const { data: allWaitlist } = await supabase
+        .from("bookings")
+        .select("id, class_id, created_at")
+        .in("class_id", classIds)
+        .eq("status", "waitlist" as any)
+        .order("created_at", { ascending: true });
+
+      for (const wb of waitlisted) {
+        const ahead = (allWaitlist ?? []).filter(
+          (w: any) => w.class_id === wb.class_id && w.created_at < wb.created_at
+        ).length;
+        posMap.set(wb.id, ahead + 1);
+      }
+      setWaitlistPositions(posMap);
+    } else {
+      setWaitlistPositions(new Map());
+    }
+
     setLoading(false);
   }, [user?.id, activeStudio?.id]);
 
@@ -205,7 +232,7 @@ export default function StudentDashboard() {
                       {b.status === "waitlist" && (
                         <Badge variant="outline" className="text-xs border-amber-400 text-amber-600">
                           <Clock className="h-3 w-3 mr-1" />
-                          Waitlisted
+                          Waitlist #{waitlistPositions.get(b.id) ?? "?"}
                         </Badge>
                       )}
                       {!isPast && (

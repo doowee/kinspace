@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useDemoPhone } from "@/contexts/DemoPhoneContext";
 import { useStudio } from "@/contexts/StudioContext";
-import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Zap, Megaphone } from "lucide-react";
+import { Users, Megaphone } from "lucide-react";
 import MessageClassDrawer from "@/components/communication/MessageClassDrawer";
 
 interface FlashSaleStudent {
@@ -37,10 +35,8 @@ interface ViewStudentsDialogProps {
 export default function ViewStudentsDialog({ open, onOpenChange, classId, className, capacity, classStartTime, onBookingsChanged }: ViewStudentsDialogProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
-  const [chainRunning, setChainRunning] = useState(false);
   const [msgDrawerOpen, setMsgDrawerOpen] = useState(false);
   const [flashSaleStudents, setFlashSaleStudents] = useState<FlashSaleStudent[]>([]);
-  const { triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
   const { activeRole } = useStudio();
 
   // Listen for flash-deal-sold events from the AI Marketing Hub
@@ -74,16 +70,6 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
     fetchBookings();
   }, [open, classId, fetchBookings]);
 
-  // Register refetch callback so DemoPhone can trigger it AND parent schedule updates
-  useEffect(() => {
-    onWaitlistPromoted.current = () => {
-      fetchBookings();
-      onBookingsChanged?.();
-    };
-    return () => {
-      onWaitlistPromoted.current = null;
-    };
-  }, [fetchBookings, onWaitlistPromoted, onBookingsChanged]);
 
   const confirmed = bookings.filter((b) => b.status === "confirmed" || b.status === "checked_in");
   const waitlisted = bookings.filter((b) => b.status === "waitlist");
@@ -103,48 +89,6 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
     return p?.email ? maskEmail(p.email) : "Unknown";
   };
 
-  const handleChainReaction = async () => {
-    if (!classId || confirmed.length === 0 || waitlisted.length === 0) return;
-    setChainRunning(true);
-
-    // Phase 1: Cancel the last confirmed booking
-    const lastConfirmed = confirmed[confirmed.length - 1];
-    await supabase
-      .from("bookings")
-      .update({ status: "cancelled" as any })
-      .eq("id", lastConfirmed.id);
-
-    // Instantly refresh roster and parent schedule to show the cancellation
-    await fetchBookings();
-    onBookingsChanged?.();
-
-    toast({
-      title: "Student cancelled. 1 spot opened.",
-      description: "Triggering Waitlist...",
-    });
-
-    // Phase 2: After 1.5s, trigger the SMS to the first waitlisted student
-    setTimeout(() => {
-      // Re-read waitlisted from current state – use the first waitlisted we already have
-      const firstWaitlisted = waitlisted[0];
-      if (!firstWaitlisted) {
-        setChainRunning(false);
-        return;
-      }
-
-      triggerWaitlistPromotion({
-        bookingId: firstWaitlisted.id,
-        userId: firstWaitlisted.user_id,
-        studioId: firstWaitlisted.studio_id,
-        className,
-        classTime: classStartTime || "",
-      });
-
-      setChainRunning(false);
-    }, 1500);
-  };
-
-  const showChainButton = activeRole === "owner" && confirmed.length > 0 && waitlisted.length > 0;
   const totalStudents = confirmed.length + waitlisted.length;
 
   return (
@@ -212,18 +156,6 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
             )}
 
 
-            {showChainButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2 border-dashed border-amber-400/60 bg-amber-50/50 text-amber-700 hover:bg-amber-100/60 hover:text-amber-800"
-                onClick={handleChainReaction}
-                disabled={chainRunning}
-              >
-                <Zap className="h-4 w-4" />
-                {chainRunning ? "Running…" : "Simulate Waitlist Chain Reaction"}
-              </Button>
-            )}
           </div>
         )}
       </DialogContent>
