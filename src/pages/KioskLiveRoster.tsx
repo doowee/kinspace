@@ -183,7 +183,34 @@ export default function KioskLiveRoster() {
   const isMilestone = (s: RosterStudent) => MILESTONES.includes(s.total_bookings);
   const hasInjury = (s: RosterStudent) => !!s.injury_notes;
 
-  if (loading) {
+  const openNotes = (student: RosterStudent) => {
+    setNotesStudent(student);
+    setEditStaffNotes(student.staff_notes ?? "");
+  };
+
+  const saveStaffNotes = async () => {
+    if (!notesStudent) return;
+    setSavingNotes(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ staff_notes: editStaffNotes } as any)
+      .eq("id", notesStudent.user_id);
+
+    if (error) {
+      toast.error("Failed to save notes");
+      setSavingNotes(false);
+      return;
+    }
+
+    setRoster((prev) =>
+      prev.map((s) =>
+        s.user_id === notesStudent.user_id ? { ...s, staff_notes: editStaffNotes } : s
+      )
+    );
+    toast.success("Notes saved");
+    setSavingNotes(false);
+    setNotesStudent(null);
+  };
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground text-xl animate-pulse">Loading roster…</p>
