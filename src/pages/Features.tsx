@@ -365,12 +365,7 @@ export default function Features() {
         </div>
       </motion.section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 bg-background">
-        <div className="container flex items-center justify-center py-8 text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} <BrandName /> · All rights reserved.</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

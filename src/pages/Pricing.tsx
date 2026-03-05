@@ -246,12 +246,7 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-8">
-        <div className="container text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} <BrandName /> — All rights reserved.
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

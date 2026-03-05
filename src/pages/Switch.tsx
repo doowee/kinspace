@@ -334,6 +334,7 @@ export default function Switch() {
           </motion.div>
         </div>
       </section>
+      <SiteFooter />
     </div>
   );
 }
