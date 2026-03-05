@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PackagesTab from "@/components/settings/PackagesTab";
+import ProductsTab from "@/components/settings/ProductsTab";
 import BrandingTab from "@/components/settings/BrandingTab";
 import PoliciesTab from "@/components/settings/PoliciesTab";
 import InstructorsTab from "@/components/settings/InstructorsTab";
@@ -16,7 +16,7 @@ export default function Settings() {
       <Tabs defaultValue="branding">
         <TabsList>
           <TabsTrigger value="branding">Branding & Appearance</TabsTrigger>
-          <TabsTrigger value="packages">Packages</TabsTrigger>
+          <TabsTrigger value="packages">Products & Memberships</TabsTrigger>
           <TabsTrigger value="instructors">Instructors</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
           <TabsTrigger value="comms">Communication Log</TabsTrigger>
@@ -25,7 +25,7 @@ export default function Settings() {
           <BrandingTab />
         </TabsContent>
         <TabsContent value="packages" className="mt-4">
-          <PackagesTab />
+          <ProductsTab />
         </TabsContent>
         <TabsContent value="instructors" className="mt-4">
           <InstructorsTab />
