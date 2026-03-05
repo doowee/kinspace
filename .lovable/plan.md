@@ -1,41 +1,66 @@
 
 
-## Instructor Data + UI Updates
+# Implementation Plan: Smart Refund, Auto-Promote & UI Cleanup
 
-### 1. Insert Dummy Instructors
+## 1. Database Migration (single SQL file)
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+### A. Replace `cancel_booking_logic` RPC
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+Updated function checks `user_subscriptions` before refunding:
+- On **early cancel**: query `user_subscriptions` joined with `products` for active sub matching the studio
+  - If subscription found → cancel booking, NO point refund, return "Booking cancelled. No credit to refund (subscription access)."
+  - If no subscription → cancel booking, refund 1 point, return "Booking cancelled. Credit refunded."
+- On **late cancel**: set `late_cancelled`, no refund regardless (same as today)
 
-No photo URLs for now (left null).
+### B. Create `auto_promote_waitlist` trigger function
 
-### 2. Public Booking Page -- Show Instructor Info
+Loops through waitlisted students (ordered by `created_at ASC`, `FOR UPDATE SKIP LOCKED`):
 
-**File: `src/pages/BookingPage.tsx`**
+1. Check if student has an active subscription (same join as booking RPC)
+   - If subscription is **active** → promote to `confirmed`, RETURN
+   - If subscription has **expired/cancelled** → skip this student, set their booking to `cancelled` (staff review), continue to next
+2. If no subscription found, student is a pack user — points were already deducted at waitlist time → promote to `confirmed`, RETURN
+3. If student has no profile at all (edge case) → skip and cancel their booking
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+### C. Create trigger
 
-No changes needed here -- it already works once instructors are linked to classes.
+```sql
+CREATE TRIGGER trg_auto_promote_waitlist
+  AFTER UPDATE ON bookings
+  FOR EACH ROW
+  WHEN (NEW.status IN ('cancelled','late_cancelled') AND OLD.status IN ('confirmed','checked_in'))
+  EXECUTE FUNCTION auto_promote_waitlist();
+```
 
-### 3. Create Class Form -- Instructor Dropdown
+## 2. StudentDashboard.tsx — Waitlist Position Badge
 
-**File: `src/pages/Schedule.tsx`**
+**Changes to `src/components/dashboard/StudentDashboard.tsx`:**
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+- Add `created_at` to the bookings query select: `"id, class_id, status, created_at, classes(name, start_time)"`
+- Add `created_at` to the `Booking` interface
+- After fetching bookings, for each waitlisted booking, compute position:
+  - Filter all bookings with same `class_id`, status `waitlist`, and `created_at` earlier than current → position = count + 1
+  - Since we only fetch the current user's bookings, we need a separate query for position. Query: for each waitlisted class_id, count bookings with `status = 'waitlist'` and `created_at < thisBooking.created_at`
+  - Store positions in a `Map<string, number>` (booking id → position)
+- Replace the "Waitlisted" badge text with `Waitlist #${position}`
 
-### Technical Details
+## 3. ViewStudentsDialog.tsx — Remove Chain Reaction
 
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+**Remove from `src/components/schedule/ViewStudentsDialog.tsx`:**
 
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+- Remove imports: `useDemoPhone`, `toast`, `Zap`
+- Remove state: `chainRunning`
+- Remove: `triggerWaitlistPromotion`, `onWaitlistPromoted` destructuring and the `useEffect` that registers `onWaitlistPromoted.current`
+- Remove: `handleChainReaction` function (lines 106-145)
+- Remove: `showChainButton` variable
+- Remove: the chain reaction `<Button>` JSX block (lines 215-226)
+- Keep: `fetchBookings`, `onBookingsChanged` prop, all other roster UI
 
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+## Files Summary
+
+| File | Action |
+|------|--------|
+| SQL migration | **Create** — smart `cancel_booking_logic` + `auto_promote_waitlist` trigger |
+| `src/components/dashboard/StudentDashboard.tsx` | **Edit** — add waitlist position query + badge |
+| `src/components/schedule/ViewStudentsDialog.tsx` | **Edit** — remove chain reaction simulation |
 
