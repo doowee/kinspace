@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isSameDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -171,23 +172,53 @@ export default function StudentPortal({ demoUserId }: { demoUserId?: string }) {
         <CardHeader><CardTitle className="font-display flex items-center gap-2"><CalendarDays className="h-5 w-5" />My Schedule</CardTitle></CardHeader>
         <CardContent>
           {bookings.length === 0 ? (<p className="text-sm text-muted-foreground py-4 text-center">No upcoming bookings.</p>) : (
-            <div className="divide-y">
-              {bookings.map((b) => (
-                <div key={b.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm truncate">{b.class_name}</p>
-                      {b.studio_name && <Badge variant="outline" className={`text-[10px] px-2 py-0 border ${studioColorMap[b.studio_id] ?? ""}`}>{b.studio_name}</Badge>}
-                      {b.status === "waitlist" && <Badge variant="outline" className="text-[10px] px-2 py-0 border border-amber-400 text-amber-600"><Clock className="h-2.5 w-2.5 mr-0.5" />Waitlisted</Badge>}
+            <div className="space-y-6">
+              {(() => {
+                const groups: { date: Date; items: Booking[] }[] = [];
+                bookings.forEach((b) => {
+                  const d = new Date(b.start_time);
+                  const last = groups[groups.length - 1];
+                  if (last && isSameDay(last.date, d)) {
+                    last.items.push(b);
+                  } else {
+                    groups.push({ date: d, items: [b] });
+                  }
+                });
+                return groups.map((group) => (
+                  <div key={group.date.toISOString()}>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      {format(group.date, "EEEE, MMMM d")}
+                    </h4>
+                    <div className="space-y-2">
+                      {group.items.map((b) => (
+                        <div key={b.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
+                          {/* Prominent time block */}
+                          <div className="flex flex-col items-center justify-center w-16 shrink-0 rounded-md bg-primary/10 py-2">
+                            <span className="text-lg font-bold text-primary leading-tight">{format(new Date(b.start_time), "h:mm")}</span>
+                            <span className="text-[10px] font-medium uppercase text-primary/70">{format(new Date(b.start_time), "a")}</span>
+                          </div>
+                          {/* Details */}
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-sm truncate">{b.class_name}</p>
+                              {b.status === "waitlist" && <Badge variant="outline" className="text-[10px] px-2 py-0 border border-amber-400 text-amber-600"><Clock className="h-2.5 w-2.5 mr-0.5" />Waitlisted</Badge>}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {b.instructor_name && <span>{b.instructor_name} · </span>}
+                              {b.studio_name && <span>{b.studio_name}</span>}
+                            </p>
+                          </div>
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 text-xs gap-1" disabled={rebookLoading && rebookSourceBooking?.id === b.id} onClick={() => handleRebook(b, true)} title="Book the next session"><CalendarPlus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Next</span></Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" disabled={cancellingId === b.id} onClick={() => handleCancelClick(b)}><X className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-xs text-muted-foreground">{b.instructor_name && <span>{b.instructor_name} · </span>}{format(new Date(b.start_time), "EEE, MMM d · h:mm a")}</p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 text-xs gap-1" disabled={rebookLoading && rebookSourceBooking?.id === b.id} onClick={() => handleRebook(b, true)} title="Book the next session"><CalendarPlus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Next Session</span></Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" disabled={cancellingId === b.id} onClick={() => handleCancelClick(b)}><X className="h-3.5 w-3.5 mr-1" />Cancel</Button>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           )}
         </CardContent>
