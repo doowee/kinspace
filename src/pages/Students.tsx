@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
 import { studioColorClass } from "@/lib/studio-colors";
@@ -11,12 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-const EMAIL_VISIBLE_ROLES = ["owner"];
 const maskEmail = (email: string) => {
   const [local, domain] = email.split("@");
   if (!domain) return "***@***";
@@ -29,7 +29,10 @@ interface StudentRow {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
-  membership_tier: string | null;
+  class_points: number;
+  subscription_name: string | null;
+  subscription_status: string | null;
+  subscription_period_end: string | null;
   total_bookings: number;
   last_booking_at: string | null;
   home_studio_id: string | null;
@@ -47,6 +50,37 @@ interface EditData {
   staff_notes: string;
 }
 
+interface TransactionRow {
+  id: string;
+  amount: number;
+  description: string | null;
+  payment_method: string;
+  status: string;
+  created_at: string;
+}
+
+/* ─── Access Status Badge (reused in table + sheet) ─── */
+function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size?: "sm" | "lg" }) {
+  const textSize = size === "lg" ? "text-xs" : "text-[10px]";
+  if (student.subscription_name) {
+    return (
+      <Badge variant="outline" className={`${textSize} gap-1 bg-yellow-500/15 text-yellow-700 border-yellow-300`}>
+        🏆 {student.subscription_name}
+      </Badge>
+    );
+  }
+  if (student.class_points >= 1) {
+    return (
+      <Badge variant="outline" className={`${textSize} gap-1 bg-blue-500/15 text-blue-700 border-blue-300`}>
+        <Coins className="h-3 w-3" />{student.class_points} Points
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className={`${textSize} text-muted-foreground`}>No Active Access</Badge>
+  );
+}
+
 export default function Students() {
   const { activeStudio, activeRole } = useStudio();
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -55,6 +89,21 @@ export default function Students() {
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", injury_notes: "", staff_notes: "" });
   const [saving, setSaving] = useState(false);
+  const [dmStudent, setDmStudent] = useState<StudentRow | null>(null);
+  const [studioIds, setStudioIds] = useState<string[]>([]);
+
+  // Add-points inline state
+  const [addPointsAmount, setAddPointsAmount] = useState("");
+  const [addingPoints, setAddingPoints] = useState(false);
+  const [showAddPoints, setShowAddPoints] = useState(false);
+
+  // Transaction history
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [txOpen, setTxOpen] = useState(false);
+  const [txLoading, setTxLoading] = useState(false);
+
+  const viewAsRole = useViewAsRole();
+  const canSeeEmail = viewAsRole === "owner";
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -68,7 +117,7 @@ export default function Students() {
         .single();
 
       const orgId = studioRow?.organization_id;
-      let studioIds: string[] = [activeStudio.id];
+      let ids: string[] = [activeStudio.id];
 
       if (orgId) {
         const { data: orgStudios } = await supabase
@@ -76,40 +125,55 @@ export default function Students() {
           .select("id")
           .eq("organization_id", orgId);
         if (orgStudios && orgStudios.length > 0) {
-          studioIds = orgStudios.map((s) => s.id);
+          ids = orgStudios.map((s) => s.id);
         }
       }
+      setStudioIds(ids);
 
       const { data: members } = await supabase
         .from("studio_members")
         .select("user_id")
-        .in("studio_id", studioIds)
+        .in("studio_id", ids)
         .eq("role", "student");
 
       if (!members || members.length === 0) { setStudents([]); setLoading(false); return; }
 
       const userIds = [...new Set(members.map((m) => m.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, email, first_name, last_name, membership_tier, home_studio_id, phone, injury_notes, staff_notes, created_at")
-        .in("id", userIds);
 
-      const homeStudioIds = [...new Set((profiles ?? []).map((p: any) => p.home_studio_id).filter(Boolean))];
+      // Parallel fetches
+      const [profilesRes, bookingsRes, subsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points")
+          .in("id", userIds),
+        supabase
+          .from("bookings")
+          .select("user_id, created_at")
+          .in("studio_id", ids)
+          .in("status", ["confirmed", "checked_in"])
+          .in("user_id", userIds),
+        supabase
+          .from("user_subscriptions")
+          .select("user_id, status, current_period_end, product_id, products(name)")
+          .eq("status", "active")
+          .in("user_id", userIds),
+      ]);
+
+      const profiles = profilesRes.data ?? [];
+      const bookings = bookingsRes.data ?? [];
+      const subs = subsRes.data ?? [];
+
+      // Home studio names
+      const homeStudioIds = [...new Set(profiles.map((p: any) => p.home_studio_id).filter(Boolean))];
       let studioNameMap: Record<string, string> = {};
       if (homeStudioIds.length > 0) {
         const { data: studioRows } = await supabase.from("studios").select("id, name").in("id", homeStudioIds);
         (studioRows ?? []).forEach((s: any) => { studioNameMap[s.id] = s.name; });
       }
 
-      const { data: bookings } = await supabase
-        .from("bookings")
-        .select("user_id, created_at")
-        .in("studio_id", studioIds)
-        .in("status", ["confirmed", "checked_in"])
-        .in("user_id", userIds);
-
+      // Booking map
       const bookingMap: Record<string, { count: number; last: string | null }> = {};
-      (bookings ?? []).forEach((b: any) => {
+      bookings.forEach((b: any) => {
         if (!bookingMap[b.user_id]) bookingMap[b.user_id] = { count: 0, last: null };
         bookingMap[b.user_id].count++;
         if (!bookingMap[b.user_id].last || b.created_at > bookingMap[b.user_id].last!) {
@@ -117,13 +181,28 @@ export default function Students() {
         }
       });
 
-      const rows: StudentRow[] = (profiles ?? []).map((p: any) => ({
+      // Subscription map (first active sub per user)
+      const subMap: Record<string, { name: string; status: string; periodEnd: string | null }> = {};
+      subs.forEach((s: any) => {
+        if (!subMap[s.user_id]) {
+          subMap[s.user_id] = {
+            name: (s.products as any)?.name ?? "Subscription",
+            status: s.status,
+            periodEnd: s.current_period_end,
+          };
+        }
+      });
+
+      const rows: StudentRow[] = profiles.map((p: any) => ({
         user_id: p.id,
         email: p.email,
         first_name: p.first_name,
         last_name: p.last_name,
         phone: p.phone ?? null,
-        membership_tier: p.membership_tier,
+        class_points: p.class_points ?? 0,
+        subscription_name: subMap[p.id]?.name ?? null,
+        subscription_status: subMap[p.id]?.status ?? null,
+        subscription_period_end: subMap[p.id]?.periodEnd ?? null,
         total_bookings: bookingMap[p.id]?.count ?? 0,
         last_booking_at: bookingMap[p.id]?.last ?? null,
         home_studio_id: p.home_studio_id ?? null,
@@ -152,10 +231,6 @@ export default function Students() {
     return s.email;
   };
 
-  const [dmStudent, setDmStudent] = useState<StudentRow | null>(null);
-  const viewAsRole = useViewAsRole();
-  const canSeeEmail = viewAsRole === "owner";
-
   const openSheet = (student: StudentRow) => {
     setSelectedStudent(student);
     setEditData({
@@ -165,6 +240,10 @@ export default function Students() {
       injury_notes: student.injury_notes ?? "",
       staff_notes: student.staff_notes ?? "",
     });
+    setShowAddPoints(false);
+    setAddPointsAmount("");
+    setTxOpen(false);
+    setTransactions([]);
   };
 
   const handleSave = async () => {
@@ -182,12 +261,8 @@ export default function Students() {
       .eq("id", selectedStudent.user_id);
 
     setSaving(false);
-    if (error) {
-      toast.error("Failed to update profile: " + error.message);
-      return;
-    }
+    if (error) { toast.error("Failed to update: " + error.message); return; }
 
-    // Optimistic update
     setStudents((prev) =>
       prev.map((s) =>
         s.user_id === selectedStudent.user_id
@@ -196,13 +271,50 @@ export default function Students() {
       )
     );
     setSelectedStudent(null);
-    toast.success("Student profile updated successfully");
+    toast.success("Student profile updated");
   };
+
+  /* ─── Add Points ─── */
+  const handleAddPoints = async () => {
+    if (!selectedStudent) return;
+    const amount = parseInt(addPointsAmount, 10);
+    if (!amount || amount < 1) { toast.error("Enter a positive number"); return; }
+    setAddingPoints(true);
+    const { error } = await supabase.rpc("increment_class_points", {
+      _user_id: selectedStudent.user_id,
+      _amount: amount,
+    });
+    setAddingPoints(false);
+    if (error) { toast.error("Failed: " + error.message); return; }
+
+    const newPoints = selectedStudent.class_points + amount;
+    setStudents((prev) => prev.map((s) => s.user_id === selectedStudent.user_id ? { ...s, class_points: newPoints } : s));
+    setSelectedStudent((prev) => prev ? { ...prev, class_points: newPoints } : prev);
+    setAddPointsAmount("");
+    setShowAddPoints(false);
+    toast.success(`Added ${amount} point${amount > 1 ? "s" : ""}`);
+  };
+
+  /* ─── Load Transaction History ─── */
+  const loadTransactions = useCallback(async () => {
+    if (!selectedStudent || studioIds.length === 0) return;
+    setTxLoading(true);
+    const { data } = await supabase
+      .from("transactions")
+      .select("id, amount, description, payment_method, status, created_at")
+      .eq("user_id", selectedStudent.user_id)
+      .in("studio_id", studioIds)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setTransactions((data as TransactionRow[]) ?? []);
+    setTxLoading(false);
+  }, [selectedStudent?.user_id, studioIds]);
 
   if (!activeStudio) return null;
 
   return (
     <div className="animate-fade-in space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold text-foreground">Students</h2>
@@ -211,6 +323,7 @@ export default function Students() {
         <Badge variant="outline" className="text-sm gap-1.5 py-1.5 px-3"><Users className="h-4 w-4" />{students.length} total</Badge>
       </div>
 
+      {/* Table */}
       <Card>
         <CardHeader className="pb-4">
           <div className="relative">
@@ -227,14 +340,14 @@ export default function Students() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                   <TableRow>
-                     <TableHead>Name</TableHead>
-                     <TableHead>Email</TableHead>
-                     <TableHead>Home Studio</TableHead>
-                     <TableHead>Tier</TableHead>
-                     <TableHead className="text-right">Bookings</TableHead>
-                     <TableHead className="text-right">Last Visit</TableHead>
-                   </TableRow>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Home Studio</TableHead>
+                    <TableHead>Access Status</TableHead>
+                    <TableHead className="text-right">Bookings</TableHead>
+                    <TableHead className="text-right">Last Visit</TableHead>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((s) => (
@@ -258,15 +371,12 @@ export default function Students() {
                       <TableCell>
                         {s.home_studio_name && s.home_studio_id ? (
                           <Badge variant="outline" className={`text-[10px] gap-1 ${studioColorClass(s.home_studio_id)}`}>
-                            <Home className="h-2.5 w-2.5" />
-                            {s.home_studio_name}
+                            <Home className="h-2.5 w-2.5" />{s.home_studio_name}
                           </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px]">{s.membership_tier ?? "Drop-in"}</Badge>
+                        <AccessStatusBadge student={s} />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.total_bookings}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
@@ -296,7 +406,7 @@ export default function Students() {
                 <SheetDescription>{selectedStudent.email}</SheetDescription>
               </SheetHeader>
 
-              {/* Section A: Badges & Quick Stats */}
+              {/* Badges & Quick Stats */}
               <div className="flex flex-wrap gap-2 mt-4">
                 {selectedStudent.total_bookings <= 3 && (
                   <Badge variant="secondary" className="gap-1"><Star className="h-3 w-3" />First-Timer</Badge>
@@ -319,12 +429,93 @@ export default function Students() {
                   <p className="text-[11px] text-muted-foreground">Join Date</p>
                 </div>
                 <div className="rounded-md border border-border p-3">
-                  <p className="text-sm font-medium text-foreground">{selectedStudent.membership_tier ?? "Drop-in"}</p>
-                  <p className="text-[11px] text-muted-foreground">Tier</p>
+                  <AccessStatusBadge student={selectedStudent} size="lg" />
+                  <p className="text-[11px] text-muted-foreground mt-1">Access</p>
                 </div>
               </div>
 
-              {/* Section B: Editable Demographics */}
+              {/* ─── Section: Billing & Access ─── */}
+              <div className="space-y-3 mt-6">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><CreditCard className="h-4 w-4" />Billing & Access</h3>
+
+                {/* Subscription details */}
+                {selectedStudent.subscription_name && (
+                  <div className="rounded-md border border-border p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">🏆 {selectedStudent.subscription_name}</span>
+                      <Badge variant="outline" className="text-[10px] bg-green-500/15 text-green-700 border-green-300">Active</Badge>
+                    </div>
+                    {selectedStudent.subscription_period_end && (
+                      <p className="text-xs text-muted-foreground">Renews {format(new Date(selectedStudent.subscription_period_end), "MMM d, yyyy")}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Points balance */}
+                <div className="rounded-md border border-border p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Coins className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-medium text-foreground">{selectedStudent.class_points} Class Points</span>
+                    </div>
+                    {!showAddPoints ? (
+                      <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => setShowAddPoints(true)}>
+                        <Plus className="h-3 w-3" />Add
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-7 w-16 text-xs"
+                          placeholder="Qty"
+                          value={addPointsAmount}
+                          onChange={(e) => setAddPointsAmount(e.target.value)}
+                          autoFocus
+                        />
+                        <Button size="sm" className="h-7 px-2 text-xs" disabled={addingPoints} onClick={handleAddPoints}>
+                          {addingPoints ? "…" : "Add"}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 px-1 text-xs" onClick={() => { setShowAddPoints(false); setAddPointsAmount(""); }}>✕</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Transaction History (collapsible) */}
+                <Collapsible open={txOpen} onOpenChange={(open) => { setTxOpen(open); if (open && transactions.length === 0) loadTransactions(); }}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-between text-sm font-medium px-3 h-9">
+                      View Transaction History
+                      <ChevronDown className={`h-4 w-4 transition-transform ${txOpen ? "rotate-180" : ""}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    {txLoading ? (
+                      <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">Loading…</p>
+                    ) : transactions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">No transactions found.</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {transactions.map((tx) => (
+                          <div key={tx.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs">
+                            <div>
+                              <p className="font-medium text-foreground">{tx.description ?? "Payment"}</p>
+                              <p className="text-muted-foreground">{format(new Date(tx.created_at), "MMM d, yyyy")} · {tx.payment_method}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium tabular-nums text-foreground">${Number(tx.amount).toFixed(2)}</p>
+                              <Badge variant="outline" className="text-[9px]">{tx.status}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              {/* Demographics */}
               <div className="space-y-3 mt-6">
                 <h3 className="text-sm font-semibold text-foreground">Demographics</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -347,7 +538,7 @@ export default function Students() {
                 </div>
               </div>
 
-              {/* Section C: Notes Engine */}
+              {/* Notes */}
               <div className="space-y-3 mt-6">
                 <h3 className="text-sm font-semibold text-foreground">Notes</h3>
                 <div className="space-y-1.5">
@@ -362,7 +553,7 @@ export default function Students() {
                 </div>
               </div>
 
-              {/* Sticky Footer */}
+              {/* Footer */}
               <div className="sticky bottom-0 bg-background border-t border-border pt-4 pb-2 mt-auto flex gap-3 justify-end">
                 <Button variant="outline" onClick={() => setSelectedStudent(null)}>Cancel</Button>
                 <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save Profile"}</Button>
