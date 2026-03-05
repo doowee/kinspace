@@ -5,12 +5,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import StudentLanding from "./StudentLanding";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useStudioThemeMaybe } from "@/components/StudioThemeProvider";
 
 type GateStatus = "loading" | "unauthenticated" | "student" | "instructor" | "owner";
 
 export default function StudentAuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<GateStatus>("loading");
+
+  // Safely get studio context (null when not inside StudioThemeProvider)
+  const themeCtx = useStudioThemeMaybe();
+  const studioInfo = themeCtx?.studio
+    ? { id: themeCtx.studio.id, name: themeCtx.studio.name, logo_url: themeCtx.studio.logo_url }
+    : null;
 
   useEffect(() => {
     if (authLoading) return;
@@ -28,7 +35,7 @@ export default function StudentAuthGate({ children }: { children: React.ReactNod
 
       if (error) {
         console.error("Role check failed:", error);
-        setStatus("student"); // fallback to student view
+        setStatus("student");
         return;
       }
 
@@ -44,7 +51,6 @@ export default function StudentAuthGate({ children }: { children: React.ReactNod
         return;
       }
 
-      // Welcome toast for students
       const { data: profile } = await supabase
         .from("profiles")
         .select("first_name")
@@ -74,7 +80,7 @@ export default function StudentAuthGate({ children }: { children: React.ReactNod
   }
 
   if (status === "unauthenticated") {
-    return <StudentLanding />;
+    return <StudentLanding studio={studioInfo} />;
   }
 
   if (status === "owner") {

@@ -6,8 +6,43 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Lock } from "lucide-react";
+import type { StudioInfo } from "@/components/student/StudentLanding";
 
-export default function InstructorLanding() {
+interface Props {
+  studio?: StudioInfo | null;
+}
+
+function StudioBrand({ studio }: { studio?: StudioInfo | null }) {
+  if (studio?.logo_url) {
+    return <img src={studio.logo_url} alt={studio.name} className="h-8 w-8 rounded-lg object-cover" />;
+  }
+  if (studio) {
+    return (
+      <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+        {studio.name.charAt(0)}
+      </div>
+    );
+  }
+  return <Lock className="h-8 w-8 opacity-80" />;
+}
+
+function StudioBrandSmall({ studio }: { studio?: StudioInfo | null }) {
+  if (studio?.logo_url) {
+    return <img src={studio.logo_url} alt={studio.name} className="h-5 w-5 rounded object-cover" />;
+  }
+  if (studio) {
+    return (
+      <div className="h-5 w-5 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold text-[10px]">
+        {studio.name.charAt(0)}
+      </div>
+    );
+  }
+  return <Lock className="h-5 w-5 text-primary" />;
+}
+
+export default function InstructorLanding({ studio }: Props) {
+  const brandName = studio?.name || "Kinspace";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,14 +88,20 @@ export default function InstructorLanding() {
       <div className="hidden lg:flex lg:w-1/2 bg-primary items-center justify-center p-12">
         <div className="max-w-md space-y-6 text-primary-foreground">
           <div className="flex items-center gap-3">
-            <Lock className="h-8 w-8 opacity-80" />
-            <span className="font-display text-2xl font-bold tracking-tight">Kinspace</span>
+            <StudioBrand studio={studio} />
+            <span className="font-display text-2xl font-bold tracking-tight">{brandName}</span>
           </div>
           <h2 className="font-display text-4xl font-bold leading-tight">
-            Your studio,<br />your command center.
+            {studio ? (
+              <>Staff Portal</>
+            ) : (
+              <>Your studio,<br />your command center.</>
+            )}
           </h2>
           <p className="text-primary-foreground/70 text-lg leading-relaxed">
-            View rosters, manage your schedule, and request subs via SmartCover — all in one place.
+            {studio
+              ? `Log in to manage your classes and schedule at ${studio.name}.`
+              : "View rosters, manage your schedule, and request subs via SmartCover — all in one place."}
           </p>
           <div className="flex gap-6 pt-4 text-sm text-primary-foreground/50">
             <span>📋 Live Rosters</span>
@@ -76,8 +117,8 @@ export default function InstructorLanding() {
           <CardContent className="p-6 sm:p-8 space-y-6">
             {/* Mobile header */}
             <div className="lg:hidden flex items-center gap-2 mb-2">
-              <Lock className="h-5 w-5 text-primary" />
-              <span className="font-display text-lg font-bold text-foreground">Kinspace</span>
+              <StudioBrandSmall studio={studio} />
+              <span className="font-display text-lg font-bold text-foreground">{brandName}</span>
             </div>
 
             <div className="space-y-2">
@@ -85,7 +126,9 @@ export default function InstructorLanding() {
                 Staff Portal
               </h1>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Log in to view your upcoming rosters, manage your schedule, and request subs via SmartCover.
+                {studio
+                  ? `Log in to view your upcoming rosters and manage your schedule at ${studio.name}.`
+                  : "Log in to view your upcoming rosters, manage your schedule, and request subs via SmartCover."}
               </p>
             </div>
 

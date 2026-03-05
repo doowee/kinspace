@@ -31,6 +31,7 @@ import CreateStudio from "./pages/CreateStudio";
 import InstructorPortal from "./pages/InstructorPortal";
 import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import StudentAuthGate from "./components/student/StudentAuthGate";
+import StudioBrandedLandingWrapper from "./components/StudioBrandedLandingWrapper";
 import KioskLogin from "./pages/KioskLogin";
 import KioskLiveRoster from "./pages/KioskLiveRoster";
 import KioskSchedule from "./pages/KioskSchedule";
@@ -170,6 +171,31 @@ const App = () => {
             </Route>
             <Route path="/book/:studio_slug" element={<ThemedBookingPage />} />
             <Route path="/book/:studio_slug/packages" element={<ThemedPackagesPage />} />
+            {/* Branded student routes */}
+            <Route
+              path="/s/:studio_slug"
+              element={
+                <StudioBrandedLandingWrapper>
+                  <StudentAuthGate>
+                    <StudentLayout />
+                  </StudentAuthGate>
+                </StudioBrandedLandingWrapper>
+              }
+            >
+              <Route index element={<BookClass />} />
+              <Route path="credits" element={<Credits />} />
+            </Route>
+            {/* Branded staff route */}
+            <Route
+              path="/s/:studio_slug/staff"
+              element={
+                <StudioBrandedLandingWrapper>
+                  <InstructorAuthGate>
+                    <InstructorPortal />
+                  </InstructorAuthGate>
+                </StudioBrandedLandingWrapper>
+              }
+            />
             <Route
               path="/instructor-portal"
               element={
