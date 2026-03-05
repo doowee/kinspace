@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Lock, Sparkles, Users, Clock, UserPlus, Rocket } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Lock, Sparkles, Users, Clock, UserPlus, Rocket, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface AIClassFillerProps {
@@ -24,8 +25,8 @@ const SEGMENTS = [
 
 const TONES = [
   { value: "friendly", label: "Friendly Reminder" },
-  { value: "discount", label: "Last-Minute 10% Discount" },
-  { value: "friend-pass", label: "Bring a Friend Pass" },
+  { value: "discount", label: "Last-Minute 50% Off" },
+  { value: "waitlist-bump", label: "Priority Waitlist Bump" },
 ] as const;
 
 type SegmentId = typeof SEGMENTS[number]["id"];
@@ -39,12 +40,12 @@ function getMockContent(segment: SegmentId, tone: ToneId, className: string) {
   };
   const offers: Record<ToneId, string> = {
     friendly: "There's a spot with your name on it — book now before it fills up! 💛",
-    discount: "Here's an exclusive 10% off to get you back on the reformer. Use code LASTSPOT. ⚡",
-    "friend-pass": "Bring a friend for FREE this time — double the fun, double the burn! 🔥",
+    discount: "Here's an exclusive 50% off to get you back on the reformer — today only! ⚡",
+    "waitlist-bump": "You've been bumped to the top of the waitlist — your spot is waiting! 🔥",
   };
   return {
     email: {
-      subject: tone === "discount" ? `⚡ 10% off ${className} — today only` : `A spot just opened in ${className}!`,
+      subject: tone === "discount" ? `⚡ 50% off ${className} — today only` : `A spot just opened in ${className}!`,
       body: `${openers[segment]} ${className}?\n\n${offers[tone]}\n\nSee you on the mat,\nYour Studio Team`,
     },
     sms: `${openers[segment]} ${className}? ${offers[tone]}`,
@@ -82,6 +83,7 @@ function ConfettiOverlay() {
 }
 
 export default function AIClassFiller({ classId, className, capacity, bookedCount, classStartTime, isPro }: AIClassFillerProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [segment, setSegment] = useState<SegmentId | null>(null);
   const [tone, setTone] = useState<ToneId | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -108,7 +110,7 @@ export default function AIClassFiller({ classId, className, capacity, bookedCoun
   const handleDeploy = () => {
     setShowConfetti(true);
     setDeployed(true);
-    toast({ title: "🚀 AI Agent deployed!", description: "Watch the bookings roll in." });
+    toast({ title: "🚀 AI Marketing Agent deployed!", description: "Watch the bookings roll in." });
     setTimeout(() => setShowConfetti(false), 1500);
   };
 
@@ -120,12 +122,12 @@ export default function AIClassFiller({ classId, className, capacity, bookedCoun
         onClick={() =>
           toast({
             title: "Upgrade to Premium",
-            description: "Let our AI automatically fill your empty reformer beds.",
+            description: "Let the AI Marketing Agent automatically fill your empty spots.",
           })
         }
       >
         <div className="pointer-events-none select-none opacity-40 blur-[1px] flex flex-col gap-1">
-          <p className="text-sm font-semibold">🪄 AI Class Filler</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> AI Marketing Agent</p>
           <p className="text-xs text-muted-foreground">{emptySpots} spot{emptySpots > 1 ? "s" : ""} to fill — let AI do the work</p>
         </div>
         <div className="absolute inset-0 flex items-center justify-center gap-2">
@@ -140,109 +142,114 @@ export default function AIClassFiller({ classId, className, capacity, bookedCoun
   return (
     <Card className="relative border-violet-400/40 bg-violet-50/30 dark:bg-violet-950/10 overflow-hidden">
       {showConfetti && <ConfettiOverlay />}
-      <CardContent className="p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet-500" />
-          <p className="text-sm font-semibold">🪄 AI Class Filler</p>
-          <Badge variant="outline" className="ml-auto text-[10px] border-violet-300 text-violet-600">
-            {emptySpots} spot{emptySpots > 1 ? "s" : ""} open
-          </Badge>
-        </div>
+      <CardContent className="p-4 space-y-0">
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+            <ChevronRight className={`h-3.5 w-3.5 text-violet-500 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+            <Sparkles className="h-4 w-4 text-violet-500" />
+            <p className="text-sm font-semibold">AI Marketing Agent</p>
+            <Badge variant="outline" className="ml-auto text-[10px] border-violet-300 text-violet-600">
+              {emptySpots} spot{emptySpots > 1 ? "s" : ""} open
+            </Badge>
+          </CollapsibleTrigger>
 
-        {/* Step 1: Segment */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">1. Target Segment</p>
-          <div className="grid gap-1.5">
-            {SEGMENTS.map((s) => {
-              const Icon = s.icon;
-              const active = segment === s.id;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => { setSegment(s.id); setPreview(null); setDeployed(false); }}
-                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                    active
-                      ? "border-violet-400 bg-violet-100/60 dark:bg-violet-900/20"
-                      : "border-border hover:bg-accent"
-                  }`}
-                >
-                  <Icon className={`h-3.5 w-3.5 ${active ? "text-violet-600" : "text-muted-foreground"}`} />
-                  <div>
-                    <span className={`font-medium ${active ? "text-violet-700 dark:text-violet-300" : ""}`}>{s.label}</span>
-                    <span className="block text-[11px] text-muted-foreground">{s.desc}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Step 2: Tone */}
-        {segment && (
-          <div className="space-y-2 animate-fade-in">
-            <p className="text-xs font-medium text-muted-foreground">2. Offer / Tone</p>
-            <Select value={tone ?? ""} onValueChange={(v) => { setTone(v as ToneId); setPreview(null); setDeployed(false); }}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Choose a tone…" />
-              </SelectTrigger>
-              <SelectContent>
-                {TONES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {/* Step 3: Generate & Preview */}
-        {segment && tone && !preview && !generating && (
-          <Button
-            size="sm"
-            className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white animate-fade-in"
-            onClick={handleGenerate}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Generate Campaign
-          </Button>
-        )}
-
-        {generating && (
-          <div className="space-y-2 animate-fade-in">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-4 w-1/2" />
-          </div>
-        )}
-
-        {preview && (
-          <div className="space-y-3 animate-fade-in">
-            <div className="rounded-lg border border-violet-200/60 dark:border-violet-700/30 p-3 space-y-1">
-              <p className="text-[10px] font-bold uppercase text-violet-500 tracking-wider">Email Preview</p>
-              <p className="text-xs font-semibold">{preview.email.subject}</p>
-              <p className="text-xs text-muted-foreground whitespace-pre-line">{preview.email.body}</p>
-            </div>
-            <div className="rounded-lg border border-violet-200/60 dark:border-violet-700/30 p-3 space-y-1">
-              <p className="text-[10px] font-bold uppercase text-violet-500 tracking-wider">SMS Preview</p>
-              <p className="text-xs text-muted-foreground">{preview.sms}</p>
+          <CollapsibleContent className="space-y-4 pt-4">
+            {/* Step 1: Segment */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">1. Target Segment</p>
+              <div className="grid gap-1.5">
+                {SEGMENTS.map((s) => {
+                  const Icon = s.icon;
+                  const active = segment === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => { setSegment(s.id); setPreview(null); setDeployed(false); }}
+                      className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                        active
+                          ? "border-violet-400 bg-violet-100/60 dark:bg-violet-900/20"
+                          : "border-border hover:bg-accent"
+                      }`}
+                    >
+                      <Icon className={`h-3.5 w-3.5 ${active ? "text-violet-600" : "text-muted-foreground"}`} />
+                      <div>
+                        <span className={`font-medium ${active ? "text-violet-700 dark:text-violet-300" : ""}`}>{s.label}</span>
+                        <span className="block text-[11px] text-muted-foreground">{s.desc}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Step 4: Deploy */}
-            {!deployed ? (
+            {/* Step 2: Tone */}
+            {segment && (
+              <div className="space-y-2 animate-fade-in">
+                <p className="text-xs font-medium text-muted-foreground">2. Offer / Tone</p>
+                <Select value={tone ?? ""} onValueChange={(v) => { setTone(v as ToneId); setPreview(null); setDeployed(false); }}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Choose a tone…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TONES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Step 3: Generate & Preview */}
+            {segment && tone && !preview && !generating && (
               <Button
                 size="sm"
-                className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white"
-                onClick={handleDeploy}
+                className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white animate-fade-in"
+                onClick={handleGenerate}
               >
-                <Rocket className="h-3.5 w-3.5" />
-                🚀 Deploy to {targetCount} Students
+                <Sparkles className="h-3.5 w-3.5" />
+                Generate Campaign
               </Button>
-            ) : (
-              <p className="text-center text-xs font-medium text-violet-600 animate-fade-in">
-                ✅ Campaign deployed to {targetCount} students
-              </p>
             )}
-          </div>
-        )}
+
+            {generating && (
+              <div className="space-y-2 animate-fade-in">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            )}
+
+            {preview && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="rounded-lg border border-violet-200/60 dark:border-violet-700/30 p-3 space-y-1">
+                  <p className="text-[10px] font-bold uppercase text-violet-500 tracking-wider">Email Preview</p>
+                  <p className="text-xs font-semibold">{preview.email.subject}</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{preview.email.body}</p>
+                </div>
+                <div className="rounded-lg border border-violet-200/60 dark:border-violet-700/30 p-3 space-y-1">
+                  <p className="text-[10px] font-bold uppercase text-violet-500 tracking-wider">SMS Preview</p>
+                  <p className="text-xs text-muted-foreground">{preview.sms}</p>
+                </div>
+
+                {/* Step 4: Deploy */}
+                {!deployed ? (
+                  <Button
+                    size="sm"
+                    className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white"
+                    onClick={handleDeploy}
+                  >
+                    <Rocket className="h-3.5 w-3.5" />
+                    🚀 Deploy to {targetCount} Students
+                  </Button>
+                ) : (
+                  <p className="text-center text-xs font-medium text-violet-600 animate-fade-in">
+                    ✅ Campaign deployed to {targetCount} students
+                  </p>
+                )}
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
