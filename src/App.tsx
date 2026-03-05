@@ -34,6 +34,7 @@ import KioskLogin from "./pages/KioskLogin";
 import KioskLiveRoster from "./pages/KioskLiveRoster";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
