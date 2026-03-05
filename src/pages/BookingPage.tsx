@@ -155,14 +155,13 @@ export default function BookingPage() {
     setBookingClassId(cls.id);
 
     try {
-      const { data: result, error: rpcError } = await supabase.rpc("book_class_with_credit", {
+      const { data: result, error: rpcError } = await supabase.rpc("handle_class_booking", {
         p_class_id: cls.id,
         p_studio_id: studio.id,
       });
 
       if (rpcError) {
-        // Check for insufficient credits
-        if (rpcError.message?.includes("Insufficient credits")) {
+        if (rpcError.message?.includes("INSUFFICIENT_ACCESS")) {
           setNoCreditsOpen(true);
           return;
         }
@@ -174,8 +173,8 @@ export default function BookingPage() {
       toast({
         title: isWaitlisted ? "Added to Waitlist" : "Success! You are booked",
         description: isWaitlisted
-          ? `You've been added to the waitlist for ${cls.name}. 1 credit held.`
-          : `You're confirmed for ${cls.name}. 1 credit deducted.`,
+          ? `You've been added to the waitlist for ${cls.name}.`
+          : `You're confirmed for ${cls.name}.`,
       });
 
       setUserBookedClassIds((prev) => new Map([...prev, [cls.id, isWaitlisted ? "waitlist" : "confirmed"]]));
@@ -573,7 +572,7 @@ export default function BookingPage() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            You need a class pass to book this session. Browse available packages and grab some credits.
+            You need a class pack or an active membership to book this session.
           </p>
           <div className="flex flex-col gap-2 mt-2">
             <Button
