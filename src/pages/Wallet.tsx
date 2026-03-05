@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, Receipt } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Ticket, Receipt, ShoppingBag } from "lucide-react";
 import { format } from "date-fns";
 
 interface Transaction {
@@ -18,6 +20,7 @@ interface Transaction {
 
 export default function Wallet() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [classPoints, setClassPoints] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +86,14 @@ export default function Wallet() {
             {classPoints}
           </div>
           <p className="text-xs text-muted-foreground mt-1">points available</p>
+          <Button
+            size="sm"
+            className="mt-3 gap-1.5"
+            onClick={() => navigate("/credits")}
+          >
+            <ShoppingBag className="h-3.5 w-3.5" />
+            Buy Credits
+          </Button>
         </CardContent>
       </Card>
 

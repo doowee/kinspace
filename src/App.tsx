@@ -23,6 +23,7 @@ import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
 import Wallet from "./pages/Wallet";
+import Credits from "./pages/Credits";
 import Profile from "./pages/Profile";
 import BookClass from "./pages/BookClass";
 import NotFound from "./pages/NotFound";
@@ -114,7 +115,7 @@ const App = () => {
                 </AuthGate>
               }
             />
-            {/* /book-class has its own auth gate with login/signup */}
+            {/* /book-class and /credits have their own auth gate with login/signup */}
             <Route
               path="/book-class"
               element={
@@ -124,6 +125,16 @@ const App = () => {
               }
             >
               <Route index element={<BookClass />} />
+            </Route>
+            <Route
+              path="/credits"
+              element={
+                <StudentAuthGate>
+                  <StudentLayout />
+                </StudentAuthGate>
+              }
+            >
+              <Route index element={<Credits />} />
             </Route>
             {/* Other student routes still require auth */}
             <Route
