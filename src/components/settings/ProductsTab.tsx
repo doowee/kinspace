@@ -226,11 +226,13 @@ export default function ProductsTab() {
       </CardContent>
 
       {/* Create Product Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Product</DialogTitle>
-            <DialogDescription>Add a class pack or unlimited subscription to your studio menu.</DialogDescription>
+            <DialogTitle>{editingProduct ? "Edit Product" : "Create Product"}</DialogTitle>
+            <DialogDescription>
+              {editingProduct ? "Update the product details below." : "Add a class pack or unlimited subscription to your studio menu."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -241,18 +243,20 @@ export default function ProductsTab() {
               <Label>Price (USD)</Label>
               <Input type="number" min="0" step="0.01" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Product Type</Label>
-              <Select value={productType} onValueChange={(v) => setProductType(v as ProductType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pack">Class Pack</SelectItem>
-                  <SelectItem value="subscription">Unlimited Subscription</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!editingProduct && (
+              <div className="space-y-2">
+                <Label>Product Type</Label>
+                <Select value={productType} onValueChange={(v) => setProductType(v as ProductType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pack">Class Pack</SelectItem>
+                    <SelectItem value="subscription">Unlimited Subscription</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {productType === "pack" && (
               <div className="space-y-2">
                 <Label>Credits (Points) Granted</Label>
@@ -275,9 +279,12 @@ export default function ProductsTab() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!name || !price || createMutation.isPending}>
-              {createMutation.isPending ? "Saving…" : "Save Product"}
+            <Button variant="outline" onClick={() => { resetForm(); setOpen(false); }}>Cancel</Button>
+            <Button
+              onClick={() => editingProduct ? updateMutation.mutate() : createMutation.mutate()}
+              disabled={!name || !price || createMutation.isPending || updateMutation.isPending}
+            >
+              {(createMutation.isPending || updateMutation.isPending) ? "Saving…" : editingProduct ? "Update Product" : "Save Product"}
             </Button>
           </DialogFooter>
         </DialogContent>
