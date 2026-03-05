@@ -1,41 +1,25 @@
 
 
-## Instructor Data + UI Updates
+# Plan: Dedicated /pricing Page
 
-### 1. Insert Dummy Instructors
+## What We're Building
+A public marketing-style pricing page at `/pricing` with two side-by-side tier comparison cards (Standard $99/mo vs Pro Engine $169/mo), a feature comparison table, and a bottom CTA. Standard links to `/auth`, Pro has a "Book a Demo" or "Contact Us" action.
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+## Changes
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+### 1. Create `src/pages/Pricing.tsx`
+- Uses `SiteHeader` with `activePath="/pricing"`
+- Hero: headline "Simple, transparent pricing" + subtitle
+- Two `GlassCard` comparison cards side-by-side (responsive: stacked on mobile)
+  - **Standard ($99/mo):** feature list from existing `PLANS` data, CTA → "Start Your Free Trial" linking to `/auth`
+  - **Pro Engine ($169/mo):** "Recommended" badge, extended feature list, CTA → "Book a Demo" (mailto or Calendly link placeholder)
+- Optional: detailed feature comparison grid below (checkmarks per tier)
+- Footer CTA section with `<SignupCTA align="center" />`
+- Framer Motion animations consistent with Features page (`fadeUp`, `stagger`)
 
-No photo URLs for now (left null).
+### 2. Update `src/App.tsx`
+- Add route: `<Route path="/pricing" element={<Pricing />} />`
 
-### 2. Public Booking Page -- Show Instructor Info
-
-**File: `src/pages/BookingPage.tsx`**
-
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
-
-No changes needed here -- it already works once instructors are linked to classes.
-
-### 3. Create Class Form -- Instructor Dropdown
-
-**File: `src/pages/Schedule.tsx`**
-
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
-
-### Technical Details
-
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
-
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
-
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+### 3. Update `src/components/landing/shared.tsx`
+- Change the "Pricing" nav link `to` from `/features` to `/pricing`
 
