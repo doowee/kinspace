@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger } from
 "@/components/ui/dropdown-menu";
-import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck, Copy, Check, CreditCard, GraduationCap } from "lucide-react";
+import { LogOut, LayoutDashboard, CalendarDays, Building2, Wallet, Settings, ExternalLink, Ticket, Users, ShieldCheck, Copy, Check, CreditCard, GraduationCap, UserCircle, Briefcase } from "lucide-react";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Outlet, Navigate } from "react-router-dom";
 import { createContext, useContext, useState, useCallback } from "react";
@@ -59,6 +59,42 @@ function CopyKioskLinkItem() {
     <DropdownMenuItem onClick={handleCopy}>
       {copied ? <Check className="h-4 w-4 mr-2 text-primary" /> : <Ticket className="h-4 w-4 mr-2" />}
       {copied ? "Link Copied!" : "Copy Kiosk Link"}
+    </DropdownMenuItem>
+  );
+}
+
+function CopyStudentPortalLinkItem({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    const url = `${PUBLISHED_DOMAIN}/s/${slug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [slug]);
+
+  return (
+    <DropdownMenuItem onClick={handleCopy}>
+      {copied ? <Check className="h-4 w-4 mr-2 text-primary" /> : <UserCircle className="h-4 w-4 mr-2" />}
+      {copied ? "Link Copied!" : "Copy Student Portal Link"}
+    </DropdownMenuItem>
+  );
+}
+
+function CopyStaffPortalLinkItem({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    const url = `${PUBLISHED_DOMAIN}/s/${slug}/staff`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [slug]);
+
+  return (
+    <DropdownMenuItem onClick={handleCopy}>
+      {copied ? <Check className="h-4 w-4 mr-2 text-primary" /> : <Briefcase className="h-4 w-4 mr-2" />}
+      {copied ? "Link Copied!" : "Copy Staff Portal Link"}
     </DropdownMenuItem>
   );
 }
@@ -217,6 +253,8 @@ export default function AppLayout() {
                             View Client App
                           </DropdownMenuItem>
                           <CopyBookingLinkItem slug={activeStudio.slug} />
+                          <CopyStudentPortalLinkItem slug={activeStudio.slug} />
+                          <CopyStaffPortalLinkItem slug={activeStudio.slug} />
                           <CopyKioskLinkItem />
                         </>
                       )}
