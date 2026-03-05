@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
+import { useSubscriptionTier } from "@/hooks/use-subscription-tier";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import TimePicker from "@/components/schedule/TimePicker";
 import EditClassDialog from "@/components/schedule/EditClassDialog";
 import ViewStudentsDialog from "@/components/schedule/ViewStudentsDialog";
 import ManualBookDialog from "@/components/schedule/ManualBookDialog";
+import AIClassFiller from "@/components/schedule/AIClassFiller";
 
 interface InstructorRow {
   id: string;
@@ -66,6 +68,7 @@ export default function Schedule() {
   const { user } = useAuth();
   const { activeStudio, activeRole } = useStudio();
   const { toast } = useToast();
+  const { isPro } = useSubscriptionTier();
   const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -611,6 +614,18 @@ export default function Schedule() {
                         />
                       </div>
                     </div>
+
+                    {/* AI Class Filler — inline on card for owners */}
+                    {canManage && (
+                      <AIClassFiller
+                        classId={cls.id}
+                        className={cls.name}
+                        capacity={cls.capacity_total}
+                        bookedCount={count}
+                        classStartTime={cls.start_time}
+                        isPro={isPro}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               );
