@@ -14,8 +14,8 @@ const PHONE_REGEX = /^\+?[\d\s\-().]{7,20}$/;
 export default function Auth() {
   const { user, loading: authLoading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("founder@kinspace.studio");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
