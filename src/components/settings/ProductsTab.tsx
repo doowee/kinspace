@@ -35,6 +35,7 @@ export default function ProductsTab() {
   const { activeStudio } = useStudio();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -81,6 +82,27 @@ export default function ProductsTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingProduct) return;
+      const row: Record<string, unknown> = {
+        name,
+        price: parseFloat(price) || 0,
+        point_value: productType === "pack" ? parseInt(pointValue) || null : null,
+        access_scope: productType === "subscription" ? accessScope : null,
+      };
+      const { error } = await supabase.from("products").update(row as any).eq("id", editingProduct.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", studioId] });
+      toast.success("Product updated");
+      resetForm();
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("products").delete().eq("id", id);
@@ -108,6 +130,17 @@ export default function ProductsTab() {
     setProductType("pack");
     setPointValue("");
     setAccessScope("single_studio");
+    setEditingProduct(null);
+  };
+
+  const openEdit = (p: Product) => {
+    setEditingProduct(p);
+    setName(p.name);
+    setPrice(String(p.price));
+    setProductType(p.product_type);
+    setPointValue(p.point_value ? String(p.point_value) : "");
+    setAccessScope(p.access_scope || "single_studio");
+    setOpen(true);
   };
 
   if (!studioId) return null;
