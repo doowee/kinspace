@@ -1,41 +1,74 @@
 
 
-## Instructor Data + UI Updates
+# Products & Memberships: Schema + Settings UI
 
-### 1. Insert Dummy Instructors
+## Part 1: Database Migration
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+Create two new tables and RLS policies:
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+**Table: `products`**
+```sql
+CREATE TABLE public.products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  studio_id UUID REFERENCES public.studios(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  price NUMERIC NOT NULL DEFAULT 0,
+  product_type VARCHAR NOT NULL CHECK (product_type IN ('pack', 'subscription')),
+  point_value INTEGER,
+  access_scope VARCHAR CHECK (access_scope IN ('single_studio', 'all_studios')),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
 
-No photo URLs for now (left null).
+RLS: Studio owners can CRUD. Studio members can SELECT.
 
-### 2. Public Booking Page -- Show Instructor Info
+**Table: `user_subscriptions`**
+```sql
+CREATE TABLE public.user_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES public.products(id),
+  studio_id UUID REFERENCES public.studios(id),
+  status VARCHAR NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'canceled', 'past_due')),
+  current_period_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
 
-**File: `src/pages/BookingPage.tsx`**
+RLS: Owners can CRUD for their studio's subscriptions. Users can SELECT own rows.
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+Also add `updated_at` triggers on both tables.
 
-No changes needed here -- it already works once instructors are linked to classes.
+## Part 2: UI — Rewrite `PackagesTab` → `ProductsTab`
 
-### 3. Create Class Form -- Instructor Dropdown
+**File: `src/components/settings/ProductsTab.tsx`** (new, replaces PackagesTab)
 
-**File: `src/pages/Schedule.tsx`**
+- Fetches `products` WHERE `studio_id = activeStudio.id`
+- Data table with columns: Name, Type (badge: Pack/Subscription), Price, Points/Scope, Active toggle
+- "Create Product" button opens a Dialog with:
+  - Name (text input)
+  - Price (number input)
+  - Type toggle: "Class Pack" vs "Unlimited Subscription"
+  - Conditional fields:
+    - Pack → `point_value` number input
+    - Subscription → `access_scope` select ("Single Studio" / "All Studios")
+  - Save button → `supabase.from('products').insert()`
+- Delete button per row
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+**File: `src/pages/Settings.tsx`** (edit)
 
-### Technical Details
+- Replace import of `PackagesTab` with `ProductsTab`
+- Rename tab trigger from "Packages" to "Products & Memberships"
 
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+## Files Summary
 
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
-
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+| File | Action |
+|------|--------|
+| 1 SQL migration | **Create** — `products` + `user_subscriptions` tables with RLS |
+| `src/components/settings/ProductsTab.tsx` | **Create** — full CRUD UI |
+| `src/pages/Settings.tsx` | **Edit** — swap tab import + label |
+| `src/components/settings/PackagesTab.tsx` | **Delete** (no longer imported) |
 
