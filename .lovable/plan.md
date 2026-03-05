@@ -1,43 +1,41 @@
 
 
-# Upgrade Booking Logic: Subscription-First "VIP Bouncer"
+## Instructor Data + UI Updates
 
-## Part 1: Database — New RPC `handle_class_booking`
+### 1. Insert Dummy Instructors
 
-Create a new SECURITY DEFINER RPC that replaces `book_class_with_credit` with subscription-first logic:
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-```
-1. Get auth.uid(), fail if null
-2. Check user_subscriptions for active sub:
-   - JOIN products to get access_scope
-   - If access_scope = 'all_studios' → AUTHORIZED (no point deduction)
-   - If access_scope = 'single_studio' AND user_subscriptions.studio_id = p_studio_id → AUTHORIZED
-3. If AUTHORIZED via subscription:
-   - Check capacity, insert booking as confirmed/waitlist
-   - RETURN 'Booked successfully' or 'Waitlisted — subscription access'
-4. If no subscription, fall back to class_points check:
-   - Lock profile, check class_points >= 1
-   - Deduct 1 point, insert booking
-   - RETURN 'Booked successfully' or 'Waitlisted — credit held'
-5. If neither: RAISE EXCEPTION 'INSUFFICIENT_ACCESS'
-```
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-This will be a SQL migration creating the function. The existing `book_class_with_credit` stays for backward compat but the UI will switch to calling `handle_class_booking`.
+No photo URLs for now (left null).
 
-## Part 2: UI — BookingPage.tsx Updates
+### 2. Public Booking Page -- Show Instructor Info
 
-Two changes in `src/pages/BookingPage.tsx`:
+**File: `src/pages/BookingPage.tsx`**
 
-1. **`handleBook` function (lines 153-193)**: Switch RPC call from `book_class_with_credit` to `handle_class_booking`. Update error check from `"Insufficient credits"` to `"INSUFFICIENT_ACCESS"`.
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-2. **No Credits Dialog (lines 567-599)**: Update the description text to: "You need a class pack or an active membership to book this session."
+No changes needed here -- it already works once instructors are linked to classes.
 
-3. **Success toast (lines 174-179)**: Keep existing logic — the RPC return string already distinguishes waitlist vs confirmed. Update credit-specific descriptions to be access-type-agnostic (e.g., remove "1 credit deducted" since subscription bookings don't deduct).
+### 3. Create Class Form -- Instructor Dropdown
 
-## Files Summary
+**File: `src/pages/Schedule.tsx`**
 
-| File | Action |
-|------|--------|
-| SQL migration | **Create** — `handle_class_booking` RPC |
-| `src/pages/BookingPage.tsx` | **Edit** — switch RPC, update error handling & dialog text |
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+
+### Technical Details
+
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 

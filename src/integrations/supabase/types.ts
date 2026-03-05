@@ -767,6 +767,10 @@ export type Database = {
         Args: { _studio_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["studio_role"]
       }
+      handle_class_booking: {
+        Args: { p_class_id: string; p_studio_id: string }
+        Returns: string
+      }
       increment_class_points: {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
