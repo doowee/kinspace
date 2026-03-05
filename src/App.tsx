@@ -179,6 +179,16 @@ const App = () => {
               }
             />
             <Route
+              path="/kiosk/schedule"
+              element={
+                <AuthGate>
+                  <StudioProvider>
+                    <KioskSchedule />
+                  </StudioProvider>
+                </AuthGate>
+              }
+            />
+            <Route
               path="/kiosk/live/:classId"
               element={
                 <AuthGate>
