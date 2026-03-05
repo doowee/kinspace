@@ -5,6 +5,7 @@ import { SiteHeader, GlassCard, DotGrid, AmbientGlow, SignupCTA, fadeUp, stagger
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 
 /* ─── Pain-point cards ─── */
 const PAIN_POINTS = [
@@ -334,6 +335,7 @@ export default function Switch() {
           </motion.div>
         </div>
       </section>
+      <SiteFooter />
     </div>
   );
 }

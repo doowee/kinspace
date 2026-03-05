@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Check, Zap, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 import {
   SiteHeader,
   SignupCTA,
@@ -246,12 +247,7 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-8">
-        <div className="container text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} <BrandName /> — All rights reserved.
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
