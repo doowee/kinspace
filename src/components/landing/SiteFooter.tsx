@@ -68,7 +68,7 @@ export function SiteFooter() {
         {/* Bottom bar */}
         <div className="border-t border-background/10 mt-12 pt-8 text-center">
           <p className="text-xs text-background/40">
-            © {new Date().getFullYear()} Kinspace. All rights reserved.
+            © {new Date().getFullYear()} Kinspace Studio. All rights reserved.
           </p>
         </div>
       </div>
