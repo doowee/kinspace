@@ -86,6 +86,14 @@ export default function Wallet() {
             {classPoints}
           </div>
           <p className="text-xs text-muted-foreground mt-1">points available</p>
+          <Button
+            size="sm"
+            className="mt-3 gap-1.5"
+            onClick={() => navigate("/credits")}
+          >
+            <ShoppingBag className="h-3.5 w-3.5" />
+            Buy Credits
+          </Button>
         </CardContent>
       </Card>
 
