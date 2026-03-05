@@ -501,41 +501,45 @@ export default function InstructorPortal({ demoUserId }: { demoUserId?: string }
                                       borderColor: studioColorMap[cls.studio_name],
                                       color: studioColorMap[cls.studio_name],
                                       backgroundColor: `${studioColorMap[cls.studio_name]}15`,
-                              }}
-                            >
-                              {cls.studio_name}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 pt-0.5">
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                          <span className={`text-xs font-medium ${isFull ? "text-destructive" : "text-foreground"}`}>
-                            {cls.booked_count}/{cls.capacity} booked
-                          </span>
-                          {isFull && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">Full</Badge>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {!isCoverRequested && !isClaimed && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 text-xs"
-                            onClick={(e) => confirmCoverRequest(cls, e)}
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                            Request Cover
-                          </Button>
-                        )}
-                        <ChevronRight
-                          className="h-5 w-5 text-muted-foreground cursor-pointer"
-                          onClick={() => openRoster(cls)}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
+                                    }}
+                                  >
+                                    {cls.studio_name}
+                                  </Badge>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  <span className={`font-medium ${isFull ? "text-destructive" : ""}`}>
+                                    {cls.booked_count}/{cls.capacity}
+                                  </span>
+                                  {isFull && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-1">Full</Badge>}
+                                </span>
+                              </div>
+                            </div>
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {!isCoverRequested && !isClaimed && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5 text-xs"
+                                  onClick={(e) => confirmCoverRequest(cls, e)}
+                                >
+                                  <RefreshCw className="h-3 w-3" />
+                                  Cover
+                                </Button>
+                              )}
+                              <ChevronRight
+                                className="h-5 w-5 text-muted-foreground cursor-pointer"
+                                onClick={() => openRoster(cls)}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ));
+              })()
             )}
           </TabsContent>
 
