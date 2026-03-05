@@ -66,7 +66,7 @@ export default function KioskLiveRoster() {
     // Fetch bookings with profile data
     const { data: bookings } = await supabase
       .from("bookings")
-      .select("id, status, user_id, profiles:user_id(first_name, last_name, home_studio_id, injury_notes)")
+      .select("id, status, user_id, profiles:user_id(first_name, last_name, home_studio_id, injury_notes, staff_notes)")
       .eq("class_id", classId)
       .in("status", ["confirmed", "checked_in", "waitlist"]);
 
@@ -97,6 +97,7 @@ export default function KioskLiveRoster() {
       last_name: b.profiles?.last_name ?? null,
       home_studio_id: b.profiles?.home_studio_id ?? null,
       injury_notes: b.profiles?.injury_notes ?? null,
+      staff_notes: b.profiles?.staff_notes ?? null,
       total_bookings: countMap[b.user_id] ?? 0,
     }));
 
