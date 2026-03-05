@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Check, X, Minus, DollarSign, Eye, MessageSquare, Brain, ArrowRight } from "lucide-react";
 import { SiteHeader, GlassCard, DotGrid, AmbientGlow, SignupCTA, fadeUp, stagger, VP } from "@/components/landing/shared";
