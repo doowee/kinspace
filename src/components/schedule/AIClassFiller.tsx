@@ -91,14 +91,7 @@ export default function AIClassFiller({ classId, className, capacity, bookedCoun
 
   const emptySpots = capacity - bookedCount;
 
-  // Visibility: only show if there are empty spots AND class is within 48h
-  const isWithin48h = useMemo(() => {
-    if (!classStartTime) return false;
-    const diff = new Date(classStartTime).getTime() - Date.now();
-    return diff > 0 && diff <= 48 * 60 * 60 * 1000;
-  }, [classStartTime]);
-
-  if (emptySpots <= 0 || !isWithin48h) return null;
+  if (emptySpots <= 0) return null;
 
   const targetCount = segment === "fan-club" ? 8 : segment === "slipping" ? 5 : 12;
 
