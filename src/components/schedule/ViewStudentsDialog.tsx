@@ -44,6 +44,7 @@ export default function ViewStudentsDialog({ open, onOpenChange, classId, classN
   const [flashSaleStudents, setFlashSaleStudents] = useState<FlashSaleStudent[]>([]);
   const { triggerWaitlistPromotion, onWaitlistPromoted } = useDemoPhone();
   const { activeRole } = useStudio();
+  const { isPro } = useSubscriptionTier();
 
   // Listen for flash-deal-sold events from the AI Marketing Hub
   useEffect(() => {
