@@ -202,7 +202,14 @@ export default function ProductsTab() {
                       onCheckedChange={(val) => toggleActiveMutation.mutate({ id: p.id, is_active: val })}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(p)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
