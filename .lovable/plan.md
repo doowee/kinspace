@@ -1,54 +1,41 @@
 
 
-# Plan: Student Detail CRM Sheet
+## Instructor Data + UI Updates
 
-## Overview
-Add a clickable row → side drawer (Sheet) pattern to the Students page. The Sheet shows full student profile with editable fields and notes, with a sticky save footer.
+### 1. Insert Dummy Instructors
 
-## Changes — Single File: `src/pages/Students.tsx`
+Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
 
-### 1. Expand Data Model
-- Update `StudentRow` interface to include `injury_notes`, `staff_notes`, `phone`, `created_at`
-- Update the profiles fetch query to select these additional columns
-- Map them into the rows
+- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
+- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
+- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
 
-### 2. Make Rows Clickable
-- Add `cursor-pointer` and `onClick` to each `<TableRow>` to open the detail sheet
-- Set a `selectedStudent` state variable
+No photo URLs for now (left null).
 
-### 3. Student Detail Sheet
-Add a `<Sheet>` that opens when `selectedStudent` is set, containing:
+### 2. Public Booking Page -- Show Instructor Info
 
-**Section A — Header & Quick Stats**
-- Full name + email displayed prominently
-- Badge indicators: 🔰 (total_bookings ≤ 3), 🏆 (total_bookings ≥ 50), ⚠️ (injury_notes not null)
-- Read-only stats row: Total Classes, Join Date (`created_at`), Membership Tier
+**File: `src/pages/BookingPage.tsx`**
 
-**Section B — Editable Demographics**
-- `<Input>` fields for: First Name, Last Name, Phone, Email (read-only since it's auth-bound)
-- Local state for editable fields, pre-filled on open
+The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
 
-**Section C — Notes Engine**
-- `<Textarea>` for `injury_notes` with amber warning helper text about kiosk flag
-- `<Textarea>` for `staff_notes` with helper text
+No changes needed here -- it already works once instructors are linked to classes.
 
-**Sticky Footer**
-- "Cancel" (closes sheet) + "Save Profile" button
-- Save executes `supabase.from("profiles").update({ first_name, last_name, phone, injury_notes, staff_notes }).eq("id", student.user_id)`
-- On success: optimistic update of local `students` state, close sheet, success toast
-- On error: error toast
+### 3. Create Class Form -- Instructor Dropdown
 
-### 4. Imports to Add
-- `Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription` from shadcn
-- `Textarea` from shadcn
-- `Label` from shadcn
-- `AlertTriangle, Award, Star` icons from lucide (for badges)
-- `toast` from sonner
+**File: `src/pages/Schedule.tsx`**
 
-### No Database Changes Needed
-All columns (`injury_notes`, `staff_notes`, `phone`, `first_name`, `last_name`) already exist on `profiles`. The existing RLS policies ("Users can update their own profile" + "Staff can update student staff_notes") cover updates. The "Staff can update student staff_notes" policy allows owners/instructors to update — but it doesn't restrict columns, so it covers all fields being updated here.
+- Add state for `instructors` list and `selectedInstructorId`
+- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
+- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
+- Include `instructor_id` in the `.insert()` call when creating a class
+- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
 
-| File | Action |
-|------|--------|
-| `src/pages/Students.tsx` | **Edit** — add Sheet, editable fields, save logic |
+### Technical Details
+
+**Files modified:**
+- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+
+**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+
+**Data insert** -- 3 rows into `public.instructors` via the insert tool.
 
