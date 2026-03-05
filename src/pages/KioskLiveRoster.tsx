@@ -45,6 +45,10 @@ export default function KioskLiveRoster() {
   const idleTimerRef = useRef<number | null>(null);
   const lastActivityRef = useRef(Date.now());
 
+  const [notesStudent, setNotesStudent] = useState<RosterStudent | null>(null);
+  const [editStaffNotes, setEditStaffNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+
   const fetchClassAndRoster = useCallback(async () => {
     if (!classId) return;
     setLoading(true);
