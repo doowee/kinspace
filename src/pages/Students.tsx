@@ -5,6 +5,7 @@ import { studioColorClass } from "@/lib/studio-colors";
 import { useViewAsRole } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,7 @@ interface EditData {
   first_name: string;
   last_name: string;
   phone: string;
+  home_studio_id: string;
   injury_notes: string;
   staff_notes: string;
 }
@@ -87,7 +89,8 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
-  const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", injury_notes: "", staff_notes: "" });
+  const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
+  const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [dmStudent, setDmStudent] = useState<StudentRow | null>(null);
   const [studioIds, setStudioIds] = useState<string[]>([]);
@@ -129,6 +132,10 @@ export default function Students() {
         }
       }
       setStudioIds(ids);
+
+      // Fetch org studio names for the home-studio selector
+      const { data: orgStudioRows } = await supabase.from("studios").select("id, name").in("id", ids);
+      setOrgStudios(orgStudioRows ?? []);
 
       const { data: members } = await supabase
         .from("studio_members")
@@ -237,6 +244,7 @@ export default function Students() {
       first_name: student.first_name ?? "",
       last_name: student.last_name ?? "",
       phone: student.phone ?? "",
+      home_studio_id: student.home_studio_id ?? "",
       injury_notes: student.injury_notes ?? "",
       staff_notes: student.staff_notes ?? "",
     });
@@ -255,6 +263,7 @@ export default function Students() {
         first_name: editData.first_name || null,
         last_name: editData.last_name || null,
         phone: editData.phone || null,
+        home_studio_id: editData.home_studio_id || null,
         injury_notes: editData.injury_notes || null,
         staff_notes: editData.staff_notes || null,
       })
@@ -266,7 +275,16 @@ export default function Students() {
     setStudents((prev) =>
       prev.map((s) =>
         s.user_id === selectedStudent.user_id
-          ? { ...s, first_name: editData.first_name || null, last_name: editData.last_name || null, phone: editData.phone || null, injury_notes: editData.injury_notes || null, staff_notes: editData.staff_notes || null }
+          ? {
+              ...s,
+              first_name: editData.first_name || null,
+              last_name: editData.last_name || null,
+              phone: editData.phone || null,
+              home_studio_id: editData.home_studio_id || null,
+              home_studio_name: orgStudios.find((st) => st.id === editData.home_studio_id)?.name ?? null,
+              injury_notes: editData.injury_notes || null,
+              staff_notes: editData.staff_notes || null,
+            }
           : s
       )
     );
@@ -535,6 +553,19 @@ export default function Students() {
                 <div className="space-y-1.5">
                   <Label htmlFor="crm-email">Email</Label>
                   <Input id="crm-email" value={selectedStudent.email} disabled className="opacity-60" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="crm-home-studio">Home Studio</Label>
+                  <Select value={editData.home_studio_id} onValueChange={(val) => setEditData((d) => ({ ...d, home_studio_id: val }))}>
+                    <SelectTrigger id="crm-home-studio">
+                      <SelectValue placeholder="Select home studio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {orgStudios.map((st) => (
+                        <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
