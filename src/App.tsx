@@ -35,6 +35,7 @@ import KioskLiveRoster from "./pages/KioskLiveRoster";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
+import Switch from "./pages/Switch";
 
 const queryClient = new QueryClient();
 

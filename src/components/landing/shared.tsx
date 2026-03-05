@@ -86,7 +86,7 @@ export function SignupCTA({ buttonText = "Start Your Free Trial", align = "left"
 const NAV_LINKS = [
 { to: "/features", label: "Features" },
 { to: "/pricing", label: "Pricing" },
-{ to: "/auth", label: "Switch to Kinspace" },
+{ to: "/switch", label: "Switch to Kinspace" },
 { href: "#", label: "Support" }] as
 const;
 
