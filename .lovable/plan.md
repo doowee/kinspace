@@ -1,41 +1,72 @@
 
 
-## Instructor Data + UI Updates
+# Plan: "Switch to Kinspace" Competitor Comparison Page
 
-### 1. Insert Dummy Instructors
+## Research Summary
+Top competitors by search ranking:
+- **Mindbody** — starts at $99/mo, opaque tiered pricing ("Let's talk"), per-booking transaction fees, dated UX
+- **Momence** — "custom pricing" (no public prices), free basic tier with limited features, standard processing fees
+- **WellnessLiving** — starts at $69/mo (Starter), goes up to $349/mo (Enterprise), add-on costs pile up
+- **Glofox (ABC Glofox)** — no public pricing ("Get a demo"), enterprise-focused, limited SMS/AI
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+## Page Structure (`src/pages/Switch.tsx`)
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+### 1. SEO Hero
+- H1: "Switch to Kinspace.Studio" with competitor names in subtitle for search targeting
+- Pain-point subtitle: "Tired of hidden fees, opaque pricing, and software that wasn't built for boutique studios?"
+- Left-aligned `<SignupCTA />`
 
-No photo URLs for now (left null).
+### 2. "Why Studios Switch" — 4 Pain-Point Cards
+Using `GlassCard`, each with icon + specific competitor callout:
+- **Hidden & escalating fees** — Mindbody charges per-booking transaction fees on top of monthly plans; WellnessLiving stacks add-on costs
+- **"Call for pricing" games** — Momence and Glofox hide pricing; Kinspace is $99 or $169, period
+- **No native SMS commerce** — None offer 1-tap SMS flash drops or AI-powered refill prompts
+- **AI bolted on, not built in** — Competitors sell AI as expensive add-ons; Kinspace Pro includes AI Revenue Agent, SmartCover, and BI
 
-### 2. Public Booking Page -- Show Instructor Info
+### 3. Head-to-Head Comparison Table
+5-column table: Feature | Kinspace | Mindbody | Momence | WellnessLiving
 
-**File: `src/pages/BookingPage.tsx`**
+Rows (specific, not generic):
+- Starting price: $99/mo | $99/mo* | "Custom" | $69/mo
+- Transparent public pricing: Yes | No (tiers hidden) | No | Partial
+- Per-booking transaction fees: None | Yes | Yes | Yes
+- White-label booking page: Yes | Widget only | Yes | Yes
+- 1-Tap SMS Flash Drops: Yes (Pro) | No | No | No
+- AI Revenue Agent: Yes (Pro) | No | No | No
+- SmartCover™ sub requests: Yes (Pro) | No | No | No
+- Multi-location: Included | Premium tier | Add-on | Premium tier
+- Stripe direct payouts: Yes | No (proprietary) | Yes | No
+- Branded client wallet: Yes | No | No | No
+- Setup time: Same day | Weeks | Days | Days
+- Contract required: No | Yes (annual) | No | Varies
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+Kinspace column highlighted with ring/accent.
 
-No changes needed here -- it already works once instructors are linked to classes.
+### 4. Migration FAQ Accordion
+SEO-targeted Q&A (6-8 questions):
+- "How do I migrate from Mindbody to Kinspace?"
+- "Does Kinspace charge per-booking or transaction fees?"
+- "Can I keep my custom domain and branding?"
+- "How long does setup take compared to Mindbody?"
+- "What happens to my existing client data?"
+- "Is there a contract or cancellation fee?"
+- "How does Kinspace compare to Momence for yoga studios?"
 
-### 3. Create Class Form -- Instructor Dropdown
+### 5. Footer CTA
+Center-aligned `<SignupCTA align="center" />`
 
-**File: `src/pages/Schedule.tsx`**
+## File Changes
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+| File | Change |
+|------|--------|
+| `src/pages/Switch.tsx` | **Create** — full page with SiteHeader, hero, pain cards, comparison table, FAQ accordion, footer CTA |
+| `src/App.tsx` | Add `<Route path="/switch" element={<Switch />} />` |
+| `src/components/landing/shared.tsx` | Change "Switch to Kinspace" nav link from `/auth` to `/switch` |
 
-### Technical Details
-
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
-
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
-
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+## Technical Notes
+- Uses existing shared components: `SiteHeader`, `GlassCard`, `DotGrid`, `AmbientGlow`, `SignupCTA`, `fadeUp`, `stagger`
+- FAQ uses existing `Accordion` from `@radix-ui/react-accordion`
+- Competitor comparison table uses existing `Table` components
+- Semantic H1/H2/H3 with competitor names in headings for SEO
+- Asterisks and footnotes on competitor pricing where data is approximate or "contact sales"
 
