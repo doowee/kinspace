@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Home, CalendarDays, Ticket, User, LogOut } from "lucide-react";
@@ -14,20 +14,28 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const NAV_ITEMS = [
-  { to: "/dashboard", icon: Home, label: "Home" },
-  { to: "/wallet", icon: Ticket, label: "My Passes" },
-];
+function useStudentNavItems() {
+  const { studio_slug } = useParams<{ studio_slug?: string }>();
+  const prefix = studio_slug ? `/s/${studio_slug}` : "";
 
-const MOBILE_NAV_ITEMS = [
-  { to: "/dashboard", icon: Home, label: "Home" },
-  { to: "/wallet", icon: Ticket, label: "My Passes" },
-  { to: "/profile", icon: User, label: "Profile" },
-];
+  return useMemo(() => {
+    const nav = [
+      { to: `${prefix}/dashboard`, icon: Home, label: "Home" },
+      { to: prefix || "/book-class", icon: CalendarDays, label: "Book" },
+      { to: `${prefix ? `${prefix}/credits` : "/wallet"}`, icon: Ticket, label: "My Passes" },
+    ];
+    const mobileNav = [
+      ...nav,
+      { to: "/profile", icon: User, label: "Profile" },
+    ];
+    return { nav, mobileNav };
+  }, [studio_slug, prefix]);
+}
 
 export default function StudentLayout() {
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
+  const { nav: NAV_ITEMS, mobileNav: MOBILE_NAV_ITEMS } = useStudentNavItems();
   const [brandInfo, setBrandInfo] = useState<{ name: string; logo_url: string | null }>({ name: "My Studios", logo_url: null });
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
