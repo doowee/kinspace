@@ -72,15 +72,34 @@ export default function Dashboard() {
 
       if (ownedCount > 0) {
         setView("owner");
-      } else if (bookingsCount > 0) {
-        setView("student");
       } else {
-        const { count: memberCount } = await supabase
+        // Student or new user — try to redirect to branded dashboard
+        const { data: membership } = await supabase
           .from("studio_members")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
+          .select("studios:studio_id(slug)")
+          .eq("user_id", user.id)
+          .eq("role", "student" as any)
+          .limit(1);
 
-        if ((memberCount ?? 0) > 0) {
+        const slug = (membership?.[0] as any)?.studios?.slug;
+        if (slug) {
+          navigate(`/s/${slug}/dashboard`, { replace: true });
+          return;
+        }
+
+        // Fallback: check bookings for a studio slug
+        if (bookingsCount > 0) {
+          const { data: bookingStudio } = await supabase
+            .from("bookings")
+            .select("studios:studio_id(slug)")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const bSlug = (bookingStudio?.[0] as any)?.studios?.slug;
+          if (bSlug) {
+            navigate(`/s/${bSlug}/dashboard`, { replace: true });
+            return;
+          }
           setView("student");
         } else {
           setView("new-user");
