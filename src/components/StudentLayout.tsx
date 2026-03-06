@@ -35,6 +35,8 @@ function useStudentNavItems() {
 export default function StudentLayout() {
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
+  const { nav: NAV_ITEMS, mobileNav: MOBILE_NAV_ITEMS } = useStudentNavItems();
+  const isMobile = useIsMobile();
   const [brandInfo, setBrandInfo] = useState<{ name: string; logo_url: string | null }>({ name: "My Studios", logo_url: null });
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
