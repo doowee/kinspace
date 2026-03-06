@@ -32,6 +32,7 @@ import InstructorPortal from "./pages/InstructorPortal";
 import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import StudentAuthGate from "./components/student/StudentAuthGate";
 import StudioBrandedLandingWrapper from "./components/StudioBrandedLandingWrapper";
+import StudentDashboard from "./components/dashboard/StudentDashboard";
 import KioskLogin from "./pages/KioskLogin";
 import KioskLiveRoster from "./pages/KioskLiveRoster";
 import KioskSchedule from "./pages/KioskSchedule";
@@ -183,6 +184,7 @@ const App = () => {
               }
             >
               <Route index element={<BookClass />} />
+              <Route path="dashboard" element={<StudentDashboard />} />
               <Route path="credits" element={<Credits />} />
             </Route>
             {/* Branded staff route */}
