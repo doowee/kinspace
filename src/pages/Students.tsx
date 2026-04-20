@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -83,7 +83,16 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
   );
 }
 
-type TierFilter = "all" | "members" | "points" | "none";
+type TierFilter = "all" | "members" | "points" | "none" | "inactive";
+
+const INACTIVE_DAYS = 60;
+const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
+
+function isInactive(s: StudentRow): boolean {
+  // Only consider students who've booked before but not in 60+ days
+  if (!s.last_booking_at) return false;
+  return Date.now() - new Date(s.last_booking_at).getTime() > INACTIVE_MS;
+}
 
 function getTier(s: StudentRow): "members" | "points" | "none" {
   if (s.subscription_name) return "members";
@@ -239,7 +248,9 @@ export default function Students() {
 
   const filtered = useMemo(() => {
     let rows = students;
-    if (tierFilter !== "all") {
+    if (tierFilter === "inactive") {
+      rows = rows.filter(isInactive);
+    } else if (tierFilter !== "all") {
       rows = rows.filter((s) => getTier(s) === tierFilter);
     }
     if (search.trim()) {
@@ -391,6 +402,7 @@ export default function Students() {
               { id: "members", label: "Members", count: students.filter((s) => getTier(s) === "members").length },
               { id: "points", label: "Points", count: students.filter((s) => getTier(s) === "points").length },
               { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
+              { id: "inactive", label: "Inactive (60d+)", count: students.filter(isInactive).length },
             ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
               <Button
                 key={chip.id}
@@ -473,7 +485,14 @@ export default function Students() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.total_bookings}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
-                        {s.last_booking_at ? format(new Date(s.last_booking_at), "MMM d, yyyy") : "—"}
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {isInactive(s) && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-muted text-muted-foreground border-border">
+                              <Clock className="h-2.5 w-2.5" />Inactive
+                            </Badge>
+                          )}
+                          <span>{s.last_booking_at ? format(new Date(s.last_booking_at), "MMM d, yyyy") : "—"}</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
