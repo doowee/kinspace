@@ -161,8 +161,22 @@ export default function BookingPage() {
       });
 
       if (rpcError) {
-        if (rpcError.message?.includes("INSUFFICIENT_ACCESS")) {
+        const errMsg = `${rpcError.message ?? ""} ${rpcError.details ?? ""} ${rpcError.hint ?? ""}`;
+        if (errMsg.includes("INSUFFICIENT_ACCESS")) {
           setNoCreditsOpen(true);
+          return;
+        }
+        if (errMsg.includes("Not authenticated")) {
+          setPendingBookClass(cls);
+          setAuthModalOpen(true);
+          return;
+        }
+        if (errMsg.includes("Class not found")) {
+          toast({
+            title: "Class unavailable",
+            description: "This class is no longer available. Please refresh the schedule.",
+            variant: "destructive",
+          });
           return;
         }
         throw rpcError;
@@ -180,10 +194,13 @@ export default function BookingPage() {
       setUserBookedClassIds((prev) => new Map([...prev, [cls.id, isWaitlisted ? "waitlist" : "confirmed"]]));
       setDetailClass(null);
       if (!isWaitlisted) setSuccessClass(cls);
+
+      // Refresh wallet/dashboard caches if open elsewhere
+      window.dispatchEvent(new Event("wallet:refresh"));
     } catch (err: any) {
       toast({
         title: "Booking failed",
-        description: err.message,
+        description: "We couldn't complete your booking. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -250,7 +267,7 @@ export default function BookingPage() {
             )}
           </div>
           {user && (
-            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/s/${studio_slug}/dashboard`)}>
               <LayoutDashboard className="mr-1.5 h-4 w-4" />
               My Dashboard
             </Button>
@@ -572,27 +589,17 @@ export default function BookingPage() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            You need a class pack or an active membership to book this session.
+            You need an active membership or class credits to book this session. Pick a pack or membership to get started.
           </p>
           <div className="flex flex-col gap-2 mt-2">
             <Button
               className="w-full gap-2"
               onClick={() => {
                 setNoCreditsOpen(false);
-                navigate("/credits");
+                navigate(`/s/${studio_slug}/credits`);
               }}
             >
               Buy Credits
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => {
-                setNoCreditsOpen(false);
-                navigate(`/book/${studio_slug}/packages?return_url=/book/${studio_slug}`);
-              }}
-            >
-              View All Packages
             </Button>
           </div>
         </DialogContent>
@@ -616,7 +623,7 @@ export default function BookingPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="flex w-full flex-col gap-2 pt-2">
-              <Button className="w-full" onClick={() => { setSuccessClass(null); navigate("/dashboard"); }}>
+              <Button className="w-full" onClick={() => { setSuccessClass(null); navigate(`/s/${studio_slug}/dashboard`); }}>
                 Go to My Dashboard
               </Button>
               <Button variant="outline" className="w-full" onClick={() => setSuccessClass(null)}>
