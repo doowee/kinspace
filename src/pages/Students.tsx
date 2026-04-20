@@ -585,13 +585,14 @@ export default function Students() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {([
               { id: "all", label: "All", count: students.length },
               { id: "members", label: "Members", count: students.filter((s) => getTier(s) === "members").length },
               { id: "points", label: "Points", count: students.filter((s) => getTier(s) === "points").length },
               { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
               { id: "inactive", label: "Inactive (60d+)", count: students.filter(isInactive).length },
+              { id: "expiring", label: "Expiring soon", count: students.filter(isExpiringSoon).length },
             ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
               <Button
                 key={chip.id}
@@ -603,6 +604,28 @@ export default function Students() {
                 {chip.label} <span className="ml-1.5 opacity-60 tabular-nums">{chip.count}</span>
               </Button>
             ))}
+            <div className="ml-auto flex items-center gap-1.5">
+              {tierFilter === "inactive" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => setReengageOpen(true)}
+                >
+                  <Send className="h-3 w-3" />
+                  Re-engage ({filtered.length})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5"
+                onClick={handleExportCsv}
+                disabled={filtered.length === 0}
+              >
+                <Download className="h-3 w-3" />
+                Export CSV
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
