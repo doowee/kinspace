@@ -71,7 +71,8 @@ export default function StudentDashboard() {
         .from("user_subscriptions")
         .select("id, current_period_end, products:product_id(name, access_scope)")
         .eq("user_id", user.id)
-        .eq("status", "active"),
+        .eq("status", "active")
+        .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`),
     ]);
 
     setFirstName(profileRes.data?.first_name || "");
@@ -279,9 +280,16 @@ export default function StudentDashboard() {
         </CardHeader>
         <CardContent>
           {bookings.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No upcoming classes booked.
-            </p>
+            <div className="py-6 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">
+                No upcoming classes booked.
+              </p>
+              <Link to={studio_slug ? `/s/${studio_slug}` : "/book-class"}>
+                <Button size="sm" className="gap-1.5">
+                  Book a Class <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </div>
           ) : (
             <div className="space-y-6">
               {(() => {

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudioThemeMaybe } from "@/components/StudioThemeProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,10 @@ export default function Credits() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const { studio_slug } = useParams<{ studio_slug: string }>();
+  const themeCtx = useStudioThemeMaybe();
+  const studioId = themeCtx?.studio?.id ?? null;
+
   const [classPoints, setClassPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -41,10 +46,12 @@ export default function Credits() {
   // Fetch balance + products
   useEffect(() => {
     if (!user) return;
+    // On branded routes, wait for studio to resolve before querying
+    if (studio_slug && !studioId) return;
+
     const fetchData = async () => {
       setLoading(true);
 
-      // Fetch balance
       const { data: profile } = await supabase
         .from("profiles")
         .select("class_points, home_studio_id")
@@ -53,18 +60,24 @@ export default function Credits() {
 
       setClassPoints(profile?.class_points ?? 0);
 
-      // Fetch active products — public RLS policy allows viewing active products
-      const { data: prods } = await supabase
+      // Scope products to studio when on branded route
+      let query = supabase
         .from("products")
         .select("id, name, price, product_type, point_value, stripe_price_id")
         .eq("is_active", true)
         .order("price", { ascending: true });
 
+      if (studioId) {
+        query = query.eq("studio_id", studioId);
+      }
+
+      const { data: prods } = await query;
+
       setProducts((prods as Product[]) ?? []);
       setLoading(false);
     };
     fetchData();
-  }, [user?.id, paymentStatus]);
+  }, [user?.id, paymentStatus, studioId, studio_slug]);
 
   const handleBuy = async (productId: string) => {
     setBuyingProduct(productId);
