@@ -171,6 +171,7 @@ export default function Students() {
           .from("user_subscriptions")
           .select("user_id, status, current_period_end, product_id, products(name)")
           .eq("status", "active")
+          .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
           .in("user_id", userIds),
       ]);
 
