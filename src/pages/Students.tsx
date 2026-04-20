@@ -359,10 +359,28 @@ export default function Students() {
 
       {/* Table */}
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { id: "all", label: "All", count: students.length },
+              { id: "members", label: "Members", count: students.filter((s) => getTier(s) === "members").length },
+              { id: "points", label: "Points", count: students.filter((s) => getTier(s) === "points").length },
+              { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
+            ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
+              <Button
+                key={chip.id}
+                size="sm"
+                variant={tierFilter === chip.id ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setTierFilter(chip.id)}
+              >
+                {chip.label} <span className="ml-1.5 opacity-60 tabular-nums">{chip.count}</span>
+              </Button>
+            ))}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -378,7 +396,7 @@ export default function Students() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Home Studio</TableHead>
-                    <TableHead>Access Status</TableHead>
+                    <TableHead>Membership</TableHead>
                     <TableHead className="text-right">Bookings</TableHead>
                     <TableHead className="text-right">Last Visit</TableHead>
                   </TableRow>
@@ -464,7 +482,7 @@ export default function Students() {
                 </div>
                 <div className="rounded-md border border-border p-3">
                   <AccessStatusBadge student={selectedStudent} size="lg" />
-                  <p className="text-[11px] text-muted-foreground mt-1">Access</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Membership</p>
                 </div>
               </div>
 
