@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
 import { studioColorClass } from "@/lib/studio-colors";
@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock, Download, Send, Hourglass } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -83,15 +84,35 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
   );
 }
 
-type TierFilter = "all" | "members" | "points" | "none" | "inactive";
+type TierFilter = "all" | "members" | "points" | "none" | "inactive" | "expiring";
 
 const INACTIVE_DAYS = 60;
 const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
+const EXPIRING_DAYS = 7;
+const EXPIRING_MS = EXPIRING_DAYS * 24 * 60 * 60 * 1000;
 
 function isInactive(s: StudentRow): boolean {
-  // Only consider students who've booked before but not in 60+ days
   if (!s.last_booking_at) return false;
   return Date.now() - new Date(s.last_booking_at).getTime() > INACTIVE_MS;
+}
+
+function isExpiringSoon(s: StudentRow): boolean {
+  if (!s.subscription_name || !s.subscription_period_end) return false;
+  const end = new Date(s.subscription_period_end).getTime();
+  const now = Date.now();
+  return end > now && end - now <= EXPIRING_MS;
+}
+
+function daysUntil(iso: string): number {
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+}
+
+function expiresLabel(iso: string): string {
+  const d = daysUntil(iso);
+  if (d <= 0) return "Expires today";
+  if (d === 1) return "Expires tomorrow";
+  return `Expires in ${d}d`;
 }
 
 function getTier(s: StudentRow): "members" | "points" | "none" {
@@ -100,14 +121,65 @@ function getTier(s: StudentRow): "members" | "points" | "none" {
   return "none";
 }
 
+/* ─── Track 2: persistent view state ─── */
+const VIEW_STORAGE_KEY = "students-crm-view-v1";
+type SortKey = "name" | "bookings" | "last" | "membership";
+type SortDir = "asc" | "desc";
+interface PersistedView {
+  q: string;
+  tierFilter: TierFilter;
+  sortKey: SortKey;
+  sortDir: SortDir;
+}
+const TIER_VALUES: TierFilter[] = ["all", "members", "points", "none", "inactive", "expiring"];
+const SORT_KEYS: SortKey[] = ["name", "bookings", "last", "membership"];
+function loadPersistedView(): PersistedView {
+  const fallback: PersistedView = { q: "", tierFilter: "all", sortKey: "name", sortDir: "asc" };
+  try {
+    const raw = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (!raw) return fallback;
+    const v = JSON.parse(raw);
+    return {
+      q: typeof v?.q === "string" ? v.q : "",
+      tierFilter: TIER_VALUES.includes(v?.tierFilter) ? v.tierFilter : "all",
+      sortKey: SORT_KEYS.includes(v?.sortKey) ? v.sortKey : "name",
+      sortDir: v?.sortDir === "desc" ? "desc" : "asc",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/* ─── Track 3: CSV helpers ─── */
+function csvEscape(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function Students() {
   const { activeStudio, activeRole } = useStudio();
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
-  const [sortKey, setSortKey] = useState<"name" | "bookings" | "last" | "membership">("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  // Track 2 — persisted view state (lazy init from localStorage)
+  const initialView = useRef<PersistedView>(loadPersistedView()).current;
+  const [search, setSearch] = useState(initialView.q);
+  const [tierFilter, setTierFilter] = useState<TierFilter>(initialView.tierFilter);
+  const [sortKey, setSortKey] = useState<SortKey>(initialView.sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(initialView.sortDir);
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
   const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
@@ -124,6 +196,28 @@ export default function Students() {
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [txOpen, setTxOpen] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
+
+  // Track 1 — Re-engage composer state
+  const [reengageOpen, setReengageOpen] = useState(false);
+  const [reChannel, setReChannel] = useState<"sms" | "email" | "both">("both");
+  const [reSubject, setReSubject] = useState("We miss you at {studio_name}");
+  const [reBody, setReBody] = useState(
+    "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}"
+  );
+  const [reSending, setReSending] = useState(false);
+
+  // Track 2 — persist view state (debounced)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          VIEW_STORAGE_KEY,
+          JSON.stringify({ q: search, tierFilter, sortKey, sortDir })
+        );
+      } catch { /* quota or disabled */ }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, tierFilter, sortKey, sortDir]);
 
   const viewAsRole = useViewAsRole();
   const canSeeEmail = viewAsRole === "owner";
@@ -250,6 +344,8 @@ export default function Students() {
     let rows = students;
     if (tierFilter === "inactive") {
       rows = rows.filter(isInactive);
+    } else if (tierFilter === "expiring") {
+      rows = rows.filter(isExpiringSoon);
     } else if (tierFilter !== "all") {
       rows = rows.filter((s) => getTier(s) === tierFilter);
     }
@@ -270,7 +366,15 @@ export default function Students() {
         const at = a.last_booking_at ? new Date(a.last_booking_at).getTime() : 0;
         const bt = b.last_booking_at ? new Date(b.last_booking_at).getTime() : 0;
         cmp = at - bt;
-      } else if (sortKey === "membership") cmp = tierRank[getTier(a)] - tierRank[getTier(b)];
+      } else if (sortKey === "membership") {
+        cmp = tierRank[getTier(a)] - tierRank[getTier(b)];
+        // Track 4 — expiring-soon members tie-break ahead of other members
+        if (cmp === 0 && getTier(a) === "members") {
+          const ax = isExpiringSoon(a) ? 0 : 1;
+          const bx = isExpiringSoon(b) ? 0 : 1;
+          cmp = ax - bx;
+        }
+      }
       return sortDir === "asc" ? cmp : -cmp;
     });
     return sorted;
@@ -284,6 +388,91 @@ export default function Students() {
   const displayName = (s: StudentRow) => {
     if (s.first_name || s.last_name) return [s.first_name, s.last_name].filter(Boolean).join(" ");
     return s.email;
+  };
+
+  /* ─── Track 3: CSV export ─── */
+  const handleExportCsv = () => {
+    if (filtered.length === 0) return;
+    const headers = ["Name", "Email", "Phone", "Membership Tier", "Subscription", "Points", "Total Bookings", "Last Visit", "Inactive"];
+    const rows = filtered.map((s) => [
+      displayName(s),
+      s.email,
+      s.phone ?? "",
+      getTier(s),
+      s.subscription_name ?? "",
+      String(s.class_points),
+      String(s.total_bookings),
+      s.last_booking_at ? format(new Date(s.last_booking_at), "yyyy-MM-dd") : "",
+      isInactive(s) ? "Yes" : "No",
+    ]);
+    const today = format(new Date(), "yyyy-MM-dd");
+    const slug = (activeStudio?.slug || "studio").toLowerCase();
+    downloadCsv(`students-${slug}-${today}.csv`, [headers, ...rows]);
+    toast.success(`Exported ${rows.length} student${rows.length === 1 ? "" : "s"}`);
+  };
+
+  /* ─── Track 1: Re-engage send ─── */
+  const reengageRecipients = useMemo(
+    () => (tierFilter === "inactive" ? filtered : []),
+    [tierFilter, filtered]
+  );
+
+  const renderToken = (tpl: string, s: StudentRow): string => {
+    const studioName = activeStudio?.name ?? "the studio";
+    const slug = activeStudio?.slug ?? "";
+    const bookingUrl = slug
+      ? `${window.location.origin}/book/${slug}`
+      : window.location.origin;
+    return tpl
+      .replace(/\{first_name\}/g, s.first_name || "there")
+      .replace(/\{studio_name\}/g, studioName)
+      .replace(/\{booking_url\}/g, bookingUrl);
+  };
+
+  const handleReengageSend = async () => {
+    if (reengageRecipients.length === 0) { toast.error("No recipients"); return; }
+    setReSending(true);
+    const today = format(new Date(), "yyyyMMdd");
+    const studioName = activeStudio?.name ?? "the studio";
+    const slug = activeStudio?.slug ?? "";
+    const bookingUrl = slug ? `${window.location.origin}/book/${slug}` : window.location.origin;
+
+    let smsSent = 0, smsFailed = 0, emailSent = 0, emailFailed = 0;
+    const wantSms = reChannel === "sms" || reChannel === "both";
+    const wantEmail = reChannel === "email" || reChannel === "both";
+
+    for (const s of reengageRecipients) {
+      if (wantSms && s.phone) {
+        try {
+          const { error } = await supabase.functions.invoke("send-twilio-sms", {
+            body: { targetPhoneNumber: s.phone, messageBody: renderToken(reBody, s) },
+          });
+          if (error) { smsFailed++; console.warn("SMS failed", s.email, error); }
+          else smsSent++;
+        } catch (e) { smsFailed++; console.warn("SMS error", s.email, e); }
+      }
+      if (wantEmail && s.email) {
+        try {
+          const { error } = await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "winback-reengage",
+              recipientEmail: s.email,
+              idempotencyKey: `reengage-${s.user_id}-${today}`,
+              templateData: { firstName: s.first_name || undefined, studioName, bookingUrl },
+            },
+          });
+          if (error) { emailFailed++; console.warn("Email failed", s.email, error); }
+          else emailSent++;
+        } catch (e) { emailFailed++; console.warn("Email error", s.email, e); }
+      }
+    }
+
+    setReSending(false);
+    setReengageOpen(false);
+    const parts: string[] = [];
+    if (wantSms) parts.push(`SMS: ${smsSent} sent${smsFailed ? `, ${smsFailed} failed` : ""}`);
+    if (wantEmail) parts.push(`Email: ${emailSent} sent${emailFailed ? `, ${emailFailed} failed` : ""}`);
+    toast.success(`Re-engage complete — ${parts.join(" · ")}`);
   };
 
   const openSheet = (student: StudentRow) => {
@@ -396,13 +585,14 @@ export default function Students() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {([
               { id: "all", label: "All", count: students.length },
               { id: "members", label: "Members", count: students.filter((s) => getTier(s) === "members").length },
               { id: "points", label: "Points", count: students.filter((s) => getTier(s) === "points").length },
               { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
               { id: "inactive", label: "Inactive (60d+)", count: students.filter(isInactive).length },
+              { id: "expiring", label: "Expiring soon", count: students.filter(isExpiringSoon).length },
             ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
               <Button
                 key={chip.id}
@@ -414,6 +604,28 @@ export default function Students() {
                 {chip.label} <span className="ml-1.5 opacity-60 tabular-nums">{chip.count}</span>
               </Button>
             ))}
+            <div className="ml-auto flex items-center gap-1.5">
+              {tierFilter === "inactive" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => setReengageOpen(true)}
+                >
+                  <Send className="h-3 w-3" />
+                  Re-engage ({filtered.length})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5"
+                onClick={handleExportCsv}
+                disabled={filtered.length === 0}
+              >
+                <Download className="h-3 w-3" />
+                Export CSV
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -481,7 +693,14 @@ export default function Students() {
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
-                        <AccessStatusBadge student={s} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <AccessStatusBadge student={s} />
+                          {isExpiringSoon(s) && s.subscription_period_end && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-amber-500/15 text-amber-700 border-amber-300">
+                              <Hourglass className="h-2.5 w-2.5" />{expiresLabel(s.subscription_period_end)}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.total_bookings}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
@@ -687,6 +906,82 @@ export default function Students() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Track 1 — Re-engage composer */}
+      <Dialog open={reengageOpen} onOpenChange={setReengageOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Re-engage inactive students</DialogTitle>
+            <DialogDescription>
+              Send a win-back message to {reengageRecipients.length} student{reengageRecipients.length === 1 ? "" : "s"} who haven't booked in {INACTIVE_DAYS}+ days.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Channel</Label>
+              <div className="flex gap-1.5">
+                {(["sms", "email", "both"] as const).map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant={reChannel === c ? "default" : "outline"}
+                    className="h-7 text-xs capitalize"
+                    onClick={() => setReChannel(c)}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {(reChannel === "email" || reChannel === "both") && (
+              <div className="space-y-1.5">
+                <Label htmlFor="re-subject" className="text-xs">Email subject</Label>
+                <Input id="re-subject" value={reSubject} onChange={(e) => setReSubject(e.target.value)} />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="re-body" className="text-xs">Message body</Label>
+              <Textarea id="re-body" rows={4} value={reBody} onChange={(e) => setReBody(e.target.value)} />
+              <p className="text-[11px] text-muted-foreground">
+                Tokens: <code>{"{first_name}"}</code>, <code>{"{studio_name}"}</code>, <code>{"{booking_url}"}</code>
+              </p>
+            </div>
+
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 text-xs px-2 gap-1">
+                  <ChevronDown className="h-3 w-3" />
+                  Recipients ({reengageRecipients.length})
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1.5 max-h-32 overflow-y-auto rounded-md border border-border p-2 text-xs text-muted-foreground space-y-0.5">
+                {reengageRecipients.map((s) => (
+                  <div key={s.user_id} className="flex justify-between gap-2">
+                    <span className="truncate">{displayName(s)}</span>
+                    <span className="opacity-60 shrink-0">
+                      {(reChannel !== "email" && s.phone) ? "📱" : ""}
+                      {(reChannel !== "sms" && s.email) ? " ✉️" : ""}
+                    </span>
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+
+            <p className="text-[11px] text-muted-foreground">SMS rate-limited to 20/hr per sender.</p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReengageOpen(false)} disabled={reSending}>Cancel</Button>
+            <Button onClick={handleReengageSend} disabled={reSending || reengageRecipients.length === 0}>
+              {reSending ? "Sending…" : `Send to ${reengageRecipients.length}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

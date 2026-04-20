@@ -40,6 +40,7 @@ import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
 import Switch from "./pages/Switch";
+import Unsubscribe from "./pages/Unsubscribe";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,7 @@ const App = () => {
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/switch" element={<Switch />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route
               path="/onboarding"
               element={
