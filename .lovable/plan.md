@@ -1,41 +1,52 @@
 
 
-## Instructor Data + UI Updates
+## Next Tasks To Tackle Today
 
-### 1. Insert Dummy Instructors
+Based on what we just shipped (branded student portal, wallet/access cards, waitlist position, grouped schedules), here are the highest-value next tasks — grouped so you can pick what to ship today.
 
-Insert 3 sample instructors linked to "My Studio" (`7f617c1a-1cb0-4494-ae6f-ce0f72755d0e`) using the database insert tool:
+### Track A — Close the loop on the student experience (recommended first)
 
-- **Sarah Jones** -- "Certified Pilates Instructor with 5 years of experience specializing in reformer and mat classes." (display_order: 1)
-- **Marco Rivera** -- "Former professional dancer turned movement specialist. Expert in barre and contemporary techniques." (display_order: 2)  
-- **Aisha Patel** -- "Yoga and mindfulness coach with a focus on breathwork and restorative practices." (display_order: 3)
+These are small, finish-what-we-started items so the new student dashboard actually feels production-ready.
 
-No photo URLs for now (left null).
+1. **Brand the `/credits` page under `/s/:slug/credits`**
+   - Today `Credits.tsx` shows *all* active products across every studio (no `studio_id` filter).
+   - Filter products by the current studio's `studio_id` so a student on `/s/kinspace/credits` only sees Kinspace packs/subscriptions.
+   - Wrap the route in `StudioBrandedLandingWrapper` so brand colors apply.
+   - Make the "Buy More" button in the wallet card route to `/s/:slug/credits` (already wired) — verify it works.
 
-### 2. Public Booking Page -- Show Instructor Info
+2. **Past Classes section — apply the same date grouping + prominent time block**
+   - Mirror the styling we used in `StudentPortal` "My Schedule" so upcoming and past feel consistent.
 
-**File: `src/pages/BookingPage.tsx`**
+3. **Empty / edge states on the student dashboard**
+   - "No active access" card when user has 0 points AND no active subscription → CTA to `/s/:slug/credits`.
+   - "No upcoming classes" card → CTA to `/s/:slug` (Book).
+   - Expired subscription handling: `current_period_end < now()` should not render as active.
 
-The RPC `get_public_classes_by_studio_slug` already returns `instructor_first_name` (mapped to `instructors.name`) and `instructor_last_name` (empty string). The booking page already renders the instructor name via the `instructorName()` helper (line 224-229) and displays it on each class card (line 386-388).
+### Track B — Booking fulfillment hierarchy (the missing backend piece)
 
-No changes needed here -- it already works once instructors are linked to classes.
+Right now the wallet shows subscription + points, but the booking flow doesn't yet *consume* them in the right order.
 
-### 3. Create Class Form -- Instructor Dropdown
+4. **Subscription-first, then points fulfillment on booking**
+   - When a student books, check in order:
+     1. Active `user_subscriptions` whose product has `access_scope = 'all_studios'` OR (`'single_studio'` AND matches `studio_id`) → book free, no point deduction.
+     2. Else if `class_points >= 1` → decrement `class_points`, insert a `transactions` row of type `class_pack` for audit.
+     3. Else → block booking and prompt user to `/s/:slug/credits`.
+   - Implement as an edge function `book-class` (or RPC) so logic is server-side and atomic.
+   - Update `BookClass.tsx` and the `BookingPage` to call it.
 
-**File: `src/pages/Schedule.tsx`**
+### Track C — Owner visibility into the new schema
 
-- Add state for `instructors` list and `selectedInstructorId`
-- Fetch instructors from `supabase.from("instructors").select("id, name").eq("studio_id", activeStudio.id).order("display_order")` when the studio loads
-- Add a `Select` dropdown (from the existing `@/components/ui/select`) in the Create Class form between "Class Name" and "Time", with a "None" option and all fetched instructors
-- Include `instructor_id` in the `.insert()` call when creating a class
-- Also display the instructor name on each class card in the Schedule page by joining instructor data (fetch classes with `.select("*, instructors(name)")`)
+5. **Owner Students CRM — show membership status column**
+   - In the existing `/students` table, add a "Membership" column that reads from `user_subscriptions` (active product name) with a fallback to `class_points` balance.
+   - Read-only addition; does not modify CRM behavior.
 
-### Technical Details
+### Recommendation
 
-**Files modified:**
-- `src/pages/Schedule.tsx` -- add instructor fetch, dropdown in form, instructor name display on class cards
+If you only have time for one thing today, do **Track A (#1 + #3)** — it's user-visible, low-risk, and finishes the story we started. Track B is the most impactful but is a bigger lift (edge function + booking refactor + testing) and probably deserves its own focused session.
 
-**No database changes needed** -- the `instructors` table and FK on `classes.instructor_id` already exist.
+### Technical notes
 
-**Data insert** -- 3 rows into `public.instructors` via the insert tool.
+- `Credits.tsx` filter: `.eq("studio_id", studioId)` — pull `studioId` from `useStudio()` or the route param.
+- Subscription expiry check: `.gt("current_period_end", new Date().toISOString())` in the user_subscriptions query.
+- Fulfillment edge function should use the service-role key for atomic point decrement to avoid race conditions on popular classes.
 
