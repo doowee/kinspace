@@ -906,6 +906,82 @@ export default function Students() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Track 1 — Re-engage composer */}
+      <Dialog open={reengageOpen} onOpenChange={setReengageOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Re-engage inactive students</DialogTitle>
+            <DialogDescription>
+              Send a win-back message to {reengageRecipients.length} student{reengageRecipients.length === 1 ? "" : "s"} who haven't booked in {INACTIVE_DAYS}+ days.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Channel</Label>
+              <div className="flex gap-1.5">
+                {(["sms", "email", "both"] as const).map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant={reChannel === c ? "default" : "outline"}
+                    className="h-7 text-xs capitalize"
+                    onClick={() => setReChannel(c)}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {(reChannel === "email" || reChannel === "both") && (
+              <div className="space-y-1.5">
+                <Label htmlFor="re-subject" className="text-xs">Email subject</Label>
+                <Input id="re-subject" value={reSubject} onChange={(e) => setReSubject(e.target.value)} />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="re-body" className="text-xs">Message body</Label>
+              <Textarea id="re-body" rows={4} value={reBody} onChange={(e) => setReBody(e.target.value)} />
+              <p className="text-[11px] text-muted-foreground">
+                Tokens: <code>{"{first_name}"}</code>, <code>{"{studio_name}"}</code>, <code>{"{booking_url}"}</code>
+              </p>
+            </div>
+
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 text-xs px-2 gap-1">
+                  <ChevronDown className="h-3 w-3" />
+                  Recipients ({reengageRecipients.length})
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1.5 max-h-32 overflow-y-auto rounded-md border border-border p-2 text-xs text-muted-foreground space-y-0.5">
+                {reengageRecipients.map((s) => (
+                  <div key={s.user_id} className="flex justify-between gap-2">
+                    <span className="truncate">{displayName(s)}</span>
+                    <span className="opacity-60 shrink-0">
+                      {(reChannel !== "email" && s.phone) ? "📱" : ""}
+                      {(reChannel !== "sms" && s.email) ? " ✉️" : ""}
+                    </span>
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+
+            <p className="text-[11px] text-muted-foreground">SMS rate-limited to 20/hr per sender.</p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReengageOpen(false)} disabled={reSending}>Cancel</Button>
+            <Button onClick={handleReengageSend} disabled={reSending || reengageRecipients.length === 0}>
+              {reSending ? "Sending…" : `Send to ${reengageRecipients.length}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
