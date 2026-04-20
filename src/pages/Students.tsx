@@ -83,7 +83,16 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
   );
 }
 
-type TierFilter = "all" | "members" | "points" | "none";
+type TierFilter = "all" | "members" | "points" | "none" | "inactive";
+
+const INACTIVE_DAYS = 60;
+const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
+
+function isInactive(s: StudentRow): boolean {
+  // Only consider students who've booked before but not in 60+ days
+  if (!s.last_booking_at) return false;
+  return Date.now() - new Date(s.last_booking_at).getTime() > INACTIVE_MS;
+}
 
 function getTier(s: StudentRow): "members" | "points" | "none" {
   if (s.subscription_name) return "members";
