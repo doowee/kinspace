@@ -40,6 +40,7 @@ export default function StudentDashboard() {
 
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [pastBookings, setPastBookings] = useState<Booking[]>([]);
   const [classPoints, setClassPoints] = useState(0);
   const [subscriptions, setSubscriptions] = useState<ActiveSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,7 @@ export default function StudentDashboard() {
         .select("id, class_id, status, created_at, classes(name, start_time, instructors:instructor_id(name))")
         .eq("user_id", user.id)
         .eq("studio_id", studioId)
-        .in("status", ["confirmed", "waitlist"])
+        .in("status", ["confirmed", "waitlist", "checked_in", "late_cancelled"])
         .order("created_at", { ascending: true }),
       supabase
         .from("user_subscriptions")
@@ -99,8 +100,13 @@ export default function StudentDashboard() {
       instructor_name: (b.classes?.instructors as any)?.name ?? null,
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-    const upcoming = mapped.filter((b) => new Date(b.start_time) > now);
+    const upcoming = mapped.filter((b) => new Date(b.start_time) > now && (b.status === "confirmed" || b.status === "waitlist"));
+    const past = mapped
+      .filter((b) => new Date(b.start_time) <= now)
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+      .slice(0, 20);
     setBookings(upcoming);
+    setPastBookings(past);
 
     // Compute waitlist positions
     const waitlisted = upcoming.filter((b) => b.status === "waitlist");
@@ -366,6 +372,78 @@ export default function StudentDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Past Classes */}
+      {pastBookings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Past Classes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {(() => {
+                const groups: { date: Date; items: Booking[] }[] = [];
+                pastBookings.forEach((b) => {
+                  const d = new Date(b.start_time);
+                  const last = groups[groups.length - 1];
+                  if (last && isSameDay(last.date, d)) {
+                    last.items.push(b);
+                  } else {
+                    groups.push({ date: d, items: [b] });
+                  }
+                });
+                return groups.map((group) => (
+                  <div key={group.date.toISOString()}>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      {format(group.date, "EEEE, MMMM d")}
+                    </h4>
+                    <div className="space-y-2">
+                      {group.items.map((b) => (
+                        <div key={b.id} className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                          <div className="flex flex-col items-center justify-center w-16 shrink-0 rounded-md bg-muted py-2">
+                            <span className="text-lg font-bold text-muted-foreground leading-tight">
+                              {format(new Date(b.start_time), "h:mm")}
+                            </span>
+                            <span className="text-[10px] font-medium uppercase text-muted-foreground/70">
+                              {format(new Date(b.start_time), "a")}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-sm truncate text-foreground/80">{b.class_name}</p>
+                              {b.status === "checked_in" && (
+                                <Badge variant="outline" className="text-[10px] px-2 py-0 border-emerald-400 text-emerald-600">
+                                  Attended
+                                </Badge>
+                              )}
+                              {b.status === "late_cancelled" && (
+                                <Badge variant="outline" className="text-[10px] px-2 py-0 border-destructive/40 text-destructive">
+                                  Late Cancel
+                                </Badge>
+                              )}
+                              {b.status === "confirmed" && (
+                                <Badge variant="outline" className="text-[10px] px-2 py-0 text-muted-foreground">
+                                  Completed
+                                </Badge>
+                              )}
+                            </div>
+                            {b.instructor_name && (
+                              <p className="text-xs text-muted-foreground">{b.instructor_name}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
