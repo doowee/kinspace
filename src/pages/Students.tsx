@@ -96,6 +96,7 @@ export default function Students() {
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
   const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
@@ -235,12 +236,18 @@ export default function Students() {
   }, [activeStudio?.id]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return students;
-    const q = search.toLowerCase();
-    return students.filter((s) =>
-      s.email.toLowerCase().includes(q) || s.first_name?.toLowerCase().includes(q) || s.last_name?.toLowerCase().includes(q)
-    );
-  }, [students, search]);
+    let rows = students;
+    if (tierFilter !== "all") {
+      rows = rows.filter((s) => getTier(s) === tierFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter((s) =>
+        s.email.toLowerCase().includes(q) || s.first_name?.toLowerCase().includes(q) || s.last_name?.toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  }, [students, search, tierFilter]);
 
   const displayName = (s: StudentRow) => {
     if (s.first_name || s.last_name) return [s.first_name, s.last_name].filter(Boolean).join(" ");
