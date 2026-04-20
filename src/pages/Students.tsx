@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudio } from "@/contexts/StudioContext";
 import { studioColorClass } from "@/lib/studio-colors";
@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock, Download, Send, Hourglass } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -83,21 +84,90 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
   );
 }
 
-type TierFilter = "all" | "members" | "points" | "none" | "inactive";
+type TierFilter = "all" | "members" | "points" | "none" | "inactive" | "expiring";
 
 const INACTIVE_DAYS = 60;
 const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
+const EXPIRING_DAYS = 7;
+const EXPIRING_MS = EXPIRING_DAYS * 24 * 60 * 60 * 1000;
 
 function isInactive(s: StudentRow): boolean {
-  // Only consider students who've booked before but not in 60+ days
   if (!s.last_booking_at) return false;
   return Date.now() - new Date(s.last_booking_at).getTime() > INACTIVE_MS;
+}
+
+function isExpiringSoon(s: StudentRow): boolean {
+  if (!s.subscription_name || !s.subscription_period_end) return false;
+  const end = new Date(s.subscription_period_end).getTime();
+  const now = Date.now();
+  return end > now && end - now <= EXPIRING_MS;
+}
+
+function daysUntil(iso: string): number {
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+}
+
+function expiresLabel(iso: string): string {
+  const d = daysUntil(iso);
+  if (d <= 0) return "Expires today";
+  if (d === 1) return "Expires tomorrow";
+  return `Expires in ${d}d`;
 }
 
 function getTier(s: StudentRow): "members" | "points" | "none" {
   if (s.subscription_name) return "members";
   if (s.class_points >= 1) return "points";
   return "none";
+}
+
+/* ─── Track 2: persistent view state ─── */
+const VIEW_STORAGE_KEY = "students-crm-view-v1";
+type SortKey = "name" | "bookings" | "last" | "membership";
+type SortDir = "asc" | "desc";
+interface PersistedView {
+  q: string;
+  tierFilter: TierFilter;
+  sortKey: SortKey;
+  sortDir: SortDir;
+}
+const TIER_VALUES: TierFilter[] = ["all", "members", "points", "none", "inactive", "expiring"];
+const SORT_KEYS: SortKey[] = ["name", "bookings", "last", "membership"];
+function loadPersistedView(): PersistedView {
+  const fallback: PersistedView = { q: "", tierFilter: "all", sortKey: "name", sortDir: "asc" };
+  try {
+    const raw = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (!raw) return fallback;
+    const v = JSON.parse(raw);
+    return {
+      q: typeof v?.q === "string" ? v.q : "",
+      tierFilter: TIER_VALUES.includes(v?.tierFilter) ? v.tierFilter : "all",
+      sortKey: SORT_KEYS.includes(v?.sortKey) ? v.sortKey : "name",
+      sortDir: v?.sortDir === "desc" ? "desc" : "asc",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/* ─── Track 3: CSV helpers ─── */
+function csvEscape(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export default function Students() {
