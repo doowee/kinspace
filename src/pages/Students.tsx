@@ -248,8 +248,27 @@ export default function Students() {
         s.email.toLowerCase().includes(q) || s.first_name?.toLowerCase().includes(q) || s.last_name?.toLowerCase().includes(q)
       );
     }
-    return rows;
-  }, [students, search, tierFilter]);
+    const tierRank = { members: 0, points: 1, none: 2 } as const;
+    const nameOf = (s: StudentRow) =>
+      (s.first_name || s.last_name ? [s.first_name, s.last_name].filter(Boolean).join(" ") : s.email).toLowerCase();
+    const sorted = [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = nameOf(a).localeCompare(nameOf(b));
+      else if (sortKey === "bookings") cmp = a.total_bookings - b.total_bookings;
+      else if (sortKey === "last") {
+        const at = a.last_booking_at ? new Date(a.last_booking_at).getTime() : 0;
+        const bt = b.last_booking_at ? new Date(b.last_booking_at).getTime() : 0;
+        cmp = at - bt;
+      } else if (sortKey === "membership") cmp = tierRank[getTier(a)] - tierRank[getTier(b)];
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [students, search, tierFilter, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "name" ? "asc" : "desc"); }
+  };
 
   const displayName = (s: StudentRow) => {
     if (s.first_name || s.last_name) return [s.first_name, s.last_name].filter(Boolean).join(" ");
