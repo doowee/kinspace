@@ -344,6 +344,8 @@ export default function Students() {
     let rows = students;
     if (tierFilter === "inactive") {
       rows = rows.filter(isInactive);
+    } else if (tierFilter === "expiring") {
+      rows = rows.filter(isExpiringSoon);
     } else if (tierFilter !== "all") {
       rows = rows.filter((s) => getTier(s) === tierFilter);
     }
@@ -364,7 +366,15 @@ export default function Students() {
         const at = a.last_booking_at ? new Date(a.last_booking_at).getTime() : 0;
         const bt = b.last_booking_at ? new Date(b.last_booking_at).getTime() : 0;
         cmp = at - bt;
-      } else if (sortKey === "membership") cmp = tierRank[getTier(a)] - tierRank[getTier(b)];
+      } else if (sortKey === "membership") {
+        cmp = tierRank[getTier(a)] - tierRank[getTier(b)];
+        // Track 4 — expiring-soon members tie-break ahead of other members
+        if (cmp === 0 && getTier(a) === "members") {
+          const ax = isExpiringSoon(a) ? 0 : 1;
+          const bx = isExpiringSoon(b) ? 0 : 1;
+          cmp = ax - bx;
+        }
+      }
       return sortDir === "asc" ? cmp : -cmp;
     });
     return sorted;
@@ -378,6 +388,91 @@ export default function Students() {
   const displayName = (s: StudentRow) => {
     if (s.first_name || s.last_name) return [s.first_name, s.last_name].filter(Boolean).join(" ");
     return s.email;
+  };
+
+  /* ─── Track 3: CSV export ─── */
+  const handleExportCsv = () => {
+    if (filtered.length === 0) return;
+    const headers = ["Name", "Email", "Phone", "Membership Tier", "Subscription", "Points", "Total Bookings", "Last Visit", "Inactive"];
+    const rows = filtered.map((s) => [
+      displayName(s),
+      s.email,
+      s.phone ?? "",
+      getTier(s),
+      s.subscription_name ?? "",
+      String(s.class_points),
+      String(s.total_bookings),
+      s.last_booking_at ? format(new Date(s.last_booking_at), "yyyy-MM-dd") : "",
+      isInactive(s) ? "Yes" : "No",
+    ]);
+    const today = format(new Date(), "yyyy-MM-dd");
+    const slug = (activeStudio?.slug || "studio").toLowerCase();
+    downloadCsv(`students-${slug}-${today}.csv`, [headers, ...rows]);
+    toast.success(`Exported ${rows.length} student${rows.length === 1 ? "" : "s"}`);
+  };
+
+  /* ─── Track 1: Re-engage send ─── */
+  const reengageRecipients = useMemo(
+    () => (tierFilter === "inactive" ? filtered : []),
+    [tierFilter, filtered]
+  );
+
+  const renderToken = (tpl: string, s: StudentRow): string => {
+    const studioName = activeStudio?.name ?? "the studio";
+    const slug = activeStudio?.slug ?? "";
+    const bookingUrl = slug
+      ? `${window.location.origin}/book/${slug}`
+      : window.location.origin;
+    return tpl
+      .replace(/\{first_name\}/g, s.first_name || "there")
+      .replace(/\{studio_name\}/g, studioName)
+      .replace(/\{booking_url\}/g, bookingUrl);
+  };
+
+  const handleReengageSend = async () => {
+    if (reengageRecipients.length === 0) { toast.error("No recipients"); return; }
+    setReSending(true);
+    const today = format(new Date(), "yyyyMMdd");
+    const studioName = activeStudio?.name ?? "the studio";
+    const slug = activeStudio?.slug ?? "";
+    const bookingUrl = slug ? `${window.location.origin}/book/${slug}` : window.location.origin;
+
+    let smsSent = 0, smsFailed = 0, emailSent = 0, emailFailed = 0;
+    const wantSms = reChannel === "sms" || reChannel === "both";
+    const wantEmail = reChannel === "email" || reChannel === "both";
+
+    for (const s of reengageRecipients) {
+      if (wantSms && s.phone) {
+        try {
+          const { error } = await supabase.functions.invoke("send-twilio-sms", {
+            body: { targetPhoneNumber: s.phone, messageBody: renderToken(reBody, s) },
+          });
+          if (error) { smsFailed++; console.warn("SMS failed", s.email, error); }
+          else smsSent++;
+        } catch (e) { smsFailed++; console.warn("SMS error", s.email, e); }
+      }
+      if (wantEmail && s.email) {
+        try {
+          const { error } = await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "winback-reengage",
+              recipientEmail: s.email,
+              idempotencyKey: `reengage-${s.user_id}-${today}`,
+              templateData: { firstName: s.first_name || undefined, studioName, bookingUrl },
+            },
+          });
+          if (error) { emailFailed++; console.warn("Email failed", s.email, error); }
+          else emailSent++;
+        } catch (e) { emailFailed++; console.warn("Email error", s.email, e); }
+      }
+    }
+
+    setReSending(false);
+    setReengageOpen(false);
+    const parts: string[] = [];
+    if (wantSms) parts.push(`SMS: ${smsSent} sent${smsFailed ? `, ${smsFailed} failed` : ""}`);
+    if (wantEmail) parts.push(`Email: ${emailSent} sent${emailFailed ? `, ${emailFailed} failed` : ""}`);
+    toast.success(`Re-engage complete — ${parts.join(" · ")}`);
   };
 
   const openSheet = (student: StudentRow) => {
