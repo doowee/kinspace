@@ -693,7 +693,14 @@ export default function Students() {
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
-                        <AccessStatusBadge student={s} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <AccessStatusBadge student={s} />
+                          {isExpiringSoon(s) && s.subscription_period_end && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-amber-500/15 text-amber-700 border-amber-300">
+                              <Hourglass className="h-2.5 w-2.5" />{expiresLabel(s.subscription_period_end)}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.total_bookings}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
