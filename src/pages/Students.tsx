@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins } from "lucide-react";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -97,6 +97,8 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
+  const [sortKey, setSortKey] = useState<"name" | "bookings" | "last" | "membership">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
   const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
@@ -246,8 +248,27 @@ export default function Students() {
         s.email.toLowerCase().includes(q) || s.first_name?.toLowerCase().includes(q) || s.last_name?.toLowerCase().includes(q)
       );
     }
-    return rows;
-  }, [students, search, tierFilter]);
+    const tierRank = { members: 0, points: 1, none: 2 } as const;
+    const nameOf = (s: StudentRow) =>
+      (s.first_name || s.last_name ? [s.first_name, s.last_name].filter(Boolean).join(" ") : s.email).toLowerCase();
+    const sorted = [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = nameOf(a).localeCompare(nameOf(b));
+      else if (sortKey === "bookings") cmp = a.total_bookings - b.total_bookings;
+      else if (sortKey === "last") {
+        const at = a.last_booking_at ? new Date(a.last_booking_at).getTime() : 0;
+        const bt = b.last_booking_at ? new Date(b.last_booking_at).getTime() : 0;
+        cmp = at - bt;
+      } else if (sortKey === "membership") cmp = tierRank[getTier(a)] - tierRank[getTier(b)];
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [students, search, tierFilter, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "name" ? "asc" : "desc"); }
+  };
 
   const displayName = (s: StudentRow) => {
     if (s.first_name || s.last_name) return [s.first_name, s.last_name].filter(Boolean).join(" ");
@@ -393,12 +414,32 @@ export default function Students() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
+                    <TableHead>
+                      <button onClick={() => toggleSort("name")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                        Name
+                        {sortKey === "name" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                      </button>
+                    </TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Home Studio</TableHead>
-                    <TableHead>Membership</TableHead>
-                    <TableHead className="text-right">Bookings</TableHead>
-                    <TableHead className="text-right">Last Visit</TableHead>
+                    <TableHead>
+                      <button onClick={() => toggleSort("membership")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                        Membership
+                        {sortKey === "membership" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button onClick={() => toggleSort("bookings")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors ml-auto">
+                        Bookings
+                        {sortKey === "bookings" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button onClick={() => toggleSort("last")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors ml-auto">
+                        Last Visit
+                        {sortKey === "last" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                      </button>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
