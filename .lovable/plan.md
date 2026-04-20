@@ -1,52 +1,50 @@
 
 
-## Next Tasks To Tackle Today
+## Track B — Wire booking flow to the new fulfillment hierarchy
 
-Based on what we just shipped (branded student portal, wallet/access cards, waitlist position, grouped schedules), here are the highest-value next tasks — grouped so you can pick what to ship today.
+The DB already does the right thing: `handle_class_booking` (1) checks for an active subscription with matching `access_scope`, (2) falls back to consuming a `class_points` credit, (3) raises `INSUFFICIENT_ACCESS` if neither is available. The waitlist trigger uses the same logic.
 
-### Track A — Close the loop on the student experience (recommended first)
+`BookingPage.tsx` already calls this RPC. The remaining work is making the UX around it correct and branded, plus making sure `BookClass.tsx` can't be reached as a dead-end.
 
-These are small, finish-what-we-started items so the new student dashboard actually feels production-ready.
+### Changes
 
-1. **Brand the `/credits` page under `/s/:slug/credits`**
-   - Today `Credits.tsx` shows *all* active products across every studio (no `studio_id` filter).
-   - Filter products by the current studio's `studio_id` so a student on `/s/kinspace/credits` only sees Kinspace packs/subscriptions.
-   - Wrap the route in `StudioBrandedLandingWrapper` so brand colors apply.
-   - Make the "Buy More" button in the wallet card route to `/s/:slug/credits` (already wired) — verify it works.
+**1. `src/pages/BookingPage.tsx` — branded routing in modals**
 
-2. **Past Classes section — apply the same date grouping + prominent time block**
-   - Mirror the styling we used in `StudentPortal` "My Schedule" so upcoming and past feel consistent.
+- "Buy Credits" CTA in the No-Credits modal: route to `/s/${studio_slug}/credits` (currently `/credits`).
+- Remove the second "View All Packages" button — it points to a legacy `/book/:slug/packages` route that no longer fits the model. One clear CTA is better.
+- Header "My Dashboard" button and Success modal "Go to My Dashboard" button: route to `/s/${studio_slug}/dashboard` (currently `/dashboard`).
+- Improve the No-Credits modal copy to reflect the hierarchy: "You need an active membership or class credits to book…"
 
-3. **Empty / edge states on the student dashboard**
-   - "No active access" card when user has 0 points AND no active subscription → CTA to `/s/:slug/credits`.
-   - "No upcoming classes" card → CTA to `/s/:slug` (Book).
-   - Expired subscription handling: `current_period_end < now()` should not render as active.
+**2. `src/pages/BookingPage.tsx` — sharper error handling**
 
-### Track B — Booking fulfillment hierarchy (the missing backend piece)
+- The current check `rpcError.message?.includes("INSUFFICIENT_ACCESS")` works, but Postgres error shape varies. Also inspect `rpcError.code`/`details` and treat any message containing the sentinel as the credits prompt. Anything else → toast with a generic "Booking failed" message (don't leak raw DB text).
+- Catch the `Class not found` and `Not authenticated` raises distinctly — show a friendly toast and (for unauth) open the AuthModal instead of showing a destructive error.
 
-Right now the wallet shows subscription + points, but the booking flow doesn't yet *consume* them in the right order.
+**3. `src/pages/BookClass.tsx` — redirect to branded booking**
 
-4. **Subscription-first, then points fulfillment on booking**
-   - When a student books, check in order:
-     1. Active `user_subscriptions` whose product has `access_scope = 'all_studios'` OR (`'single_studio'` AND matches `studio_id`) → book free, no point deduction.
-     2. Else if `class_points >= 1` → decrement `class_points`, insert a `transactions` row of type `class_pack` for audit.
-     3. Else → block booking and prompt user to `/s/:slug/credits`.
-   - Implement as an edge function `book-class` (or RPC) so logic is server-side and atomic.
-   - Update `BookClass.tsx` and the `BookingPage` to call it.
+- Today this page lists studios the user belongs to and links to `/book/:slug`. With the branded student portal, the canonical entry is `/s/:slug`. Update the "View Schedule" link to `/s/${slug}` so users land on the branded booking surface (which already calls the RPC).
+- If the user belongs to exactly one studio, auto-redirect to `/s/${slug}` so this page isn't a needless interstitial.
 
-### Track C — Owner visibility into the new schema
+**4. Wallet / dashboard refresh after booking**
 
-5. **Owner Students CRM — show membership status column**
-   - In the existing `/students` table, add a "Membership" column that reads from `user_subscriptions` (active product name) with a fallback to `class_points` balance.
-   - Read-only addition; does not modify CRM behavior.
+- After a successful confirmed/waitlist booking, the cached `class_points` on the dashboard becomes stale. In `BookingPage.handleBook`, after a successful RPC call, dispatch a lightweight refresh signal: re-fetch `profiles.class_points` for the current user (used in some surfaces) is out of scope here, but emit a `window.dispatchEvent(new Event('wallet:refresh'))` and have `StudentDashboard` listen for it to refetch wallet + bookings. Small, isolated, no schema change.
 
-### Recommendation
+### Out of scope
 
-If you only have time for one thing today, do **Track A (#1 + #3)** — it's user-visible, low-risk, and finishes the story we started. Track B is the most impactful but is a bigger lift (edge function + booking refactor + testing) and probably deserves its own focused session.
+- No DB migrations — `handle_class_booking` and `auto_promote_waitlist` already implement the hierarchy correctly.
+- No changes to the owner CRM, kiosk, or instructor flows.
+- No edge function — RPC is sufficient and atomic (row locks + SECURITY DEFINER already in place).
 
-### Technical notes
+### Files touched
 
-- `Credits.tsx` filter: `.eq("studio_id", studioId)` — pull `studioId` from `useStudio()` or the route param.
-- Subscription expiry check: `.gt("current_period_end", new Date().toISOString())` in the user_subscriptions query.
-- Fulfillment edge function should use the service-role key for atomic point decrement to avoid race conditions on popular classes.
+- `src/pages/BookingPage.tsx` — branded routes, modal copy, tighter error handling, wallet refresh dispatch.
+- `src/pages/BookClass.tsx` — link to `/s/:slug`, single-studio auto-redirect.
+- `src/components/dashboard/StudentDashboard.tsx` — listen for `wallet:refresh` to refetch wallet + bookings.
+
+### Verification (after implementation)
+
+1. As `studenta@gmail.com` on `/s/downtown-pilates`, book a class with available points → confirm toast shows "Success", point count drops by 1 on dashboard.
+2. Drain points to zero, attempt to book → No-Credits modal opens, "Buy Credits" routes to `/s/downtown-pilates/credits`.
+3. As a user with an active subscription on that studio, book → confirms without deducting points.
+4. Book into a full class → confirms as "Waitlisted", shows amber badge with waitlist position on dashboard.
 
