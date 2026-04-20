@@ -485,7 +485,14 @@ export default function Students() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{s.total_bookings}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
-                        {s.last_booking_at ? format(new Date(s.last_booking_at), "MMM d, yyyy") : "—"}
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {isInactive(s) && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-muted text-muted-foreground border-border">
+                              <Clock className="h-2.5 w-2.5" />Inactive
+                            </Badge>
+                          )}
+                          <span>{s.last_booking_at ? format(new Date(s.last_booking_at), "MMM d, yyyy") : "—"}</span>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
