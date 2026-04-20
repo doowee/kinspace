@@ -248,7 +248,9 @@ export default function Students() {
 
   const filtered = useMemo(() => {
     let rows = students;
-    if (tierFilter !== "all") {
+    if (tierFilter === "inactive") {
+      rows = rows.filter(isInactive);
+    } else if (tierFilter !== "all") {
       rows = rows.filter((s) => getTier(s) === tierFilter);
     }
     if (search.trim()) {
