@@ -97,6 +97,8 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
+  const [sortKey, setSortKey] = useState<"name" | "bookings" | "last" | "membership">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
   const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
