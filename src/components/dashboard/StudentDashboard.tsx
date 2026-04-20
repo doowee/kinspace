@@ -132,6 +132,13 @@ export default function StudentDashboard() {
     fetchAll();
   }, [fetchAll]);
 
+  // Refetch wallet + bookings when a booking elsewhere dispatches a refresh signal
+  useEffect(() => {
+    const handler = () => fetchAll();
+    window.addEventListener("wallet:refresh", handler);
+    return () => window.removeEventListener("wallet:refresh", handler);
+  }, [fetchAll]);
+
   const handleCancelClick = async (booking: Booking) => {
     if (!studioId) return;
     const { data: studioData } = await supabase
