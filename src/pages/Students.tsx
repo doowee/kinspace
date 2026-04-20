@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import { toast } from "sonner";
 import { format } from "date-fns";
