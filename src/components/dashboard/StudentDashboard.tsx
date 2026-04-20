@@ -40,6 +40,7 @@ export default function StudentDashboard() {
 
   const [firstName, setFirstName] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [pastBookings, setPastBookings] = useState<Booking[]>([]);
   const [classPoints, setClassPoints] = useState(0);
   const [subscriptions, setSubscriptions] = useState<ActiveSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,7 @@ export default function StudentDashboard() {
         .select("id, class_id, status, created_at, classes(name, start_time, instructors:instructor_id(name))")
         .eq("user_id", user.id)
         .eq("studio_id", studioId)
-        .in("status", ["confirmed", "waitlist"])
+        .in("status", ["confirmed", "waitlist", "checked_in", "late_cancelled"])
         .order("created_at", { ascending: true }),
       supabase
         .from("user_subscriptions")
@@ -99,8 +100,13 @@ export default function StudentDashboard() {
       instructor_name: (b.classes?.instructors as any)?.name ?? null,
     }));
     mapped.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-    const upcoming = mapped.filter((b) => new Date(b.start_time) > now);
+    const upcoming = mapped.filter((b) => new Date(b.start_time) > now && (b.status === "confirmed" || b.status === "waitlist"));
+    const past = mapped
+      .filter((b) => new Date(b.start_time) <= now)
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+      .slice(0, 20);
     setBookings(upcoming);
+    setPastBookings(past);
 
     // Compute waitlist positions
     const waitlisted = upcoming.filter((b) => b.status === "waitlist");
