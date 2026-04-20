@@ -174,10 +174,12 @@ export default function Students() {
   const { activeStudio, activeRole } = useStudio();
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
-  const [sortKey, setSortKey] = useState<"name" | "bookings" | "last" | "membership">("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  // Track 2 — persisted view state (lazy init from localStorage)
+  const initialView = useRef<PersistedView>(loadPersistedView()).current;
+  const [search, setSearch] = useState(initialView.q);
+  const [tierFilter, setTierFilter] = useState<TierFilter>(initialView.tierFilter);
+  const [sortKey, setSortKey] = useState<SortKey>(initialView.sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(initialView.sortDir);
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
   const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
@@ -194,6 +196,28 @@ export default function Students() {
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [txOpen, setTxOpen] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
+
+  // Track 1 — Re-engage composer state
+  const [reengageOpen, setReengageOpen] = useState(false);
+  const [reChannel, setReChannel] = useState<"sms" | "email" | "both">("both");
+  const [reSubject, setReSubject] = useState("We miss you at {studio_name}");
+  const [reBody, setReBody] = useState(
+    "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}"
+  );
+  const [reSending, setReSending] = useState(false);
+
+  // Track 2 — persist view state (debounced)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          VIEW_STORAGE_KEY,
+          JSON.stringify({ q: search, tierFilter, sortKey, sortDir })
+        );
+      } catch { /* quota or disabled */ }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, tierFilter, sortKey, sortDir]);
 
   const viewAsRole = useViewAsRole();
   const canSeeEmail = viewAsRole === "owner";
