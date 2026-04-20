@@ -79,8 +79,16 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
     );
   }
   return (
-    <Badge variant="outline" className={`${textSize} text-muted-foreground`}>No Active Access</Badge>
+    <Badge variant="outline" className={`${textSize} text-muted-foreground`}>No Access</Badge>
   );
+}
+
+type TierFilter = "all" | "members" | "points" | "none";
+
+function getTier(s: StudentRow): "members" | "points" | "none" {
+  if (s.subscription_name) return "members";
+  if (s.class_points >= 1) return "points";
+  return "none";
 }
 
 export default function Students() {
@@ -88,6 +96,7 @@ export default function Students() {
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
   const [editData, setEditData] = useState<EditData>({ first_name: "", last_name: "", phone: "", home_studio_id: "", injury_notes: "", staff_notes: "" });
   const [orgStudios, setOrgStudios] = useState<{ id: string; name: string }[]>([]);
@@ -163,6 +172,7 @@ export default function Students() {
           .from("user_subscriptions")
           .select("user_id, status, current_period_end, product_id, products(name)")
           .eq("status", "active")
+          .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
           .in("user_id", userIds),
       ]);
 
@@ -226,12 +236,18 @@ export default function Students() {
   }, [activeStudio?.id]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return students;
-    const q = search.toLowerCase();
-    return students.filter((s) =>
-      s.email.toLowerCase().includes(q) || s.first_name?.toLowerCase().includes(q) || s.last_name?.toLowerCase().includes(q)
-    );
-  }, [students, search]);
+    let rows = students;
+    if (tierFilter !== "all") {
+      rows = rows.filter((s) => getTier(s) === tierFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter((s) =>
+        s.email.toLowerCase().includes(q) || s.first_name?.toLowerCase().includes(q) || s.last_name?.toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  }, [students, search, tierFilter]);
 
   const displayName = (s: StudentRow) => {
     if (s.first_name || s.last_name) return [s.first_name, s.last_name].filter(Boolean).join(" ");
@@ -343,10 +359,28 @@ export default function Students() {
 
       {/* Table */}
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { id: "all", label: "All", count: students.length },
+              { id: "members", label: "Members", count: students.filter((s) => getTier(s) === "members").length },
+              { id: "points", label: "Points", count: students.filter((s) => getTier(s) === "points").length },
+              { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
+            ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
+              <Button
+                key={chip.id}
+                size="sm"
+                variant={tierFilter === chip.id ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setTierFilter(chip.id)}
+              >
+                {chip.label} <span className="ml-1.5 opacity-60 tabular-nums">{chip.count}</span>
+              </Button>
+            ))}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -362,7 +396,7 @@ export default function Students() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Home Studio</TableHead>
-                    <TableHead>Access Status</TableHead>
+                    <TableHead>Membership</TableHead>
                     <TableHead className="text-right">Bookings</TableHead>
                     <TableHead className="text-right">Last Visit</TableHead>
                   </TableRow>
@@ -448,7 +482,7 @@ export default function Students() {
                 </div>
                 <div className="rounded-md border border-border p-3">
                   <AccessStatusBadge student={selectedStudent} size="lg" />
-                  <p className="text-[11px] text-muted-foreground mt-1">Access</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Membership</p>
                 </div>
               </div>
 
