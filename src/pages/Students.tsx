@@ -79,8 +79,16 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
     );
   }
   return (
-    <Badge variant="outline" className={`${textSize} text-muted-foreground`}>No Active Access</Badge>
+    <Badge variant="outline" className={`${textSize} text-muted-foreground`}>No Access</Badge>
   );
+}
+
+type TierFilter = "all" | "members" | "points" | "none";
+
+function getTier(s: StudentRow): "members" | "points" | "none" {
+  if (s.subscription_name) return "members";
+  if (s.class_points >= 1) return "points";
+  return "none";
 }
 
 export default function Students() {
