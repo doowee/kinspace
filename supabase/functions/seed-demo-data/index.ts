@@ -401,6 +401,183 @@ Deno.serve(async (req) => {
     }
     totalTransactions = txRows.length;
 
+    /* ═══════════════════════════════════════════════════════════
+       6. Edge-case demo students for Students CRM chips
+       - 3 inactive (last booking 65–90 days ago)
+       - 2 expiring soon (sub ends in 1–6 days)
+       - 1 lapsed (sub ended 5 days ago)
+       Idempotent via deterministic emails.
+    ═══════════════════════════════════════════════════════════ */
+    const primaryStudio = studioIds[0];
+
+    // Find or create an active "Monthly Unlimited" product on the primary studio
+    let unlimitedProductId: string | null = null;
+    {
+      const { data: existing } = await supabaseAdmin
+        .from("products")
+        .select("id")
+        .eq("studio_id", primaryStudio)
+        .eq("name", "Monthly Unlimited")
+        .eq("is_active", true)
+        .maybeSingle();
+      if (existing) {
+        unlimitedProductId = existing.id;
+      } else {
+        const { data: created } = await supabaseAdmin
+          .from("products")
+          .insert({
+            studio_id: primaryStudio,
+            name: "Monthly Unlimited",
+            product_type: "subscription",
+            access_scope: "single_studio",
+            price: 250,
+            is_active: true,
+          })
+          .select("id")
+          .single();
+        unlimitedProductId = created?.id ?? null;
+      }
+    }
+
+    type EdgeCase =
+      | { kind: "inactive"; idx: number; daysAgo: number }
+      | { kind: "expiring"; idx: number; daysAhead: number }
+      | { kind: "lapsed"; idx: number; daysAgo: number };
+
+    const edgeCases: EdgeCase[] = [
+      { kind: "inactive", idx: 1, daysAgo: 65 },
+      { kind: "inactive", idx: 2, daysAgo: 78 },
+      { kind: "inactive", idx: 3, daysAgo: 90 },
+      { kind: "expiring", idx: 1, daysAhead: 2 },
+      { kind: "expiring", idx: 2, daysAhead: 5 },
+      { kind: "lapsed", idx: 1, daysAgo: 5 },
+    ];
+
+    const NAMES_INACTIVE = [
+      ["Riley", "Quinn"],
+      ["Morgan", "Bailey"],
+      ["Jamie", "Reese"],
+    ];
+    const NAMES_EXPIRING = [
+      ["Skyler", "Hayes"],
+      ["Avery", "Brooks"],
+    ];
+    const NAMES_LAPSED = [["Casey", "Monroe"]];
+
+    let edgeStudentCount = 0;
+    let edgeSubCount = 0;
+
+    for (const ec of edgeCases) {
+      const email =
+        ec.kind === "inactive"
+          ? `demo-inactive-${ec.idx}@kinspace.test`
+          : ec.kind === "expiring"
+          ? `demo-expiring-${ec.idx}@kinspace.test`
+          : `demo-lapsed-${ec.idx}@kinspace.test`;
+      const [first, last] =
+        ec.kind === "inactive"
+          ? NAMES_INACTIVE[ec.idx - 1]
+          : ec.kind === "expiring"
+          ? NAMES_EXPIRING[ec.idx - 1]
+          : NAMES_LAPSED[ec.idx - 1];
+      const phone = `555-09${String(10 + edgeStudentCount).slice(-2)}`;
+
+      // Upsert auth user
+      let userId: string;
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (existingProfile) {
+        userId = existingProfile.id;
+      } else {
+        const { data: authUser, error: authErr } =
+          await supabaseAdmin.auth.admin.createUser({
+            email,
+            password: crypto.randomUUID() + "!Aa1",
+            email_confirm: true,
+            user_metadata: { first_name: first, last_name: last, phone },
+          });
+        if (authErr || !authUser?.user) {
+          console.warn(`Edge-case ${email}: ${authErr?.message ?? "create failed"}`);
+          continue;
+        }
+        userId = authUser.user.id;
+      }
+
+      // Profile linkage (always update so re-seed refreshes state)
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          first_name: first,
+          last_name: last,
+          phone,
+          organization_id: orgId,
+          home_studio_id: primaryStudio,
+        })
+        .eq("id", userId);
+
+      // Studio membership
+      await supabaseAdmin
+        .from("studio_members")
+        .upsert(
+          { user_id: userId, studio_id: primaryStudio, role: "student" },
+          { onConflict: "user_id,studio_id" as any }
+        );
+
+      edgeStudentCount++;
+
+      if (ec.kind === "inactive") {
+        // Wipe prior bookings so the latest is the backdated one (idempotent).
+        await supabaseAdmin
+          .from("bookings")
+          .delete()
+          .eq("user_id", userId)
+          .eq("studio_id", primaryStudio);
+
+        const backdate = addDays(now, -ec.daysAgo).toISOString();
+        const { data: anyClass } = await supabaseAdmin
+          .from("classes")
+          .select("id")
+          .eq("studio_id", primaryStudio)
+          .limit(1)
+          .maybeSingle();
+        if (anyClass) {
+          await supabaseAdmin.from("bookings").insert({
+            user_id: userId,
+            class_id: anyClass.id,
+            studio_id: primaryStudio,
+            status: "checked_in",
+            created_at: backdate,
+          });
+        }
+      } else if (unlimitedProductId) {
+        // Clear prior subscriptions for this user/studio
+        await supabaseAdmin
+          .from("user_subscriptions")
+          .delete()
+          .eq("user_id", userId)
+          .eq("studio_id", primaryStudio);
+
+        const periodEnd =
+          ec.kind === "expiring"
+            ? addDays(now, ec.daysAhead).toISOString()
+            : addDays(now, -ec.daysAgo).toISOString();
+        const status = ec.kind === "expiring" ? "active" : "expired";
+
+        await supabaseAdmin.from("user_subscriptions").insert({
+          user_id: userId,
+          product_id: unlimitedProductId,
+          studio_id: primaryStudio,
+          status,
+          current_period_end: periodEnd,
+        });
+        edgeSubCount++;
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -409,6 +586,8 @@ Deno.serve(async (req) => {
         bookingCount: totalBookings,
         transactionCount: totalTransactions,
         studioCount: studioIds.length,
+        edgeCaseStudents: edgeStudentCount,
+        edgeCaseSubscriptions: edgeSubCount,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

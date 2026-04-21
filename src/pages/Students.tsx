@@ -14,8 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock, Download, Send, Hourglass } from "lucide-react";
+import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock, Download, Send, Hourglass, RefreshCw } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
+import BulkSmsDialog, { type BulkSmsMode } from "@/components/students/BulkSmsDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -197,14 +198,9 @@ export default function Students() {
   const [txOpen, setTxOpen] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
 
-  // Track 1 — Re-engage composer state
-  const [reengageOpen, setReengageOpen] = useState(false);
-  const [reChannel, setReChannel] = useState<"sms" | "email" | "both">("both");
-  const [reSubject, setReSubject] = useState("We miss you at {studio_name}");
-  const [reBody, setReBody] = useState(
-    "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}"
-  );
-  const [reSending, setReSending] = useState(false);
+  // Bulk SMS composer (Re-engage + Renewal nudge)
+  const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
+  const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
@@ -411,69 +407,25 @@ export default function Students() {
     toast.success(`Exported ${rows.length} student${rows.length === 1 ? "" : "s"}`);
   };
 
-  /* ─── Track 1: Re-engage send ─── */
-  const reengageRecipients = useMemo(
-    () => (tierFilter === "inactive" ? filtered : []),
-    [tierFilter, filtered]
-  );
+  /* ─── Bulk SMS recipients (shared composer) ─── */
+  const bulkRecipients = useMemo(() => {
+    const rows = bulkSmsMode === "reengage"
+      ? (tierFilter === "inactive" ? filtered : [])
+      : (tierFilter === "expiring" ? filtered : []);
+    return rows.map((s) => ({
+      user_id: s.user_id,
+      first_name: s.first_name,
+      last_name: s.last_name,
+      email: s.email,
+      phone: s.phone,
+      subscription_period_end: s.subscription_period_end,
+    }));
+  }, [bulkSmsMode, tierFilter, filtered]);
 
-  const renderToken = (tpl: string, s: StudentRow): string => {
-    const studioName = activeStudio?.name ?? "the studio";
-    const slug = activeStudio?.slug ?? "";
-    const bookingUrl = slug
-      ? `${window.location.origin}/book/${slug}`
-      : window.location.origin;
-    return tpl
-      .replace(/\{first_name\}/g, s.first_name || "there")
-      .replace(/\{studio_name\}/g, studioName)
-      .replace(/\{booking_url\}/g, bookingUrl);
-  };
-
-  const handleReengageSend = async () => {
-    if (reengageRecipients.length === 0) { toast.error("No recipients"); return; }
-    setReSending(true);
-    const today = format(new Date(), "yyyyMMdd");
-    const studioName = activeStudio?.name ?? "the studio";
-    const slug = activeStudio?.slug ?? "";
-    const bookingUrl = slug ? `${window.location.origin}/book/${slug}` : window.location.origin;
-
-    let smsSent = 0, smsFailed = 0, emailSent = 0, emailFailed = 0;
-    const wantSms = reChannel === "sms" || reChannel === "both";
-    const wantEmail = reChannel === "email" || reChannel === "both";
-
-    for (const s of reengageRecipients) {
-      if (wantSms && s.phone) {
-        try {
-          const { error } = await supabase.functions.invoke("send-twilio-sms", {
-            body: { targetPhoneNumber: s.phone, messageBody: renderToken(reBody, s) },
-          });
-          if (error) { smsFailed++; console.warn("SMS failed", s.email, error); }
-          else smsSent++;
-        } catch (e) { smsFailed++; console.warn("SMS error", s.email, e); }
-      }
-      if (wantEmail && s.email) {
-        try {
-          const { error } = await supabase.functions.invoke("send-transactional-email", {
-            body: {
-              templateName: "winback-reengage",
-              recipientEmail: s.email,
-              idempotencyKey: `reengage-${s.user_id}-${today}`,
-              templateData: { firstName: s.first_name || undefined, studioName, bookingUrl },
-            },
-          });
-          if (error) { emailFailed++; console.warn("Email failed", s.email, error); }
-          else emailSent++;
-        } catch (e) { emailFailed++; console.warn("Email error", s.email, e); }
-      }
-    }
-
-    setReSending(false);
-    setReengageOpen(false);
-    const parts: string[] = [];
-    if (wantSms) parts.push(`SMS: ${smsSent} sent${smsFailed ? `, ${smsFailed} failed` : ""}`);
-    if (wantEmail) parts.push(`Email: ${emailSent} sent${emailFailed ? `, ${emailFailed} failed` : ""}`);
-    toast.success(`Re-engage complete — ${parts.join(" · ")}`);
-  };
+  const reengageDefaultBody =
+    "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}";
+  const renewDefaultBody =
+    "Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}";
 
   const openSheet = (student: StudentRow) => {
     setSelectedStudent(student);
@@ -609,10 +561,20 @@ export default function Students() {
                 <Button
                   size="sm"
                   className="h-7 text-xs gap-1.5"
-                  onClick={() => setReengageOpen(true)}
+                  onClick={() => { setBulkSmsMode("reengage"); setBulkSmsOpen(true); }}
                 >
                   <Send className="h-3 w-3" />
                   Re-engage ({filtered.length})
+                </Button>
+              )}
+              {tierFilter === "expiring" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => { setBulkSmsMode("renew"); setBulkSmsOpen(true); }}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Renew ({filtered.length})
                 </Button>
               )}
               <Button
@@ -907,81 +869,14 @@ export default function Students() {
         </SheetContent>
       </Sheet>
 
-      {/* Track 1 — Re-engage composer */}
-      <Dialog open={reengageOpen} onOpenChange={setReengageOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Re-engage inactive students</DialogTitle>
-            <DialogDescription>
-              Send a win-back message to {reengageRecipients.length} student{reengageRecipients.length === 1 ? "" : "s"} who haven't booked in {INACTIVE_DAYS}+ days.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Channel</Label>
-              <div className="flex gap-1.5">
-                {(["sms", "email", "both"] as const).map((c) => (
-                  <Button
-                    key={c}
-                    type="button"
-                    size="sm"
-                    variant={reChannel === c ? "default" : "outline"}
-                    className="h-7 text-xs capitalize"
-                    onClick={() => setReChannel(c)}
-                  >
-                    {c}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {(reChannel === "email" || reChannel === "both") && (
-              <div className="space-y-1.5">
-                <Label htmlFor="re-subject" className="text-xs">Email subject</Label>
-                <Input id="re-subject" value={reSubject} onChange={(e) => setReSubject(e.target.value)} />
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="re-body" className="text-xs">Message body</Label>
-              <Textarea id="re-body" rows={4} value={reBody} onChange={(e) => setReBody(e.target.value)} />
-              <p className="text-[11px] text-muted-foreground">
-                Tokens: <code>{"{first_name}"}</code>, <code>{"{studio_name}"}</code>, <code>{"{booking_url}"}</code>
-              </p>
-            </div>
-
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 text-xs px-2 gap-1">
-                  <ChevronDown className="h-3 w-3" />
-                  Recipients ({reengageRecipients.length})
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-1.5 max-h-32 overflow-y-auto rounded-md border border-border p-2 text-xs text-muted-foreground space-y-0.5">
-                {reengageRecipients.map((s) => (
-                  <div key={s.user_id} className="flex justify-between gap-2">
-                    <span className="truncate">{displayName(s)}</span>
-                    <span className="opacity-60 shrink-0">
-                      {(reChannel !== "email" && s.phone) ? "📱" : ""}
-                      {(reChannel !== "sms" && s.email) ? " ✉️" : ""}
-                    </span>
-                  </div>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-
-            <p className="text-[11px] text-muted-foreground">SMS rate-limited to 20/hr per sender.</p>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReengageOpen(false)} disabled={reSending}>Cancel</Button>
-            <Button onClick={handleReengageSend} disabled={reSending || reengageRecipients.length === 0}>
-              {reSending ? "Sending…" : `Send to ${reengageRecipients.length}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Bulk SMS composer (Re-engage + Renew) */}
+      <BulkSmsDialog
+        open={bulkSmsOpen}
+        onOpenChange={setBulkSmsOpen}
+        mode={bulkSmsMode}
+        recipients={bulkRecipients}
+        defaultBody={bulkSmsMode === "reengage" ? reengageDefaultBody : renewDefaultBody}
+      />
     </div>
   );
 }

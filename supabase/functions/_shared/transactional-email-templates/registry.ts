@@ -9,8 +9,6 @@ export interface TemplateEntry {
   previewData?: Record<string, any>
 }
 
-import { template as winbackReengage } from './winback-reengage.tsx'
-
-export const TEMPLATES: Record<string, TemplateEntry> = {
-  'winback-reengage': winbackReengage,
-}
+// No transactional templates currently registered.
+// Marketing-style sends (e.g. win-back) are handled via SMS only — see Students CRM.
+export const TEMPLATES: Record<string, TemplateEntry> = {}
