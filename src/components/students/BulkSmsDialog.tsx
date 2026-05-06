@@ -223,6 +223,29 @@ export default function BulkSmsDialog({
     }
   };
 
+  const handleSaveTemplate = async () => {
+    if (!activeStudio?.id || !user?.id) return;
+    if (body.trim().length === 0) return;
+    setSavingTpl(true);
+    const { error } = await supabase
+      .from("studio_sms_templates")
+      .upsert(
+        {
+          studio_id: activeStudio.id,
+          mode,
+          body: body.trim(),
+          updated_by: user.id,
+        },
+        { onConflict: "studio_id,mode" },
+      );
+    setSavingTpl(false);
+    if (error) {
+      toast.error(`Couldn't save template: ${error.message}`);
+    } else {
+      toast.success("Saved as this studio's default");
+    }
+  };
+
   const copy = MODE_COPY[mode];
   const optedOutCount = recipients.filter((r) => r.sms_opted_out).length;
   const phoneCount = recipients.filter((r) => !!r.phone && !r.sms_opted_out).length;
