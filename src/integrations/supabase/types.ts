@@ -513,6 +513,8 @@ export type Database = {
           notification_preferences: Json
           organization_id: string | null
           phone: string | null
+          sms_opted_out: boolean
+          sms_opted_out_at: string | null
           staff_notes: string | null
           stripe_customer_id: string | null
           updated_at: string
@@ -531,6 +533,8 @@ export type Database = {
           notification_preferences?: Json
           organization_id?: string | null
           phone?: string | null
+          sms_opted_out?: boolean
+          sms_opted_out_at?: string | null
           staff_notes?: string | null
           stripe_customer_id?: string | null
           updated_at?: string
@@ -549,6 +553,8 @@ export type Database = {
           notification_preferences?: Json
           organization_id?: string | null
           phone?: string | null
+          sms_opted_out?: boolean
+          sms_opted_out_at?: string | null
           staff_notes?: string | null
           stripe_customer_id?: string | null
           updated_at?: string
