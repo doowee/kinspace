@@ -580,6 +580,7 @@ export default function Students() {
               { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
               { id: "inactive", label: "Inactive (60d+)", count: students.filter(isInactive).length },
               { id: "expiring", label: "Expiring soon", count: students.filter(isExpiringSoon).length },
+              { id: "lapsed", label: "Lapsed (30d)", count: students.filter(isLapsed).length },
             ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
               <Button
                 key={chip.id}
