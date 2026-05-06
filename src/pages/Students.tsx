@@ -88,12 +88,14 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
   );
 }
 
-type TierFilter = "all" | "members" | "points" | "none" | "inactive" | "expiring";
+type TierFilter = "all" | "members" | "points" | "none" | "inactive" | "expiring" | "lapsed";
 
 const INACTIVE_DAYS = 60;
 const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
 const EXPIRING_DAYS = 7;
 const EXPIRING_MS = EXPIRING_DAYS * 24 * 60 * 60 * 1000;
+const LAPSED_DAYS = 30;
+const LAPSED_MS = LAPSED_DAYS * 24 * 60 * 60 * 1000;
 
 function isInactive(s: StudentRow): boolean {
   if (!s.last_booking_at) return false;
