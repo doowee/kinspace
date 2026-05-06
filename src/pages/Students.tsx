@@ -224,6 +224,7 @@ export default function Students() {
     return v === null ? true : v === "1";
   });
   const prefsLoadedRef = useRef(false);
+  const [prefsSaveState, setPrefsSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   // Hydrate from profile on mount
   useEffect(() => {
