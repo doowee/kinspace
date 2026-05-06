@@ -12,6 +12,7 @@ import {
   fadeUp, stagger, EASE, VP,
 } from "@/components/landing/shared";
 import { SiteFooter } from "@/components/landing/SiteFooter";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 /* ─── Feature Data ─── */
 
@@ -225,6 +226,10 @@ function FeatureCategoryCard({ category, index }: { category: FeatureCategory; i
 /* ─── Page ─── */
 
 export default function Features() {
+  useDocumentTitle(
+    "Features — Kinspace Studio",
+    "Every Kinspace Studio feature: scheduling, kiosk, SMS commerce, the Agent Suite, multi-studio management, and more."
+  );
   const roadmapRef = useRef<HTMLDivElement>(null);
   const roadmapInView = useInView(roadmapRef, { once: true, margin: "-100px" });
 

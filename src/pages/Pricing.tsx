@@ -4,6 +4,7 @@ import { Check, Zap, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteFooter } from "@/components/landing/SiteFooter";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   SiteHeader,
   SignupCTA,
@@ -78,6 +79,10 @@ const COMPARISON = [
 ];
 
 export default function Pricing() {
+  useDocumentTitle(
+    "Pricing — Kinspace Studio",
+    "Simple, transparent pricing for boutique wellness studios. Standard and Pro tiers, no per-student fees."
+  );
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SiteHeader activePath="/pricing" />
