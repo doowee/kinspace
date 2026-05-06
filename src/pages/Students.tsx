@@ -33,6 +33,7 @@ interface StudentRow {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  sms_opted_out: boolean;
   class_points: number;
   subscription_name: string | null;
   subscription_status: string | null;
