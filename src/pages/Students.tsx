@@ -33,6 +33,7 @@ interface StudentRow {
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
+  sms_opted_out: boolean;
   class_points: number;
   subscription_name: string | null;
   subscription_status: string | null;
@@ -263,7 +264,7 @@ export default function Students() {
       const [profilesRes, bookingsRes, subsRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points")
+          .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points, sms_opted_out")
           .in("id", userIds),
         supabase
           .from("bookings")
@@ -319,6 +320,7 @@ export default function Students() {
         first_name: p.first_name,
         last_name: p.last_name,
         phone: p.phone ?? null,
+        sms_opted_out: !!p.sms_opted_out,
         class_points: p.class_points ?? 0,
         subscription_name: subMap[p.id]?.name ?? null,
         subscription_status: subMap[p.id]?.status ?? null,
@@ -420,6 +422,7 @@ export default function Students() {
       last_name: s.last_name,
       email: s.email,
       phone: s.phone,
+      sms_opted_out: s.sms_opted_out,
       subscription_period_end: s.subscription_period_end,
     }));
   }, [bulkSmsMode, tierFilter, filtered]);

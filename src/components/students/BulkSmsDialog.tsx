@@ -28,6 +28,7 @@ export interface BulkSmsRecipient {
   last_name: string | null;
   email: string;
   phone: string | null;
+  sms_opted_out?: boolean | null;
   subscription_period_end?: string | null;
 }
 
@@ -127,7 +128,8 @@ export default function BulkSmsDialog({
       .replace(/\{days_left\}/g, String(daysLeft));
 
   const handleSend = async () => {
-    if (recipients.length === 0) {
+    const sendable = recipients.filter((r) => r.phone && !r.sms_opted_out);
+    if (sendable.length === 0) {
       toast.error("No recipients");
       return;
     }
@@ -135,8 +137,13 @@ export default function BulkSmsDialog({
     let sent = 0;
     let failed = 0;
     let skipped = 0;
+    let optedOut = 0;
 
     for (const r of recipients) {
+      if (r.sms_opted_out) {
+        optedOut++;
+        continue;
+      }
       if (!r.phone) {
         skipped++;
         continue;
@@ -172,7 +179,7 @@ export default function BulkSmsDialog({
         recipient_count: recipients.length,
         sent_count: sent,
         failed_count: failed,
-        skipped_count: skipped,
+        skipped_count: skipped + optedOut,
         body_preview: body.slice(0, 280),
       });
       if (logErr) console.warn("sms_campaigns insert failed", logErr);
@@ -183,6 +190,7 @@ export default function BulkSmsDialog({
     const parts: string[] = [`${sent} sent`];
     if (failed) parts.push(`${failed} failed`);
     if (skipped) parts.push(`${skipped} skipped (no phone)`);
+    if (optedOut) parts.push(`${optedOut} opted out`);
     toast.success(`SMS complete — ${parts.join(" · ")}`);
   };
 
@@ -210,7 +218,8 @@ export default function BulkSmsDialog({
   };
 
   const copy = MODE_COPY[mode];
-  const phoneCount = recipients.filter((r) => !!r.phone).length;
+  const optedOutCount = recipients.filter((r) => r.sms_opted_out).length;
+  const phoneCount = recipients.filter((r) => !!r.phone && !r.sms_opted_out).length;
   const sendDisabled = sending || phoneCount === 0 || body.trim().length === 0;
 
   return (
@@ -250,18 +259,27 @@ export default function BulkSmsDialog({
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 text-xs px-2 gap-1">
                 <ChevronDown className="h-3 w-3" />
-                Recipients ({phoneCount} with phone / {recipients.length} total)
+                Recipients ({phoneCount} sendable / {recipients.length} total
+                {optedOutCount > 0 ? ` · ${optedOutCount} opted out` : ""})
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1.5 max-h-32 overflow-y-auto rounded-md border border-border p-2 text-xs text-muted-foreground space-y-0.5">
               {recipients.map((r) => (
                 <div key={r.user_id} className="flex justify-between gap-2">
                   <span className="truncate">{displayName(r)}</span>
-                  <span className="opacity-60 shrink-0">{r.phone ? "📱" : "—"}</span>
+                  <span className="opacity-60 shrink-0">
+                    {r.sms_opted_out ? "🚫 opted out" : r.phone ? "📱" : "—"}
+                  </span>
                 </div>
               ))}
             </CollapsibleContent>
           </Collapsible>
+
+          {optedOutCount > 0 && (
+            <p className="text-[11px] text-amber-600">
+              {optedOutCount} recipient{optedOutCount === 1 ? "" : "s"} opted out (replied STOP) and will be excluded.
+            </p>
+          )}
 
           <p className="text-[11px] text-muted-foreground">
             SMS rate-limited to 20/hr per sender.
