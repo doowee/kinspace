@@ -202,6 +202,7 @@ export default function Students() {
   // Bulk SMS composer (Re-engage + Renewal nudge)
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
   const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
+  const [campaignRefreshKey, setCampaignRefreshKey] = useState(0);
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
