@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock, Download, Send, Hourglass, RefreshCw } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import BulkSmsDialog, { type BulkSmsMode } from "@/components/students/BulkSmsDialog";
+import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
