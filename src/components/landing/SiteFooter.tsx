@@ -8,10 +8,10 @@ const PRODUCT_LINKS = [
   { to: "/auth", label: "Log In" },
 ];
 
-const COMPANY_LINKS = [
-  { href: "#", label: "Support" },
-  { href: "#", label: "Privacy Policy" },
-  { href: "#", label: "Terms of Service" },
+const COMPANY_LINKS: { to?: string; href?: string; label: string }[] = [
+  { href: "mailto:hello@kinspace.studio", label: "Support" },
+  { to: "/privacy", label: "Privacy Policy" },
+  { to: "/terms", label: "Terms of Service" },
 ];
 
 export function SiteFooter() {
@@ -53,12 +53,21 @@ export function SiteFooter() {
             <ul className="space-y-2.5">
               {COMPANY_LINKS.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm text-background/60 hover:text-background transition-colors"
-                  >
-                    {link.label}
-                  </a>
+                  {link.to ? (
+                    <Link
+                      to={link.to}
+                      className="text-sm text-background/60 hover:text-background transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      className="text-sm text-background/60 hover:text-background transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

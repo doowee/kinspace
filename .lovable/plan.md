@@ -1,83 +1,87 @@
 
+# Demo-Ready Checklist (No Live Switch)
 
-## Plan — Ship all 4 follow-ups
+Goal: get the app polished enough to **demo and show off** to prospects/investors. Keep Stripe + Twilio in **test/sandbox** mode. Nothing here flips production switches.
 
-Four small, additive changes. No DB migrations. Marketing-style email is removed to comply with transactional-only policy; SMS remains the channel for re-engagement and renewals.
+## 1. Public-facing polish (15 min)
+- Replace `<meta name="author">` (currently "Lovable") with "Kinspace".
+- Confirm `<title>` and meta description reflect the demo brand.
+- Replace default OG/Twitter preview image with a branded card.
+- Add favicon + apple-touch-icon.
+
+## 2. SEO + per-route titles (15 min)
+- One H1 per marketing page (`Index.tsx`, `Features.tsx`, `Pricing.tsx`).
+- Per-route `<title>` + meta description (small helper or react-helmet).
+- Alt text on hero images.
+
+## 3. Demo data hygiene (15 min)
+- Confirm `seed-demo-data` runs cleanly and produces a believable studio (instructors, classes, students, transactions).
+- Add a one-click "Reset demo data" affordance for owners (or document the steps so you can re-seed before each pitch).
+- Make sure canonical demo personas (Jessica M., instructor PINs) are present and current.
+
+## 4. Demo flow walkthrough (30 min — manual QA)
+Run through the story you'll tell on stage and fix anything ugly:
+- Sign up → onboarding → create studio → branded portal loads.
+- Owner dashboard → Students → Bulk SMS preview (excluded count + STOP drawer + audit row).
+- Schedule → book a class → waitlist promotion.
+- Kiosk PIN login → live roster.
+- Finance → revenue chart + manual transaction.
+- AI Marketing Agent (Pro tier) flash drop demo.
+
+Note any 3-second-or-longer pauses, broken empty states, or mismatched brand colors.
+
+## 5. Empty / loading / error states (20 min)
+- Every list view has a friendly empty state ("No students yet — invite one").
+- Skeleton loaders or spinners on slow queries.
+- `NotFound.tsx` reachable + has a "Back to dashboard" CTA.
+- Add a global error boundary if missing.
+
+## 6. Auth + access gates (15 min)
+- Confirm protected routes redirect unauthenticated users to `/auth`.
+- Confirm Auth Email branding (Coastal Minimalism) renders in the test inbox.
+- Email confirmation + leaked-password protection enabled in test env.
+
+## 7. Console + visible jank (10 min)
+- Remove leftover `console.log`s on hot paths.
+- Strip TODO comments visible in DevTools.
+- No 404s in the network tab on the main demo flow.
+
+## 8. Stripe — keep in TEST mode (5 min)
+- Verify Stripe is on **test keys** in the published env.
+- Run one test checkout with `4242 4242 4242 4242` to confirm the happy path renders.
+- Do NOT swap to live keys.
+
+## 9. Twilio — keep in sandbox (5 min)
+- Keep Twilio on the existing test/dev number.
+- Send one test SMS to your own phone to confirm Bulk SMS + audit log work.
+- Skip SMS Pumping Protection / Geo Permissions tightening until go-live.
+
+## 10. Footer, legal stubs, and disclaimers (10 min)
+- Footer with Terms / Privacy stubs (can be one-paragraph placeholders for now).
+- Small "Demo environment — no live charges" badge in the dashboard header (toggle via env flag so you can hide it later).
+
+## 11. Publish + share preview (5 min)
+- Publish to `kinspace.lovable.app` (and `kinspace.studio` if already pointing).
+- Set publish visibility to **public** so anyone with the link can view.
+- Confirm the published site loads cleanly in an incognito window.
+
+## 12. Demo logistics (5 min)
+- Bookmark the live tabs you'll need on stage: dashboard, schedule, kiosk, students, finance.
+- Pre-create a "demo owner" account with everything pre-seeded so you don't sign up live.
+- Have a backup screen-recording of the happy path in case wifi dies.
 
 ---
 
-### 1. Seed exercise data (so chips light up)
+## Suggested order
+1. Items 1, 2, 5, 7, 10 → batch frontend polish.
+2. Items 3, 4 → demo content + manual walkthrough.
+3. Items 6, 8, 9 → light hardening on test infra.
+4. Items 11, 12 → publish + dry-run.
 
-Extend `supabase/functions/seed-demo-data/index.ts` to produce a small slice of edge-case students against the Downtown studio (`11111111-1111-1111-1111-111111111111`):
+## Explicitly NOT doing
+- No live Stripe keys.
+- No production Twilio number / Geo Permissions changes.
+- No DNS / domain swaps beyond what's already set up.
+- No new features.
 
-- **3 inactive students**: bookings whose latest `created_at` is 65–90 days ago, no recent activity. Surfaces in **Inactive (60d+)**.
-- **2 expiring-soon members**: one active row in `user_subscriptions` with `current_period_end` between `now + 1d` and `now + 6d`. Surfaces in **Expiring soon** with the amber "Expires in Nd" badge.
-- **1 already-lapsed member**: `current_period_end` 5 days in the past — verifies the gold badge correctly drops off.
-
-Idempotent: tagged via deterministic emails (`demo-inactive-1@kinspace.test`, `demo-expiring-1@kinspace.test`, etc.) and upserted on each run, so re-seeding doesn't multiply rows.
-
-Trigger: existing **⚡ Seed Demo Studio** item in `DemoTriggers` — no UI change.
-
----
-
-### 2. Refactor Re-engage to SMS-only
-
-`src/pages/Students.tsx`:
-
-- Drop the **Channel** toggle and **Subject** field from the Re-engage dialog.
-- Remove all `send-transactional-email` invocations from the bulk send loop.
-- Keep only the SMS path (`send-twilio-sms`), the editable body textarea, recipient count + name list, and the "Send to N students" confirm.
-- Add a one-line muted note under the body: *"SMS only. Marketing email is handled by your dedicated marketing provider."*
-- Header copy: **"Re-engage via SMS"**.
-
-Also remove the now-orphaned `winback-reengage.tsx` template and its registry entry (cleanup; transactional infra stays in place for future legitimate transactional sends).
-
----
-
-### 3. Renewal nudge (SMS-only) on Expiring soon chip
-
-Mirror the Re-engage composer for the **Expiring soon** filter:
-
-- New toolbar button **"Renew (N)"** appears only when `tierFilter === "expiring"` AND filtered count > 0.
-- Reuses the same dialog component with a different default body:
-  > *"Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}"*
-- Token replacement extended to support `{days_left}` (computed per-recipient from `subscription_period_end`).
-- Same Twilio loop, same toast summary.
-
-Implementation: refactor the existing dialog into a single `BulkSmsDialog` component (props: `mode: "reengage" | "renew"`, `recipients`, `defaultBody`) so both buttons share one code path.
-
----
-
-### 4. "Send test to me" button inside the SMS composer
-
-Inside `BulkSmsDialog` footer, add a secondary **"Send test to me"** button next to the primary confirm:
-
-- Sends a single SMS to the logged-in owner's `profiles.phone` using the current draft body.
-- Token replacement uses the owner's first name + their studio name + a placeholder `2` for `{days_left}` so previews are realistic.
-- Disabled with tooltip "Add a phone number to your profile" if owner has no phone.
-- Toast on success/failure; does not close the dialog so the owner can iterate.
-
----
-
-### Files touched
-
-- `supabase/functions/seed-demo-data/index.ts` — add edge-case student/subscription rows (Track 1).
-- `src/pages/Students.tsx` — refactor Re-engage to SMS-only, add Renew button, integrate shared dialog (Tracks 2, 3, 4).
-- `src/components/students/BulkSmsDialog.tsx` — new shared composer with test-send (Tracks 2, 3, 4).
-- `supabase/functions/_shared/transactional-email-templates/registry.ts` — drop `winback-reengage` entry (Track 2 cleanup).
-- `supabase/functions/_shared/transactional-email-templates/winback-reengage.tsx` — delete (Track 2 cleanup).
-
-### Out of scope
-
-- No DB schema or RLS changes.
-- No new edge functions (reuse `send-twilio-sms` and `seed-demo-data`).
-- No campaign history table — deferred; can revisit once SMS volume warrants it.
-- No changes to the existing transactional email infrastructure beyond removing the one marketing template.
-
-### Execution order
-
-1. Track 1 (seed) — unblocks visual verification of Tracks 3 & 4.
-2. Track 2 (SMS-only refactor) — sets the shared dialog foundation.
-3. Track 3 (Renew button) — wires the second entry point into the shared dialog.
-4. Track 4 (Test send) — small addition inside the shared dialog.
-
+Want me to start by knocking out items 1, 2, 5, 7, 10 in one polish pass?
