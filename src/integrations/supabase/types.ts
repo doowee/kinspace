@@ -657,6 +657,36 @@ export type Database = {
           },
         ]
       }
+      studio_sms_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          mode: string
+          studio_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          mode: string
+          studio_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          mode?: string
+          studio_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       studios: {
         Row: {
           brand_background: string | null
