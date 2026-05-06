@@ -162,7 +162,24 @@ export default function BulkSmsDialog({
     }
 
     setSending(false);
+
+    // Log campaign (best-effort; don't block UX on failure)
+    if (activeStudio?.id && user?.id) {
+      const { error: logErr } = await supabase.from("sms_campaigns").insert({
+        studio_id: activeStudio.id,
+        sender_id: user.id,
+        mode,
+        recipient_count: recipients.length,
+        sent_count: sent,
+        failed_count: failed,
+        skipped_count: skipped,
+        body_preview: body.slice(0, 280),
+      });
+      if (logErr) console.warn("sms_campaigns insert failed", logErr);
+    }
+
     onOpenChange(false);
+    onSent?.();
     const parts: string[] = [`${sent} sent`];
     if (failed) parts.push(`${failed} failed`);
     if (skipped) parts.push(`${skipped} skipped (no phone)`);
