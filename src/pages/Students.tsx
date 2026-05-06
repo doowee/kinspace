@@ -143,7 +143,7 @@ interface PersistedView {
   sortKey: SortKey;
   sortDir: SortDir;
 }
-const TIER_VALUES: TierFilter[] = ["all", "members", "points", "none", "inactive", "expiring"];
+const TIER_VALUES: TierFilter[] = ["all", "members", "points", "none", "inactive", "expiring", "lapsed"];
 const SORT_KEYS: SortKey[] = ["name", "bookings", "last", "membership"];
 function loadPersistedView(): PersistedView {
   const fallback: PersistedView = { q: "", tierFilter: "all", sortKey: "name", sortDir: "asc" };
