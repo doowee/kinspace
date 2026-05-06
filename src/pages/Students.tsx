@@ -259,10 +259,14 @@ export default function Students() {
       localStorage.setItem(EXCLUDE_OPTED_OUT_KEY, excludeOptedOut ? "1" : "0");
     } catch {}
     if (!prefsLoadedRef.current) return;
+    setPrefsSaveState("saving");
     const t = setTimeout(async () => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
-      if (!uid) return;
+      if (!uid) {
+        setPrefsSaveState("idle");
+        return;
+      }
       const { data: existing } = await supabase
         .from("profiles")
         .select("staff_ui_prefs")
@@ -274,7 +278,14 @@ export default function Students() {
         .from("profiles")
         .update({ staff_ui_prefs: next })
         .eq("id", uid);
-      if (error) console.warn("staff_ui_prefs save failed", error);
+      if (error) {
+        console.warn("staff_ui_prefs save failed", error);
+        toast.error("Couldn't save preference");
+        setPrefsSaveState("idle");
+        return;
+      }
+      setPrefsSaveState("saved");
+      setTimeout(() => setPrefsSaveState("idle"), 1800);
     }, 400);
     return () => clearTimeout(t);
   }, [excludeOptedOut]);
