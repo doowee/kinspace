@@ -18,6 +18,7 @@ import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, P
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import BulkSmsDialog, { type BulkSmsMode } from "@/components/students/BulkSmsDialog";
 import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
+import LapsedSummary from "@/components/students/LapsedSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
