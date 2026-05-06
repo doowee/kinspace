@@ -287,6 +287,12 @@ export default function Students() {
           .eq("status", "active")
           .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
           .in("user_id", userIds),
+        supabase
+          .from("user_subscriptions")
+          .select("user_id, status, updated_at")
+          .in("status", ["expired", "canceled", "past_due"])
+          .gte("updated_at", new Date(Date.now() - LAPSED_MS).toISOString())
+          .in("user_id", userIds),
       ]);
 
       const profiles = profilesRes.data ?? [];
