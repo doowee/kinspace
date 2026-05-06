@@ -579,6 +579,59 @@ export type Database = {
           },
         ]
       }
+      sms_campaign_audit: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          mode: string
+          outcome: string
+          reason: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          recipient_user_id: string | null
+          sender_id: string
+          studio_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mode: string
+          outcome: string
+          reason?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          recipient_user_id?: string | null
+          sender_id: string
+          studio_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mode?: string
+          outcome?: string
+          reason?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          recipient_user_id?: string | null
+          sender_id?: string
+          studio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_campaign_audit_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sms_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_campaigns: {
         Row: {
           body_preview: string | null
