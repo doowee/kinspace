@@ -4,9 +4,11 @@ import { useStudio } from "@/contexts/StudioContext";
 import { formatDistanceToNow } from "date-fns";
 import { History } from "lucide-react";
 
+type CampaignMode = "reengage" | "renew" | "winback";
+
 interface CampaignRow {
   id: string;
-  mode: "reengage" | "renew";
+  mode: CampaignMode;
   recipient_count: number;
   sent_count: number;
   failed_count: number;
@@ -17,7 +19,7 @@ interface CampaignRow {
 }
 
 interface Props {
-  mode: "reengage" | "renew";
+  mode: CampaignMode;
   /** Bumping this triggers a refetch (e.g. after a new send completes). */
   refreshKey?: number;
 }
