@@ -79,6 +79,10 @@ const COMPARISON = [
 ];
 
 export default function Pricing() {
+  useDocumentTitle(
+    "Pricing — Kinspace Studio",
+    "Simple, transparent pricing for boutique wellness studios. Standard and Pro tiers, no per-student fees."
+  );
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SiteHeader activePath="/pricing" />
