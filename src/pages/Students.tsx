@@ -1133,6 +1133,7 @@ export default function Students() {
         onOpenChange={(o) => { setBulkSmsOpen(o); if (!o) setCampaignRefreshKey((k) => k + 1); }}
         mode={bulkSmsMode}
         recipients={bulkRecipients}
+        excludedOptedOut={bulkExcludedOptedOut}
         defaultBody={activeDefaultBody}
         onSent={() => setCampaignRefreshKey((k) => k + 1)}
       />
