@@ -226,6 +226,10 @@ function FeatureCategoryCard({ category, index }: { category: FeatureCategory; i
 /* ─── Page ─── */
 
 export default function Features() {
+  useDocumentTitle(
+    "Features — Kinspace Studio",
+    "Every Kinspace Studio feature: scheduling, kiosk, SMS commerce, the Agent Suite, multi-studio management, and more."
+  );
   const roadmapRef = useRef<HTMLDivElement>(null);
   const roadmapInView = useInView(roadmapRef, { once: true, margin: "-100px" });
 
