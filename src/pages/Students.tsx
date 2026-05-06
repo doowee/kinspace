@@ -510,9 +510,8 @@ export default function Students() {
     let rows: StudentRow[] = [];
     if (bulkSmsMode === "reengage" && tierFilter === "inactive") rows = filtered;
     else if (bulkSmsMode === "renew" && tierFilter === "expiring") rows = filtered;
-    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") {
-      rows = excludeOptedOut ? filtered.filter((s) => !s.sms_opted_out) : filtered;
-    }
+    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") rows = filtered;
+    if (excludeOptedOut) rows = rows.filter((s) => !s.sms_opted_out);
     return rows.map((s) => ({
       user_id: s.user_id,
       first_name: s.first_name,
@@ -524,10 +523,18 @@ export default function Students() {
     }));
   }, [bulkSmsMode, tierFilter, filtered, excludeOptedOut]);
 
-  const lapsedOptedOutCount = useMemo(
-    () => (tierFilter === "lapsed" ? filtered.filter((s) => s.sms_opted_out).length : 0),
-    [tierFilter, filtered],
+  // Count of opted-out students in the currently filtered view (for any tier)
+  const filteredOptedOutCount = useMemo(
+    () => filtered.filter((s) => s.sms_opted_out).length,
+    [filtered],
   );
+  // Backwards-compat alias used by the lapsed chip
+  const lapsedOptedOutCount = tierFilter === "lapsed" ? filteredOptedOutCount : 0;
+
+  // Effective recipient count for the current bulk SMS button
+  const effectiveBulkCount = excludeOptedOut
+    ? Math.max(0, filtered.length - filteredOptedOutCount)
+    : filtered.length;
 
   const studioBookingUrl = useMemo(() => {
     const slug = activeStudio?.slug;
