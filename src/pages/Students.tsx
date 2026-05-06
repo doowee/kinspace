@@ -349,6 +349,7 @@ export default function Students() {
         subscription_name: subMap[p.id]?.name ?? null,
         subscription_status: subMap[p.id]?.status ?? null,
         subscription_period_end: subMap[p.id]?.periodEnd ?? null,
+        lapsed_at: subMap[p.id] ? null : (lapsedMap[p.id] ?? null),
         total_bookings: bookingMap[p.id]?.count ?? 0,
         last_booking_at: bookingMap[p.id]?.last ?? null,
         home_studio_id: p.home_studio_id ?? null,
