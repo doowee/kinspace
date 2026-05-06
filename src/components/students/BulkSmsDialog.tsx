@@ -85,6 +85,7 @@ export default function BulkSmsDialog({
   const [body, setBody] = useState(defaultBody);
   const [sending, setSending] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [savingTpl, setSavingTpl] = useState(false);
   const [ownerPhone, setOwnerPhone] = useState<string | null>(null);
   const [ownerFirstName, setOwnerFirstName] = useState<string | null>(null);
 
