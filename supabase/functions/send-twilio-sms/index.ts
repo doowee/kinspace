@@ -124,6 +124,7 @@ serve(async (req) => {
       );
     }
 
+    // 5. Send SMS via Twilio
 
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
