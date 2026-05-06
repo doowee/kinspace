@@ -307,10 +307,30 @@ export default function BulkSmsDialog({
             </CollapsibleContent>
           </Collapsible>
 
-          {optedOutCount > 0 && (
-            <p className="text-[11px] text-amber-600">
-              {optedOutCount} recipient{optedOutCount === 1 ? "" : "s"} opted out (replied STOP) and will be excluded.
-            </p>
+          {(optedOutCount > 0 || excludedOptedOut.length > 0) && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs px-2 gap-1 text-amber-700 hover:text-amber-800"
+                >
+                  <ChevronDown className="h-3 w-3" />
+                  {optedOutCount + excludedOptedOut.length} excluded — replied STOP (sms_opted_out)
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1.5 max-h-32 overflow-y-auto rounded-md border border-amber-200 bg-amber-50/50 p-2 text-xs text-amber-800 space-y-0.5">
+                {[...excludedOptedOut, ...recipients.filter((r) => r.sms_opted_out)].map((r) => (
+                  <div key={r.user_id} className="flex justify-between gap-2">
+                    <span className="truncate">{displayName(r)}</span>
+                    <span className="opacity-60 shrink-0">🚫 STOP</span>
+                  </div>
+                ))}
+                <p className="pt-1 text-[10px] opacity-70 italic">
+                  These students will not receive this campaign. They re-enter the list only if they reply START.
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           <p className="text-[11px] text-muted-foreground">
