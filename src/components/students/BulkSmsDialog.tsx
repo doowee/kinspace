@@ -19,7 +19,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, Send } from "lucide-react";
+import { ChevronDown, Send, Save } from "lucide-react";
 import { toast } from "sonner";
 
 export interface BulkSmsRecipient {
