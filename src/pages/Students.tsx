@@ -613,6 +613,16 @@ export default function Students() {
                   Renew ({filtered.length})
                 </Button>
               )}
+              {tierFilter === "lapsed" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
+                >
+                  <Send className="h-3 w-3" />
+                  Win back ({filtered.length})
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -625,9 +635,9 @@ export default function Students() {
               </Button>
             </div>
           </div>
-          {(tierFilter === "inactive" || tierFilter === "expiring") && (
+          {(tierFilter === "inactive" || tierFilter === "expiring" || tierFilter === "lapsed") && (
             <SmsCampaignHistory
-              mode={tierFilter === "inactive" ? "reengage" : "renew"}
+              mode={tierFilter === "inactive" ? "reengage" : tierFilter === "expiring" ? "renew" : "winback"}
               refreshKey={campaignRefreshKey}
             />
           )}
