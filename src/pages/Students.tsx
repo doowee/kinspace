@@ -215,18 +215,69 @@ export default function Students() {
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
   const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
   const [campaignRefreshKey, setCampaignRefreshKey] = useState(0);
-  // Lapsed win-back: exclude STOP-replied (opted-out) recipients (persisted)
+  // Lapsed win-back: exclude STOP-replied (opted-out) recipients.
+  // Persisted to profiles.staff_ui_prefs (cross-device) with a localStorage cache for instant boot.
   const EXCLUDE_OPTED_OUT_KEY = "coreflow_students_exclude_opted_out";
   const [excludeOptedOut, setExcludeOptedOut] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     const v = localStorage.getItem(EXCLUDE_OPTED_OUT_KEY);
     return v === null ? true : v === "1";
   });
+  const prefsLoadedRef = useRef(false);
+
+  // Hydrate from profile on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("staff_ui_prefs")
+        .eq("id", uid)
+        .maybeSingle();
+      if (cancelled || error) {
+        prefsLoadedRef.current = true;
+        return;
+      }
+      const prefs = (data?.staff_ui_prefs as Record<string, unknown> | null) ?? {};
+      if (typeof prefs.exclude_opted_out === "boolean") {
+        setExcludeOptedOut(prefs.exclude_opted_out as boolean);
+      }
+      prefsLoadedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Mirror to localStorage + debounce-write to profile
   useEffect(() => {
     try {
       localStorage.setItem(EXCLUDE_OPTED_OUT_KEY, excludeOptedOut ? "1" : "0");
     } catch {}
+    if (!prefsLoadedRef.current) return;
+    const t = setTimeout(async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) return;
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("staff_ui_prefs")
+        .eq("id", uid)
+        .maybeSingle();
+      const prev = (existing?.staff_ui_prefs as Record<string, unknown> | null) ?? {};
+      const next = { ...prev, exclude_opted_out: excludeOptedOut };
+      const { error } = await supabase
+        .from("profiles")
+        .update({ staff_ui_prefs: next })
+        .eq("id", uid);
+      if (error) console.warn("staff_ui_prefs save failed", error);
+    }, 400);
+    return () => clearTimeout(t);
   }, [excludeOptedOut]);
+
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
