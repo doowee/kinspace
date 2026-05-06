@@ -27,6 +27,7 @@ import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
 import LapsedSummary from "@/components/students/LapsedSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const maskEmail = (email: string) => {
   const [local, domain] = email.split("@");
@@ -850,7 +851,17 @@ export default function Students() {
           {loading ? (
             <p className="text-sm text-muted-foreground text-center py-8 animate-pulse">Loading students…</p>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{search ? `No students matching "${search}"` : "No students found."}</p>
+            <div className="px-6 py-8">
+              <EmptyState
+                icon={Users}
+                title={search ? `No students matching "${search}"` : "No students yet"}
+                description={
+                  search
+                    ? "Try a different name, email, or phone number."
+                    : "Students appear here once they sign up, are invited, or book a class."
+                }
+              />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>

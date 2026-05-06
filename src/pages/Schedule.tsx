@@ -34,6 +34,7 @@ import EditClassDialog from "@/components/schedule/EditClassDialog";
 import ViewStudentsDialog from "@/components/schedule/ViewStudentsDialog";
 import ManualBookDialog from "@/components/schedule/ManualBookDialog";
 import AIClassFiller from "@/components/schedule/AIClassFiller";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface InstructorRow {
   id: string;
@@ -476,7 +477,11 @@ export default function Schedule() {
           {loading ? (
             <p className="text-sm text-muted-foreground animate-pulse">Loading…</p>
           ) : classesOnDate.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No classes scheduled for this day.</p>
+            <EmptyState
+              icon={CalendarIcon}
+              title="No classes on this day"
+              description="Pick another date or add a class from the schedule editor."
+            />
           ) : (
             classesOnDate.map((cls) => {
               const count = bookingCounts[cls.id] || 0;
