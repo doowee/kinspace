@@ -214,6 +214,8 @@ export default function Students() {
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
   const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
   const [campaignRefreshKey, setCampaignRefreshKey] = useState(0);
+  // Lapsed win-back: exclude STOP-replied (opted-out) recipients
+  const [excludeOptedOut, setExcludeOptedOut] = useState(true);
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
@@ -446,7 +448,9 @@ export default function Students() {
     let rows: StudentRow[] = [];
     if (bulkSmsMode === "reengage" && tierFilter === "inactive") rows = filtered;
     else if (bulkSmsMode === "renew" && tierFilter === "expiring") rows = filtered;
-    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") rows = filtered;
+    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") {
+      rows = excludeOptedOut ? filtered.filter((s) => !s.sms_opted_out) : filtered;
+    }
     return rows.map((s) => ({
       user_id: s.user_id,
       first_name: s.first_name,
@@ -456,7 +460,12 @@ export default function Students() {
       sms_opted_out: s.sms_opted_out,
       subscription_period_end: s.subscription_period_end,
     }));
-  }, [bulkSmsMode, tierFilter, filtered]);
+  }, [bulkSmsMode, tierFilter, filtered, excludeOptedOut]);
+
+  const lapsedOptedOutCount = useMemo(
+    () => (tierFilter === "lapsed" ? filtered.filter((s) => s.sms_opted_out).length : 0),
+    [tierFilter, filtered],
+  );
 
   const studioBookingUrl = useMemo(() => {
     const slug = activeStudio?.slug;
@@ -653,14 +662,28 @@ export default function Students() {
                 </Button>
               )}
               {tierFilter === "lapsed" && filtered.length > 0 && (
-                <Button
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
-                >
-                  <Send className="h-3 w-3" />
-                  Win back ({filtered.length})
-                </Button>
+                <>
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="h-3 w-3 accent-primary"
+                      checked={excludeOptedOut}
+                      onChange={(e) => setExcludeOptedOut(e.target.checked)}
+                    />
+                    Exclude STOP replies
+                    {lapsedOptedOutCount > 0 && (
+                      <span className="tabular-nums opacity-70">({lapsedOptedOutCount})</span>
+                    )}
+                  </label>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
+                  >
+                    <Send className="h-3 w-3" />
+                    Win back ({excludeOptedOut ? filtered.length - lapsedOptedOutCount : filtered.length})
+                  </Button>
+                </>
               )}
               <Button
                 size="sm"
