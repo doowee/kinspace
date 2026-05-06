@@ -109,6 +109,12 @@ function isExpiringSoon(s: StudentRow): boolean {
   return end > now && end - now <= EXPIRING_MS;
 }
 
+function isLapsed(s: StudentRow): boolean {
+  if (!s.lapsed_at) return false;
+  const ms = Date.now() - new Date(s.lapsed_at).getTime();
+  return ms >= 0 && ms <= LAPSED_MS;
+}
+
 function daysUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now();
   return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
