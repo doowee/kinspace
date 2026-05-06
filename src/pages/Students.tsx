@@ -270,7 +270,7 @@ export default function Students() {
       const userIds = [...new Set(members.map((m) => m.user_id))];
 
       // Parallel fetches
-      const [profilesRes, bookingsRes, subsRes] = await Promise.all([
+      const [profilesRes, bookingsRes, subsRes, lapsedRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points, sms_opted_out")
