@@ -459,6 +459,8 @@ export default function Students() {
     "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}";
   const renewDefaultBody =
     "Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}";
+  const winbackDefaultBody =
+    "Hi {first_name}, we'd love to welcome you back to {studio_name}. Your membership recently lapsed — reactivate here and grab your spot: {booking_url}";
 
   const openSheet = (student: StudentRow) => {
     setSelectedStudent(student);
