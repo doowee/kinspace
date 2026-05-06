@@ -148,13 +148,51 @@ export default function BulkSmsDialog({
     let skipped = 0;
     let optedOut = 0;
 
+    type AuditRow = {
+      recipient_user_id: string | null;
+      recipient_phone: string | null;
+      recipient_email: string | null;
+      outcome: "sent" | "failed" | "skipped_no_phone" | "blocked_opted_out";
+      reason: string | null;
+      error_message: string | null;
+    };
+    const auditRows: AuditRow[] = [];
+
+    // Record everyone surfaced as excluded due to STOP (not in `recipients` when toggle on)
+    for (const r of excludedOptedOut) {
+      auditRows.push({
+        recipient_user_id: r.user_id ?? null,
+        recipient_phone: r.phone ?? null,
+        recipient_email: r.email ?? null,
+        outcome: "blocked_opted_out",
+        reason: "Recipient previously replied STOP (sms_opted_out=true)",
+        error_message: null,
+      });
+    }
+
     for (const r of recipients) {
       if (r.sms_opted_out) {
         optedOut++;
+        auditRows.push({
+          recipient_user_id: r.user_id ?? null,
+          recipient_phone: r.phone ?? null,
+          recipient_email: r.email ?? null,
+          outcome: "blocked_opted_out",
+          reason: "Recipient previously replied STOP (sms_opted_out=true)",
+          error_message: null,
+        });
         continue;
       }
       if (!r.phone) {
         skipped++;
+        auditRows.push({
+          recipient_user_id: r.user_id ?? null,
+          recipient_phone: null,
+          recipient_email: r.email ?? null,
+          outcome: "skipped_no_phone",
+          reason: "No phone number on file",
+          error_message: null,
+        });
         continue;
       }
       const days = daysUntil(r.subscription_period_end);
@@ -168,30 +206,75 @@ export default function BulkSmsDialog({
         if (error) {
           failed++;
           console.warn("SMS failed", r.email, error);
+          auditRows.push({
+            recipient_user_id: r.user_id ?? null,
+            recipient_phone: r.phone,
+            recipient_email: r.email ?? null,
+            outcome: "failed",
+            reason: "Twilio send returned an error",
+            error_message: error.message ?? String(error),
+          });
         } else {
           sent++;
+          auditRows.push({
+            recipient_user_id: r.user_id ?? null,
+            recipient_phone: r.phone,
+            recipient_email: r.email ?? null,
+            outcome: "sent",
+            reason: null,
+            error_message: null,
+          });
         }
-      } catch (e) {
+      } catch (e: any) {
         failed++;
         console.warn("SMS error", r.email, e);
+        auditRows.push({
+          recipient_user_id: r.user_id ?? null,
+          recipient_phone: r.phone,
+          recipient_email: r.email ?? null,
+          outcome: "failed",
+          reason: "Exception thrown during send",
+          error_message: e?.message ?? String(e),
+        });
       }
     }
 
     setSending(false);
 
     // Log campaign (best-effort; don't block UX on failure)
+    let campaignId: string | null = null;
     if (activeStudio?.id && user?.id) {
-      const { error: logErr } = await supabase.from("sms_campaigns").insert({
-        studio_id: activeStudio.id,
-        sender_id: user.id,
-        mode,
-        recipient_count: recipients.length,
-        sent_count: sent,
-        failed_count: failed,
-        skipped_count: skipped + optedOut,
-        body_preview: body.slice(0, 280),
-      });
+      const { data: campaignData, error: logErr } = await supabase
+        .from("sms_campaigns")
+        .insert({
+          studio_id: activeStudio.id,
+          sender_id: user.id,
+          mode,
+          recipient_count: recipients.length + excludedOptedOut.length,
+          sent_count: sent,
+          failed_count: failed,
+          skipped_count: skipped + optedOut + excludedOptedOut.length,
+          body_preview: body.slice(0, 280),
+        })
+        .select("id")
+        .maybeSingle();
       if (logErr) console.warn("sms_campaigns insert failed", logErr);
+      campaignId = campaignData?.id ?? null;
+
+      if (auditRows.length > 0) {
+        const { error: auditErr } = await supabase
+          .from("sms_campaign_audit")
+          .insert(
+            auditRows.map((r) => ({
+              ...r,
+              campaign_id: campaignId,
+              studio_id: activeStudio.id,
+              sender_id: user.id,
+              mode,
+            })),
+          );
+        if (auditErr) console.warn("sms_campaign_audit insert failed", auditErr);
+      }
     }
 
     onOpenChange(false);
