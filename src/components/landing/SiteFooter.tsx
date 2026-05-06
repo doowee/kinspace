@@ -8,10 +8,10 @@ const PRODUCT_LINKS = [
   { to: "/auth", label: "Log In" },
 ];
 
-const COMPANY_LINKS = [
-  { href: "#", label: "Support" },
-  { href: "#", label: "Privacy Policy" },
-  { href: "#", label: "Terms of Service" },
+const COMPANY_LINKS: { to?: string; href?: string; label: string }[] = [
+  { href: "mailto:hello@kinspace.studio", label: "Support" },
+  { to: "/privacy", label: "Privacy Policy" },
+  { to: "/terms", label: "Terms of Service" },
 ];
 
 export function SiteFooter() {
