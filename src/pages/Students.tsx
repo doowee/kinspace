@@ -264,7 +264,7 @@ export default function Students() {
       const [profilesRes, bookingsRes, subsRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points")
+          .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points, sms_opted_out")
           .in("id", userIds),
         supabase
           .from("bookings")
