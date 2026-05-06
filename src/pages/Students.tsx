@@ -214,8 +214,18 @@ export default function Students() {
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
   const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
   const [campaignRefreshKey, setCampaignRefreshKey] = useState(0);
-  // Lapsed win-back: exclude STOP-replied (opted-out) recipients
-  const [excludeOptedOut, setExcludeOptedOut] = useState(true);
+  // Lapsed win-back: exclude STOP-replied (opted-out) recipients (persisted)
+  const EXCLUDE_OPTED_OUT_KEY = "coreflow_students_exclude_opted_out";
+  const [excludeOptedOut, setExcludeOptedOut] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const v = localStorage.getItem(EXCLUDE_OPTED_OUT_KEY);
+    return v === null ? true : v === "1";
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(EXCLUDE_OPTED_OUT_KEY, excludeOptedOut ? "1" : "0");
+    } catch {}
+  }, [excludeOptedOut]);
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
