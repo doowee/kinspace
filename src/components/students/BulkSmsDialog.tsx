@@ -128,7 +128,8 @@ export default function BulkSmsDialog({
       .replace(/\{days_left\}/g, String(daysLeft));
 
   const handleSend = async () => {
-    if (recipients.length === 0) {
+    const sendable = recipients.filter((r) => r.phone && !r.sms_opted_out);
+    if (sendable.length === 0) {
       toast.error("No recipients");
       return;
     }
@@ -136,8 +137,13 @@ export default function BulkSmsDialog({
     let sent = 0;
     let failed = 0;
     let skipped = 0;
+    let optedOut = 0;
 
     for (const r of recipients) {
+      if (r.sms_opted_out) {
+        optedOut++;
+        continue;
+      }
       if (!r.phone) {
         skipped++;
         continue;
@@ -173,7 +179,7 @@ export default function BulkSmsDialog({
         recipient_count: recipients.length,
         sent_count: sent,
         failed_count: failed,
-        skipped_count: skipped,
+        skipped_count: skipped + optedOut,
         body_preview: body.slice(0, 280),
       });
       if (logErr) console.warn("sms_campaigns insert failed", logErr);
@@ -184,6 +190,7 @@ export default function BulkSmsDialog({
     const parts: string[] = [`${sent} sent`];
     if (failed) parts.push(`${failed} failed`);
     if (skipped) parts.push(`${skipped} skipped (no phone)`);
+    if (optedOut) parts.push(`${optedOut} opted out`);
     toast.success(`SMS complete — ${parts.join(" · ")}`);
   };
 
