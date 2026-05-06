@@ -316,27 +316,41 @@ export default function BulkSmsDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTestSend}
-                    disabled={testing || sending || !ownerPhone || body.trim().length === 0}
-                    className="gap-1.5"
-                  >
-                    <Send className="h-3 w-3" />
-                    {testing ? "Sending…" : "Send test to me"}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {!ownerPhone && (
-                <TooltipContent>Add a phone number to your profile</TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex flex-wrap gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTestSend}
+                      disabled={testing || sending || !ownerPhone || body.trim().length === 0}
+                      className="gap-1.5"
+                    >
+                      <Send className="h-3 w-3" />
+                      {testing ? "Sending…" : "Send test to me"}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!ownerPhone && (
+                  <TooltipContent>Add a phone number to your profile</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveTemplate}
+              disabled={savingTpl || sending || body.trim().length === 0}
+              className="gap-1.5"
+              title="Save this message as the studio's default for this composer"
+            >
+              <Save className="h-3 w-3" />
+              {savingTpl ? "Saving…" : "Save as default"}
+            </Button>
+          </div>
 
           <div className="flex gap-2">
             <Button
