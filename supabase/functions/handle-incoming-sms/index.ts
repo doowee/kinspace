@@ -103,6 +103,28 @@ serve(async (req) => {
 
     console.log(`Incoming SMS from ${from}: "${body.substring(0, 50)}"`);
 
+    // 2.5 Handle SMS opt-out / opt-in keywords (carrier-standard)
+    const trimmed = body.trim().toUpperCase();
+    const STOP_KEYWORDS = ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"];
+    const START_KEYWORDS = ["START", "UNSTOP", "YES"];
+
+    if (STOP_KEYWORDS.includes(trimmed) || START_KEYWORDS.includes(trimmed)) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const optOut = STOP_KEYWORDS.includes(trimmed);
+      const { error: updErr } = await supabase
+        .from("profiles")
+        .update({
+          sms_opted_out: optOut,
+          sms_opted_out_at: optOut ? new Date().toISOString() : null,
+        })
+        .eq("phone", from);
+      if (updErr) console.warn("opt-out update failed", updErr);
+      // Twilio auto-injects STOP/START confirmations; return empty TwiML
+      return twimlResponse("");
+    }
+
     // 3. Check for CLAIM keyword (case-insensitive)
     if (!body.toUpperCase().includes("CLAIM")) {
       console.log("Message does not contain CLAIM, ignoring.");
