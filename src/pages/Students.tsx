@@ -22,7 +22,6 @@ import {
   getBulkRecipients,
   getExcludedOptedOut,
   getEffectiveBulkCount,
-  type TierFilter,
 } from "@/lib/winback-filter";
 import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
 import LapsedSummary from "@/components/students/LapsedSummary";
