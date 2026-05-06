@@ -735,6 +735,16 @@ export default function Students() {
                     {filteredOptedOutCount > 0 && (
                       <span className="tabular-nums opacity-70">({filteredOptedOutCount})</span>
                     )}
+                    {prefsSaveState !== "idle" && (
+                      <span
+                        className={`text-[10px] tabular-nums transition-opacity ${
+                          prefsSaveState === "saved" ? "text-emerald-600" : "opacity-60"
+                        }`}
+                        aria-live="polite"
+                      >
+                        {prefsSaveState === "saving" ? "Saving…" : "✓ Saved"}
+                      </span>
+                    )}
                     <TooltipProvider delayDuration={150}>
                       <Tooltip>
                         <TooltipTrigger asChild>
