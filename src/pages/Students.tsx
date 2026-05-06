@@ -18,6 +18,7 @@ import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, P
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import BulkSmsDialog, { type BulkSmsMode } from "@/components/students/BulkSmsDialog";
 import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
+import LapsedSummary from "@/components/students/LapsedSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -597,6 +598,12 @@ export default function Students() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
           </div>
+          {tierFilter === "lapsed" && (
+            <LapsedSummary
+              totalLapsed={students.filter(isLapsed).length}
+              refreshKey={campaignRefreshKey}
+            />
+          )}
           <div className="flex flex-wrap items-center gap-1.5">
             {([
               { id: "all", label: "All", count: students.length },
