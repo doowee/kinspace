@@ -124,8 +124,9 @@ export default function AppLayout() {
         <header className="border-b bg-card">
           <div className="container flex h-14 items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <DynamicLogo logoUrl={studioLogoUrl} studioName={activeStudio?.name} size={32} />
+                <DemoModeBadge />
               </div>
               <div className="h-5 w-px bg-border" />
               <StudioSwitcher />
