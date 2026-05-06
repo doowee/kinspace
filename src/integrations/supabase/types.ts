@@ -570,6 +570,45 @@ export type Database = {
           },
         ]
       }
+      sms_campaigns: {
+        Row: {
+          body_preview: string | null
+          created_at: string
+          failed_count: number
+          id: string
+          mode: string
+          recipient_count: number
+          sender_id: string
+          sent_count: number
+          skipped_count: number
+          studio_id: string
+        }
+        Insert: {
+          body_preview?: string | null
+          created_at?: string
+          failed_count?: number
+          id?: string
+          mode: string
+          recipient_count?: number
+          sender_id: string
+          sent_count?: number
+          skipped_count?: number
+          studio_id: string
+        }
+        Update: {
+          body_preview?: string | null
+          created_at?: string
+          failed_count?: number
+          id?: string
+          mode?: string
+          recipient_count?: number
+          sender_id?: string
+          sent_count?: number
+          skipped_count?: number
+          studio_id?: string
+        }
+        Relationships: []
+      }
       studio_members: {
         Row: {
           created_at: string

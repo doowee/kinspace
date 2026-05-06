@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, Plus, ChevronDown, CreditCard, Coins, ArrowUp, ArrowDown, ArrowUpDown, Clock, Download, Send, Hourglass, RefreshCw } from "lucide-react";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import BulkSmsDialog, { type BulkSmsMode } from "@/components/students/BulkSmsDialog";
+import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -201,6 +202,7 @@ export default function Students() {
   // Bulk SMS composer (Re-engage + Renewal nudge)
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
   const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
+  const [campaignRefreshKey, setCampaignRefreshKey] = useState(0);
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
@@ -589,6 +591,12 @@ export default function Students() {
               </Button>
             </div>
           </div>
+          {(tierFilter === "inactive" || tierFilter === "expiring") && (
+            <SmsCampaignHistory
+              mode={tierFilter === "inactive" ? "reengage" : "renew"}
+              refreshKey={campaignRefreshKey}
+            />
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -876,6 +884,7 @@ export default function Students() {
         mode={bulkSmsMode}
         recipients={bulkRecipients}
         defaultBody={bulkSmsMode === "reengage" ? reengageDefaultBody : renewDefaultBody}
+        onSent={() => setCampaignRefreshKey((k) => k + 1)}
       />
     </div>
   );
