@@ -440,9 +440,10 @@ export default function Students() {
 
   /* ─── Bulk SMS recipients (shared composer) ─── */
   const bulkRecipients = useMemo(() => {
-    const rows = bulkSmsMode === "reengage"
-      ? (tierFilter === "inactive" ? filtered : [])
-      : (tierFilter === "expiring" ? filtered : []);
+    let rows: StudentRow[] = [];
+    if (bulkSmsMode === "reengage" && tierFilter === "inactive") rows = filtered;
+    else if (bulkSmsMode === "renew" && tierFilter === "expiring") rows = filtered;
+    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") rows = filtered;
     return rows.map((s) => ({
       user_id: s.user_id,
       first_name: s.first_name,
