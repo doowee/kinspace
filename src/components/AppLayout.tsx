@@ -4,6 +4,7 @@ import { DemoPhoneProvider } from "@/contexts/DemoPhoneContext";
 import StudioSwitcher from "./StudioSwitcher";
 
 import DynamicLogo from "./DynamicLogo";
+import { DemoModeBadge } from "./DemoModeBadge";
 import DemoPhone from "./demo/DemoPhone";
 import DemoTriggers from "./demo/DemoTriggers";
 import { useDynamicFavicon } from "@/hooks/use-dynamic-favicon";
