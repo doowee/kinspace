@@ -685,6 +685,20 @@ export default function Students() {
                     {lapsedOptedOutCount > 0 && (
                       <span className="tabular-nums opacity-70">({lapsedOptedOutCount})</span>
                     )}
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground/70 hover:text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                          A student is marked <code>sms_opted_out</code> when they reply
+                          <strong> STOP</strong> (or STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT)
+                          to one of your SMS messages. Twilio enforces the block at the carrier
+                          level — keeping this on excludes them from this campaign so you stay
+                          TCPA-compliant. They re-enter the list only if they reply START.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </label>
                   <Button
                     size="sm"
