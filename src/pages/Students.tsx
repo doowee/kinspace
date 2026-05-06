@@ -947,7 +947,7 @@ export default function Students() {
       {/* Bulk SMS composer (Re-engage + Renew) */}
       <BulkSmsDialog
         open={bulkSmsOpen}
-        onOpenChange={setBulkSmsOpen}
+        onOpenChange={(o) => { setBulkSmsOpen(o); if (!o) setCampaignRefreshKey((k) => k + 1); }}
         mode={bulkSmsMode}
         recipients={bulkRecipients}
         defaultBody={activeDefaultBody}
