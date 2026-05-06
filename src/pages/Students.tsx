@@ -759,6 +759,20 @@ export default function Students() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    {!excludeOptedOut && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setExcludeOptedOut(true);
+                          toast.success("Reset to default (Exclude STOP replies on)");
+                        }}
+                        className="text-[10px] underline-offset-2 hover:underline text-muted-foreground hover:text-foreground"
+                        title="Restore the recommended default"
+                      >
+                        Reset to default
+                      </button>
+                    )}
                   </label>
                 )}
               {tierFilter === "inactive" && filtered.length > 0 && (
