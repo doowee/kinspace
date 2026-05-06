@@ -591,6 +591,12 @@ export default function Students() {
               </Button>
             </div>
           </div>
+          {(tierFilter === "inactive" || tierFilter === "expiring") && (
+            <SmsCampaignHistory
+              mode={tierFilter === "inactive" ? "reengage" : "renew"}
+              refreshKey={campaignRefreshKey}
+            />
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
