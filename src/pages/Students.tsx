@@ -884,6 +884,7 @@ export default function Students() {
         mode={bulkSmsMode}
         recipients={bulkRecipients}
         defaultBody={bulkSmsMode === "reengage" ? reengageDefaultBody : renewDefaultBody}
+        onSent={() => setCampaignRefreshKey((k) => k + 1)}
       />
     </div>
   );
