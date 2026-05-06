@@ -32,7 +32,7 @@ export interface BulkSmsRecipient {
   subscription_period_end?: string | null;
 }
 
-export type BulkSmsMode = "reengage" | "renew";
+export type BulkSmsMode = "reengage" | "renew" | "winback";
 
 interface BulkSmsDialogProps {
   open: boolean;
@@ -53,6 +53,11 @@ const MODE_COPY: Record<BulkSmsMode, { title: string; description: (n: number) =
     title: "Renewal nudge via SMS",
     description: (n) =>
       `Remind ${n} member${n === 1 ? "" : "s"} whose membership is expiring soon to renew.`,
+  },
+  winback: {
+    title: "Win back lapsed members via SMS",
+    description: (n) =>
+      `Reach out to ${n} member${n === 1 ? "" : "s"} whose membership lapsed in the last 30 days.`,
   },
 };
 
