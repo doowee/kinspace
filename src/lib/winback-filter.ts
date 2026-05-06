@@ -8,7 +8,7 @@
  */
 
 export type BulkSmsMode = "reengage" | "renew" | "winback";
-export type TierFilter = "all" | "active" | "inactive" | "expiring" | "lapsed";
+export type TierFilter = string;
 
 export interface FilterableStudent {
   user_id: string;
