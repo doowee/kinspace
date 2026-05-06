@@ -39,6 +39,7 @@ interface BulkSmsDialogProps {
   mode: BulkSmsMode;
   recipients: BulkSmsRecipient[];
   defaultBody: string;
+  onSent?: () => void;
 }
 
 const MODE_COPY: Record<BulkSmsMode, { title: string; description: (n: number) => string }> = {
