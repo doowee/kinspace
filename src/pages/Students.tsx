@@ -662,14 +662,28 @@ export default function Students() {
                 </Button>
               )}
               {tierFilter === "lapsed" && filtered.length > 0 && (
-                <Button
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
-                >
-                  <Send className="h-3 w-3" />
-                  Win back ({filtered.length})
-                </Button>
+                <>
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="h-3 w-3 accent-primary"
+                      checked={excludeOptedOut}
+                      onChange={(e) => setExcludeOptedOut(e.target.checked)}
+                    />
+                    Exclude STOP replies
+                    {lapsedOptedOutCount > 0 && (
+                      <span className="tabular-nums opacity-70">({lapsedOptedOutCount})</span>
+                    )}
+                  </label>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1.5"
+                    onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
+                  >
+                    <Send className="h-3 w-3" />
+                    Win back ({excludeOptedOut ? filtered.length - lapsedOptedOutCount : filtered.length})
+                  </Button>
+                </>
               )}
               <Button
                 size="sm"
