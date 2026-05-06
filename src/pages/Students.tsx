@@ -371,6 +371,8 @@ export default function Students() {
       rows = rows.filter(isInactive);
     } else if (tierFilter === "expiring") {
       rows = rows.filter(isExpiringSoon);
+    } else if (tierFilter === "lapsed") {
+      rows = rows.filter(isLapsed);
     } else if (tierFilter !== "all") {
       rows = rows.filter((s) => getTier(s) === tierFilter);
     }
