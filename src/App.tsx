@@ -41,6 +41,9 @@ import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
 import Switch from "./pages/Switch";
 import Unsubscribe from "./pages/Unsubscribe";
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
