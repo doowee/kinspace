@@ -710,28 +710,8 @@ export default function Students() {
               </Button>
             ))}
             <div className="ml-auto flex items-center gap-1.5">
-              {tierFilter === "inactive" && filtered.length > 0 && (
-                <Button
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={() => { setBulkSmsMode("reengage"); setBulkSmsOpen(true); }}
-                >
-                  <Send className="h-3 w-3" />
-                  Re-engage ({filtered.length})
-                </Button>
-              )}
-              {tierFilter === "expiring" && filtered.length > 0 && (
-                <Button
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={() => { setBulkSmsMode("renew"); setBulkSmsOpen(true); }}
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Renew ({filtered.length})
-                </Button>
-              )}
-              {tierFilter === "lapsed" && filtered.length > 0 && (
-                <>
+              {(tierFilter === "inactive" || tierFilter === "expiring" || tierFilter === "lapsed") &&
+                filtered.length > 0 && (
                   <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -740,8 +720,8 @@ export default function Students() {
                       onChange={(e) => setExcludeOptedOut(e.target.checked)}
                     />
                     Exclude STOP replies
-                    {lapsedOptedOutCount > 0 && (
-                      <span className="tabular-nums opacity-70">({lapsedOptedOutCount})</span>
+                    {filteredOptedOutCount > 0 && (
+                      <span className="tabular-nums opacity-70">({filteredOptedOutCount})</span>
                     )}
                     <TooltipProvider delayDuration={150}>
                       <Tooltip>
@@ -758,15 +738,39 @@ export default function Students() {
                       </Tooltip>
                     </TooltipProvider>
                   </label>
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs gap-1.5"
-                    onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
-                  >
-                    <Send className="h-3 w-3" />
-                    Win back ({excludeOptedOut ? filtered.length - lapsedOptedOutCount : filtered.length})
-                  </Button>
-                </>
+                )}
+              {tierFilter === "inactive" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => { setBulkSmsMode("reengage"); setBulkSmsOpen(true); }}
+                  disabled={effectiveBulkCount === 0}
+                >
+                  <Send className="h-3 w-3" />
+                  Re-engage ({effectiveBulkCount})
+                </Button>
+              )}
+              {tierFilter === "expiring" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => { setBulkSmsMode("renew"); setBulkSmsOpen(true); }}
+                  disabled={effectiveBulkCount === 0}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Renew ({effectiveBulkCount})
+                </Button>
+              )}
+              {tierFilter === "lapsed" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
+                  disabled={effectiveBulkCount === 0}
+                >
+                  <Send className="h-3 w-3" />
+                  Win back ({effectiveBulkCount})
+                </Button>
               )}
               <Button
                 size="sm"
