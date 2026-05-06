@@ -38,6 +38,7 @@ interface StudentRow {
   subscription_name: string | null;
   subscription_status: string | null;
   subscription_period_end: string | null;
+  lapsed_at: string | null;
   total_bookings: number;
   last_booking_at: string | null;
   home_studio_id: string | null;
