@@ -448,7 +448,9 @@ export default function Students() {
     let rows: StudentRow[] = [];
     if (bulkSmsMode === "reengage" && tierFilter === "inactive") rows = filtered;
     else if (bulkSmsMode === "renew" && tierFilter === "expiring") rows = filtered;
-    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") rows = filtered;
+    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") {
+      rows = excludeOptedOut ? filtered.filter((s) => !s.sms_opted_out) : filtered;
+    }
     return rows.map((s) => ({
       user_id: s.user_id,
       first_name: s.first_name,
@@ -458,7 +460,12 @@ export default function Students() {
       sms_opted_out: s.sms_opted_out,
       subscription_period_end: s.subscription_period_end,
     }));
-  }, [bulkSmsMode, tierFilter, filtered]);
+  }, [bulkSmsMode, tierFilter, filtered, excludeOptedOut]);
+
+  const lapsedOptedOutCount = useMemo(
+    () => (tierFilter === "lapsed" ? filtered.filter((s) => s.sms_opted_out).length : 0),
+    [tierFilter, filtered],
+  );
 
   const studioBookingUrl = useMemo(() => {
     const slug = activeStudio?.slug;
