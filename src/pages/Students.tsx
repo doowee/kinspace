@@ -950,13 +950,7 @@ export default function Students() {
         onOpenChange={setBulkSmsOpen}
         mode={bulkSmsMode}
         recipients={bulkRecipients}
-        defaultBody={
-          bulkSmsMode === "reengage"
-            ? reengageDefaultBody
-            : bulkSmsMode === "renew"
-              ? renewDefaultBody
-              : winbackDefaultBody
-        }
+        defaultBody={activeDefaultBody}
         onSent={() => setCampaignRefreshKey((k) => k + 1)}
       />
     </div>
