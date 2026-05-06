@@ -64,7 +64,12 @@ export default function SmsCampaignHistory({ mode, refreshKey = 0 }: Props) {
   if (loading && rows.length === 0) return null;
   if (!loading && rows.length === 0) return null;
 
-  const label = mode === "reengage" ? "Re-engage history" : "Renewal nudge history";
+  const label =
+    mode === "reengage"
+      ? "Re-engage history"
+      : mode === "renew"
+        ? "Renewal nudge history"
+        : "Lapsed win-back history";
 
   return (
     <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
