@@ -79,6 +79,7 @@ export default function BulkSmsDialog({
   onOpenChange,
   mode,
   recipients,
+  excludedOptedOut = [],
   defaultBody,
   onSent,
 }: BulkSmsDialogProps) {
