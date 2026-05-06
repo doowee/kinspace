@@ -4,7 +4,7 @@ import { motion, useInView } from "framer-motion";
 import {
   CalendarDays, Users, UserCog, DollarSign, MessageSquare, BrainCircuit,
   Building2, Palette, MonitorSmartphone, Globe, CreditCard, Rocket,
-  Check, ArrowRight, Sparkles
+  Check, ArrowRight, Sparkles, ShieldCheck, ShieldAlert, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,9 +38,11 @@ const CATEGORIES: FeatureCategory[] = [
       { label: "Visual calendar with day/week view", built: true },
       { label: "Class creation with instructor assignment", built: true },
       { label: "Capacity management & fill-rate tracking", built: true },
-      { label: "Waitlist with auto-promotion", built: true },
+      { label: "Waitlist with auto-promotion + smart refunds", built: true },
       { label: "Manual booking by staff", built: true },
       { label: "Edit & cancel classes", built: true },
+      { label: "Automated 2-hour class reminders (SMS)", built: true },
+      { label: "SmartCover sub-routing for instructor coverage", built: true },
     ],
   },
   {
@@ -48,10 +50,13 @@ const CATEGORIES: FeatureCategory[] = [
     title: "Client Management",
     description: "Know your clients inside and out.",
     features: [
-      { label: "Student roster with search", built: true },
+      { label: "Student roster with search & sort", built: true },
       { label: "Client profiles & booking history", built: true },
       { label: "Credit & wallet balance tracking", built: true },
-      { label: "Package purchases & management", built: true },
+      { label: "Manual credit adjustments with audit trail", built: true },
+      { label: "Lapsed-client summary & win-back tools", built: true },
+      { label: "Org-level client search across sister studios", built: true },
+      { label: "Bulk SMS with STOP / opt-out audit log", built: true },
     ],
   },
   {
@@ -63,6 +68,7 @@ const CATEGORIES: FeatureCategory[] = [
       { label: "Phone & email contact info", built: true },
       { label: "Direct messaging from admin", built: true },
       { label: "Instructor provisioning (invite via email)", built: true },
+      { label: "Soft-delete offboarding with orphan flagging", built: true },
       { label: "Instructor portal (separate login)", built: true },
     ],
   },
@@ -75,6 +81,8 @@ const CATEGORIES: FeatureCategory[] = [
       { label: "Record manual payments", built: true },
       { label: "Payment history & tracking", built: true },
       { label: "Stripe Connect payouts", built: true },
+      { label: "Frictionless 1-tap checkout (Stripe Elements)", built: true },
+      { label: "Org-level vaulted payment methods", built: true },
       { label: "Package & credit-based billing", built: true },
     ],
   },
@@ -87,19 +95,22 @@ const CATEGORIES: FeatureCategory[] = [
       { label: "Smart Waitlist auto-text", built: true },
       { label: "1-Tap SMS class pack refills", built: true },
       { label: "Flash Deals for empty spots", built: true },
-      { label: "Two-way SMS communication", built: true },
-      { label: "Communication log", built: true },
+      { label: "Two-way SMS with HMAC signature validation", built: true },
+      { label: "Carrier-standard STOP / START handling", built: true },
+      { label: "Communication log + delivery audit", built: true },
     ],
   },
   {
     icon: <BrainCircuit className="h-5 w-5" />,
-    title: "AI Agent Suite",
+    title: "The Agent Suite",
     description: "Your digital workforce that never sleeps.",
     pro: true,
     features: [
-      { label: "AI Marketing Hub — auto-draft promo emails", built: true },
+      { label: "AI Marketing Agent — 4-step promo workflow", built: true },
+      { label: "AI Class Filler — empty-spot promotion", built: true },
       { label: "BI Insights — plain-English analytics queries", built: true },
       { label: "Revenue Agent — automated monetization", built: true },
+      { label: "Yield Management flash drops", built: true },
       { label: "Support Agent — AI concierge", built: false },
     ],
   },
@@ -111,7 +122,8 @@ const CATEGORIES: FeatureCategory[] = [
       { label: "Multi-location management under one org", built: true },
       { label: "Studio switcher in admin", built: true },
       { label: "Org-level revenue dashboard", built: true },
-      { label: "Role-based access (Owner / Front Desk)", built: true },
+      { label: "Role-based access (Owner / Instructor / Student)", built: true },
+      { label: "Tenant-isolated billing & data", built: true },
     ],
   },
   {
@@ -119,8 +131,9 @@ const CATEGORIES: FeatureCategory[] = [
     title: "Branding & White-Label",
     description: "Your brand, everywhere your clients look.",
     features: [
-      { label: "Custom logo, colors, and theme", built: true },
+      { label: "Custom logo, colors, and theme (HSL tokens)", built: true },
       { label: "White-labeled booking page per studio", built: true },
+      { label: "Branded transactional + auth emails", built: true },
       { label: "Dynamic favicon", built: true },
       { label: "Custom studio slug URLs", built: true },
     ],
@@ -130,8 +143,9 @@ const CATEGORIES: FeatureCategory[] = [
     title: "Kiosk Mode",
     description: "Transform any tablet into a check-in station.",
     features: [
-      { label: "PIN-based kiosk login", built: true },
-      { label: "Live class roster display", built: true },
+      { label: "Shared PIN-based kiosk login", built: true },
+      { label: "Live class roster with capacity", built: true },
+      { label: "Staff notes modal & timeout", built: true },
     ],
   },
   {
@@ -140,6 +154,7 @@ const CATEGORIES: FeatureCategory[] = [
     description: "A seamless booking experience under your brand.",
     features: [
       { label: "Public booking page per studio", built: true },
+      { label: "Rolling 7-day public schedule", built: true },
       { label: "Student auth gate (login/signup)", built: true },
       { label: "Student dashboard, wallet & profile", built: true },
     ],
@@ -150,8 +165,25 @@ const CATEGORIES: FeatureCategory[] = [
     description: "Transparent SaaS billing built on Stripe.",
     features: [
       { label: "SaaS subscription tiers (Standard / Pro)", built: true },
+      { label: "Multi-product membership architecture", built: true },
       { label: "Stripe integration for billing", built: true },
+      { label: "VIP Bouncer access logic (subs vs packs)", built: true },
       { label: "Plan comparison & upgrade flow", built: true },
+    ],
+  },
+  {
+    icon: <ShieldCheck className="h-5 w-5" />,
+    title: "Trust, Security & Reliability",
+    description: "Enterprise-grade hardening from day one.",
+    features: [
+      { label: "Row-level security on every tenant table", built: true },
+      { label: "Owner-only access to financial data", built: true },
+      { label: "Tenant-scoped email lookup (no enumeration)", built: true },
+      { label: "PII-safe SMS logging (masked phone numbers)", built: true },
+      { label: "Atomic SECURITY DEFINER booking flows", built: true },
+      { label: "Global error boundary with friendly recovery", built: true },
+      { label: "Lazy-loaded route bundles for fast first paint", built: true },
+      { label: "Legal stubs (Terms / Privacy)", built: true },
     ],
   },
 ];
@@ -162,12 +194,14 @@ interface RoadmapItem {
 }
 
 const ROADMAP: RoadmapItem[] = [
-  { label: "AI Support Agent", description: "Automated concierge handling client FAQs, policy questions, and instructor shift-coverage." },
-  { label: "Advanced Retention Analytics", description: "Churn prediction, cohort analysis, and automated win-back campaigns." },
-  { label: "Mobile App Wrapper", description: "Distribute your branded studio app on the App Store & Google Play." },
-  { label: "Marketplace Integrations", description: "Connect with ClassPass, Google Reserve, and other discovery platforms." },
-  { label: "Multi-Language Support", description: "Serve clients in their preferred language with localized booking and comms." },
-  { label: "Automated Class Reminders", description: "Smart reminders via SMS and email to reduce no-shows." },
+  { label: "AI Support Agent", description: "Automated concierge handling client FAQs, policy questions, and shift-coverage requests in natural language." },
+  { label: "Advanced Retention Analytics", description: "Churn prediction, cohort analysis, and automated win-back campaigns triggered by lapse signals." },
+  { label: "Mobile App Wrapper", description: "Distribute your branded studio app on the App Store & Google Play with push notifications." },
+  { label: "Marketplace Integrations", description: "Connect with ClassPass, Google Reserve, and other discovery platforms for net-new acquisition." },
+  { label: "Multi-Language Support", description: "Serve clients in their preferred language across booking, SMS, and email comms." },
+  { label: "Native Calendar Sync", description: "Two-way sync with Google Calendar and iCal for instructors and clients." },
+  { label: "Advanced Reporting Exports", description: "Scheduled CSV / PDF financial and attendance reports delivered to your inbox." },
+  { label: "Live Production Launch", description: "Move from demo (Stripe test / Twilio sandbox) to live keys with full PCI + 10DLC compliance." },
 ];
 
 /* ─── Components ─── */
