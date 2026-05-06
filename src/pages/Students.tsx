@@ -38,6 +38,7 @@ interface StudentRow {
   subscription_name: string | null;
   subscription_status: string | null;
   subscription_period_end: string | null;
+  lapsed_at: string | null;
   total_bookings: number;
   last_booking_at: string | null;
   home_studio_id: string | null;
@@ -87,12 +88,14 @@ function AccessStatusBadge({ student, size = "sm" }: { student: StudentRow; size
   );
 }
 
-type TierFilter = "all" | "members" | "points" | "none" | "inactive" | "expiring";
+type TierFilter = "all" | "members" | "points" | "none" | "inactive" | "expiring" | "lapsed";
 
 const INACTIVE_DAYS = 60;
 const INACTIVE_MS = INACTIVE_DAYS * 24 * 60 * 60 * 1000;
 const EXPIRING_DAYS = 7;
 const EXPIRING_MS = EXPIRING_DAYS * 24 * 60 * 60 * 1000;
+const LAPSED_DAYS = 30;
+const LAPSED_MS = LAPSED_DAYS * 24 * 60 * 60 * 1000;
 
 function isInactive(s: StudentRow): boolean {
   if (!s.last_booking_at) return false;
@@ -104,6 +107,12 @@ function isExpiringSoon(s: StudentRow): boolean {
   const end = new Date(s.subscription_period_end).getTime();
   const now = Date.now();
   return end > now && end - now <= EXPIRING_MS;
+}
+
+function isLapsed(s: StudentRow): boolean {
+  if (!s.lapsed_at) return false;
+  const ms = Date.now() - new Date(s.lapsed_at).getTime();
+  return ms >= 0 && ms <= LAPSED_MS;
 }
 
 function daysUntil(iso: string): number {
@@ -134,7 +143,7 @@ interface PersistedView {
   sortKey: SortKey;
   sortDir: SortDir;
 }
-const TIER_VALUES: TierFilter[] = ["all", "members", "points", "none", "inactive", "expiring"];
+const TIER_VALUES: TierFilter[] = ["all", "members", "points", "none", "inactive", "expiring", "lapsed"];
 const SORT_KEYS: SortKey[] = ["name", "bookings", "last", "membership"];
 function loadPersistedView(): PersistedView {
   const fallback: PersistedView = { q: "", tierFilter: "all", sortKey: "name", sortDir: "asc" };
@@ -261,7 +270,7 @@ export default function Students() {
       const userIds = [...new Set(members.map((m) => m.user_id))];
 
       // Parallel fetches
-      const [profilesRes, bookingsRes, subsRes] = await Promise.all([
+      const [profilesRes, bookingsRes, subsRes, lapsedRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, email, first_name, last_name, phone, home_studio_id, injury_notes, staff_notes, created_at, class_points, sms_opted_out")
@@ -278,11 +287,26 @@ export default function Students() {
           .eq("status", "active")
           .or(`current_period_end.is.null,current_period_end.gt.${new Date().toISOString()}`)
           .in("user_id", userIds),
+        supabase
+          .from("user_subscriptions")
+          .select("user_id, status, updated_at")
+          .in("status", ["expired", "canceled", "past_due"])
+          .gte("updated_at", new Date(Date.now() - LAPSED_MS).toISOString())
+          .in("user_id", userIds),
       ]);
 
       const profiles = profilesRes.data ?? [];
       const bookings = bookingsRes.data ?? [];
       const subs = subsRes.data ?? [];
+      const lapsedSubs = (lapsedRes as any)?.data ?? [];
+
+      // Most recent lapsed-sub timestamp per user (last 30 days)
+      const lapsedMap: Record<string, string> = {};
+      lapsedSubs.forEach((s: any) => {
+        if (!lapsedMap[s.user_id] || s.updated_at > lapsedMap[s.user_id]) {
+          lapsedMap[s.user_id] = s.updated_at;
+        }
+      });
 
       // Home studio names
       const homeStudioIds = [...new Set(profiles.map((p: any) => p.home_studio_id).filter(Boolean))];
@@ -325,6 +349,7 @@ export default function Students() {
         subscription_name: subMap[p.id]?.name ?? null,
         subscription_status: subMap[p.id]?.status ?? null,
         subscription_period_end: subMap[p.id]?.periodEnd ?? null,
+        lapsed_at: subMap[p.id] ? null : (lapsedMap[p.id] ?? null),
         total_bookings: bookingMap[p.id]?.count ?? 0,
         last_booking_at: bookingMap[p.id]?.last ?? null,
         home_studio_id: p.home_studio_id ?? null,
@@ -346,6 +371,8 @@ export default function Students() {
       rows = rows.filter(isInactive);
     } else if (tierFilter === "expiring") {
       rows = rows.filter(isExpiringSoon);
+    } else if (tierFilter === "lapsed") {
+      rows = rows.filter(isLapsed);
     } else if (tierFilter !== "all") {
       rows = rows.filter((s) => getTier(s) === tierFilter);
     }
@@ -413,9 +440,10 @@ export default function Students() {
 
   /* ─── Bulk SMS recipients (shared composer) ─── */
   const bulkRecipients = useMemo(() => {
-    const rows = bulkSmsMode === "reengage"
-      ? (tierFilter === "inactive" ? filtered : [])
-      : (tierFilter === "expiring" ? filtered : []);
+    let rows: StudentRow[] = [];
+    if (bulkSmsMode === "reengage" && tierFilter === "inactive") rows = filtered;
+    else if (bulkSmsMode === "renew" && tierFilter === "expiring") rows = filtered;
+    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") rows = filtered;
     return rows.map((s) => ({
       user_id: s.user_id,
       first_name: s.first_name,
@@ -431,6 +459,8 @@ export default function Students() {
     "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}";
   const renewDefaultBody =
     "Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}";
+  const winbackDefaultBody =
+    "Hi {first_name}, we'd love to welcome you back to {studio_name}. Your membership recently lapsed — reactivate here and grab your spot: {booking_url}";
 
   const openSheet = (student: StudentRow) => {
     setSelectedStudent(student);
@@ -550,6 +580,7 @@ export default function Students() {
               { id: "none", label: "No Access", count: students.filter((s) => getTier(s) === "none").length },
               { id: "inactive", label: "Inactive (60d+)", count: students.filter(isInactive).length },
               { id: "expiring", label: "Expiring soon", count: students.filter(isExpiringSoon).length },
+              { id: "lapsed", label: "Lapsed (30d)", count: students.filter(isLapsed).length },
             ] as { id: TierFilter; label: string; count: number }[]).map((chip) => (
               <Button
                 key={chip.id}
@@ -582,6 +613,16 @@ export default function Students() {
                   Renew ({filtered.length})
                 </Button>
               )}
+              {tierFilter === "lapsed" && filtered.length > 0 && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => { setBulkSmsMode("winback"); setBulkSmsOpen(true); }}
+                >
+                  <Send className="h-3 w-3" />
+                  Win back ({filtered.length})
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -594,9 +635,9 @@ export default function Students() {
               </Button>
             </div>
           </div>
-          {(tierFilter === "inactive" || tierFilter === "expiring") && (
+          {(tierFilter === "inactive" || tierFilter === "expiring" || tierFilter === "lapsed") && (
             <SmsCampaignHistory
-              mode={tierFilter === "inactive" ? "reengage" : "renew"}
+              mode={tierFilter === "inactive" ? "reengage" : tierFilter === "expiring" ? "renew" : "winback"}
               refreshKey={campaignRefreshKey}
             />
           )}
@@ -886,7 +927,13 @@ export default function Students() {
         onOpenChange={setBulkSmsOpen}
         mode={bulkSmsMode}
         recipients={bulkRecipients}
-        defaultBody={bulkSmsMode === "reengage" ? reengageDefaultBody : renewDefaultBody}
+        defaultBody={
+          bulkSmsMode === "reengage"
+            ? reengageDefaultBody
+            : bulkSmsMode === "renew"
+              ? renewDefaultBody
+              : winbackDefaultBody
+        }
         onSent={() => setCampaignRefreshKey((k) => k + 1)}
       />
     </div>
