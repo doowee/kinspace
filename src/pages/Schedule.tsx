@@ -34,6 +34,7 @@ import EditClassDialog from "@/components/schedule/EditClassDialog";
 import ViewStudentsDialog from "@/components/schedule/ViewStudentsDialog";
 import ManualBookDialog from "@/components/schedule/ManualBookDialog";
 import AIClassFiller from "@/components/schedule/AIClassFiller";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface InstructorRow {
   id: string;

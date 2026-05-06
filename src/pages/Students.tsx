@@ -27,6 +27,7 @@ import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
 import LapsedSummary from "@/components/students/LapsedSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const maskEmail = (email: string) => {
   const [local, domain] = email.split("@");
