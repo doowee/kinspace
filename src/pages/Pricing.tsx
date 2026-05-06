@@ -4,6 +4,7 @@ import { Check, Zap, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteFooter } from "@/components/landing/SiteFooter";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   SiteHeader,
   SignupCTA,
