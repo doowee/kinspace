@@ -458,14 +458,21 @@ export default function Students() {
     }));
   }, [bulkSmsMode, tierFilter, filtered]);
 
-  const FALLBACK_BODIES: Record<BulkSmsMode, string> = {
+  const studioBookingUrl = useMemo(() => {
+    const slug = activeStudio?.slug;
+    if (!slug) return "{booking_url}";
+    if (typeof window === "undefined") return `/book/${slug}`;
+    return `${window.location.origin}/book/${slug}`;
+  }, [activeStudio?.slug]);
+
+  const FALLBACK_BODIES: Record<BulkSmsMode, string> = useMemo(() => ({
     reengage:
       "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}",
     renew:
       "Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}",
     winback:
-      "Hi {first_name}, we'd love to welcome you back to {studio_name}. Your membership recently lapsed — reactivate here and grab your spot: {booking_url}",
-  };
+      `Hi {first_name}, we'd love to welcome you back to {studio_name}. Your membership recently lapsed — reactivate here and grab your spot: ${studioBookingUrl}`,
+  }), [studioBookingUrl]);
 
   // Per-studio saved overrides (loaded once per studio)
   const [studioTemplates, setStudioTemplates] = useState<Partial<Record<BulkSmsMode, string>>>({});
