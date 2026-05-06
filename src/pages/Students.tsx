@@ -292,7 +292,8 @@ export default function Students() {
           .select("user_id, status, updated_at")
           .in("status", ["expired", "canceled", "past_due"])
           .gte("updated_at", new Date(Date.now() - LAPSED_MS).toISOString())
-          .in("user_id", userIds),
+          .in("user_id", userIds)
+          .order("updated_at", { ascending: false }),
       ]);
 
       const profiles = profilesRes.data ?? [];
@@ -300,13 +301,14 @@ export default function Students() {
       const subs = subsRes.data ?? [];
       const lapsedSubs = (lapsedRes as any)?.data ?? [];
 
-      // Most recent lapsed-sub timestamp per user (last 30 days)
+      // Most-recent lapsed-sub timestamp per user (rows already ordered desc).
+      // We only keep the FIRST occurrence per user_id, which is the latest updated_at.
+      // NOTE: Active-subscription exclusion is enforced below when building each row
+      // (we set lapsed_at to null whenever the user has any active sub in subMap).
       const lapsedMap: Record<string, string> = {};
-      lapsedSubs.forEach((s: any) => {
-        if (!lapsedMap[s.user_id] || s.updated_at > lapsedMap[s.user_id]) {
-          lapsedMap[s.user_id] = s.updated_at;
-        }
-      });
+      for (const s of lapsedSubs as Array<{ user_id: string; updated_at: string }>) {
+        if (!lapsedMap[s.user_id]) lapsedMap[s.user_id] = s.updated_at;
+      }
 
       // Home studio names
       const homeStudioIds = [...new Set(profiles.map((p: any) => p.home_studio_id).filter(Boolean))];
