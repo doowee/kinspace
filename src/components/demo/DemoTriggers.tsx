@@ -29,6 +29,9 @@ export default function DemoTriggers() {
   if (activeRole !== "owner") return null;
 
   const handleSeedDemoData = async () => {
+    if (!window.confirm("Reset & re-seed the demo studio? This regenerates classes, students, bookings, and transactions.")) {
+      return;
+    }
     try {
       toast({ title: "Seeding…", description: "Creating demo data, please wait." });
       const result = await seedDemoData("11111111-1111-1111-1111-111111111111");
@@ -176,7 +179,7 @@ export default function DemoTriggers() {
           <RotateCcw className="h-4 w-4" /> Reset Waitlist Demo
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSeedDemoData} className="gap-2 cursor-pointer text-muted-foreground">
-          <Database className="h-4 w-4" /> ⚡ Seed Demo Studio
+          <Database className="h-4 w-4" /> Reset & Seed Demo Studio
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
