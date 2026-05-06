@@ -104,7 +104,28 @@ serve(async (req) => {
       );
     }
 
+    // 4b. Server-side opt-out guard — block sends to profiles flagged sms_opted_out
+    // Defence-in-depth so opted-out recipients are never messaged even if the UI filter is bypassed.
+    const { data: optedOutMatch, error: optedOutErr } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("phone", targetPhoneNumber)
+      .eq("sms_opted_out", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (optedOutErr) {
+      console.warn("opt-out lookup failed", optedOutErr);
+    }
+    if (optedOutMatch) {
+      return new Response(
+        JSON.stringify({ error: "Recipient has opted out of SMS (replied STOP).", code: "OPTED_OUT" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 5. Send SMS via Twilio
+
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
     const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
