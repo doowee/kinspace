@@ -72,6 +72,7 @@ export default function BulkSmsDialog({
   mode,
   recipients,
   defaultBody,
+  onSent,
 }: BulkSmsDialogProps) {
   const { activeStudio } = useStudio();
   const { user } = useAuth();
