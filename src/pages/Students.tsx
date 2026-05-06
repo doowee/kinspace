@@ -18,6 +18,12 @@ import { Users, Search, MessageCircle, Lock, Home, AlertTriangle, Award, Star, P
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DirectMessageDrawer from "@/components/communication/DirectMessageDrawer";
 import BulkSmsDialog, { type BulkSmsMode } from "@/components/students/BulkSmsDialog";
+import {
+  getBulkRecipients,
+  getExcludedOptedOut,
+  getEffectiveBulkCount,
+  type TierFilter,
+} from "@/lib/winback-filter";
 import SmsCampaignHistory from "@/components/students/SmsCampaignHistory";
 import LapsedSummary from "@/components/students/LapsedSummary";
 import { toast } from "sonner";
