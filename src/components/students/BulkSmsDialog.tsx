@@ -39,6 +39,8 @@ interface BulkSmsDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: BulkSmsMode;
   recipients: BulkSmsRecipient[];
+  /** Students excluded from `recipients` because they replied STOP (sms_opted_out). */
+  excludedOptedOut?: BulkSmsRecipient[];
   defaultBody: string;
   onSent?: () => void;
 }
