@@ -3,49 +3,62 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StudioProvider } from "@/contexts/StudioContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+
+// Eager: landing page (LCP) + lightweight gates/layouts shared across routes
+import Index from "./pages/Index";
 import StudioGate from "./components/StudioGate";
 import StudioThemeProvider from "./components/StudioThemeProvider";
 import StudentLayout from "./components/StudentLayout";
-import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import Schedule from "./pages/Schedule";
-import Students from "./pages/Students";
-import InstructorsAdmin from "./pages/InstructorsAdmin";
 import AppLayout from "./components/AppLayout";
-import BookingPage from "./pages/BookingPage";
-import PublicPackagesPage from "./pages/PublicPackagesPage";
-import OrgRevenue from "./pages/OrgRevenue";
-import Finance from "./pages/Finance";
-import Settings from "./pages/Settings";
-import Billing from "./pages/Billing";
-import Wallet from "./pages/Wallet";
-import Credits from "./pages/Credits";
-import Profile from "./pages/Profile";
-import BookClass from "./pages/BookClass";
-import NotFound from "./pages/NotFound";
-import CreateStudio from "./pages/CreateStudio";
-import InstructorPortal from "./pages/InstructorPortal";
 import InstructorAuthGate from "./components/instructor/InstructorAuthGate";
 import StudentAuthGate from "./components/student/StudentAuthGate";
 import StudioBrandedLandingWrapper from "./components/StudioBrandedLandingWrapper";
-import StudentDashboard from "./components/dashboard/StudentDashboard";
-import KioskLogin from "./pages/KioskLogin";
-import KioskLiveRoster from "./pages/KioskLiveRoster";
-import KioskSchedule from "./pages/KioskSchedule";
-import Index from "./pages/Index";
-import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import Switch from "./pages/Switch";
-import Unsubscribe from "./pages/Unsubscribe";
-import Terms from "./pages/legal/Terms";
-import Privacy from "./pages/legal/Privacy";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+
+// Lazy: every other route splits into its own chunk
+const Auth = lazy(() => import("./pages/Auth"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Schedule = lazy(() => import("./pages/Schedule"));
+const Students = lazy(() => import("./pages/Students"));
+const InstructorsAdmin = lazy(() => import("./pages/InstructorsAdmin"));
+const BookingPage = lazy(() => import("./pages/BookingPage"));
+const PublicPackagesPage = lazy(() => import("./pages/PublicPackagesPage"));
+const OrgRevenue = lazy(() => import("./pages/OrgRevenue"));
+const Finance = lazy(() => import("./pages/Finance"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Billing = lazy(() => import("./pages/Billing"));
+const Wallet = lazy(() => import("./pages/Wallet"));
+const Credits = lazy(() => import("./pages/Credits"));
+const Profile = lazy(() => import("./pages/Profile"));
+const BookClass = lazy(() => import("./pages/BookClass"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const CreateStudio = lazy(() => import("./pages/CreateStudio"));
+const InstructorPortal = lazy(() => import("./pages/InstructorPortal"));
+const StudentDashboard = lazy(() => import("./components/dashboard/StudentDashboard"));
+const KioskLogin = lazy(() => import("./pages/KioskLogin"));
+const KioskLiveRoster = lazy(() => import("./pages/KioskLiveRoster"));
+const KioskSchedule = lazy(() => import("./pages/KioskSchedule"));
+const Features = lazy(() => import("./pages/Features"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Switch = lazy(() => import("./pages/Switch"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
 
 const queryClient = new QueryClient();
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="animate-pulse text-muted-foreground">Loading…</div>
+    </div>
+  );
+}
+
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -97,6 +110,7 @@ const App = () => {
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route index element={<Index />} />
             <Route path="/features" element={<Features />} />
@@ -247,6 +261,7 @@ const App = () => {
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
