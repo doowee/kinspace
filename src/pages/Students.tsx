@@ -455,12 +455,35 @@ export default function Students() {
     }));
   }, [bulkSmsMode, tierFilter, filtered]);
 
-  const reengageDefaultBody =
-    "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}";
-  const renewDefaultBody =
-    "Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}";
-  const winbackDefaultBody =
-    "Hi {first_name}, we'd love to welcome you back to {studio_name}. Your membership recently lapsed — reactivate here and grab your spot: {booking_url}";
+  const FALLBACK_BODIES: Record<BulkSmsMode, string> = {
+    reengage:
+      "Hi {first_name}, we miss you at {studio_name}! Come back this week — your spot is waiting. Book here: {booking_url}",
+    renew:
+      "Hi {first_name}, your {studio_name} membership renews in {days_left} days. Tap below to keep your spot — see you on the mat. {booking_url}",
+    winback:
+      "Hi {first_name}, we'd love to welcome you back to {studio_name}. Your membership recently lapsed — reactivate here and grab your spot: {booking_url}",
+  };
+
+  // Per-studio saved overrides (loaded once per studio)
+  const [studioTemplates, setStudioTemplates] = useState<Partial<Record<BulkSmsMode, string>>>({});
+  useEffect(() => {
+    if (!activeStudio?.id) { setStudioTemplates({}); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("studio_sms_templates")
+        .select("mode, body")
+        .eq("studio_id", activeStudio.id);
+      if (cancelled) return;
+      const map: Partial<Record<BulkSmsMode, string>> = {};
+      (data ?? []).forEach((r: any) => { map[r.mode as BulkSmsMode] = r.body; });
+      setStudioTemplates(map);
+    })();
+    return () => { cancelled = true; };
+  }, [activeStudio?.id, campaignRefreshKey]);
+
+  const activeDefaultBody =
+    studioTemplates[bulkSmsMode] ?? FALLBACK_BODIES[bulkSmsMode];
 
   const openSheet = (student: StudentRow) => {
     setSelectedStudent(student);
@@ -924,16 +947,10 @@ export default function Students() {
       {/* Bulk SMS composer (Re-engage + Renew) */}
       <BulkSmsDialog
         open={bulkSmsOpen}
-        onOpenChange={setBulkSmsOpen}
+        onOpenChange={(o) => { setBulkSmsOpen(o); if (!o) setCampaignRefreshKey((k) => k + 1); }}
         mode={bulkSmsMode}
         recipients={bulkRecipients}
-        defaultBody={
-          bulkSmsMode === "reengage"
-            ? reengageDefaultBody
-            : bulkSmsMode === "renew"
-              ? renewDefaultBody
-              : winbackDefaultBody
-        }
+        defaultBody={activeDefaultBody}
         onSent={() => setCampaignRefreshKey((k) => k + 1)}
       />
     </div>

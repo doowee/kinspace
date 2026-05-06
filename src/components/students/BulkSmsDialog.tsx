@@ -19,7 +19,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, Send } from "lucide-react";
+import { ChevronDown, Send, Save } from "lucide-react";
 import { toast } from "sonner";
 
 export interface BulkSmsRecipient {
@@ -85,6 +85,7 @@ export default function BulkSmsDialog({
   const [body, setBody] = useState(defaultBody);
   const [sending, setSending] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [savingTpl, setSavingTpl] = useState(false);
   const [ownerPhone, setOwnerPhone] = useState<string | null>(null);
   const [ownerFirstName, setOwnerFirstName] = useState<string | null>(null);
 
@@ -222,6 +223,29 @@ export default function BulkSmsDialog({
     }
   };
 
+  const handleSaveTemplate = async () => {
+    if (!activeStudio?.id || !user?.id) return;
+    if (body.trim().length === 0) return;
+    setSavingTpl(true);
+    const { error } = await supabase
+      .from("studio_sms_templates")
+      .upsert(
+        {
+          studio_id: activeStudio.id,
+          mode,
+          body: body.trim(),
+          updated_by: user.id,
+        },
+        { onConflict: "studio_id,mode" },
+      );
+    setSavingTpl(false);
+    if (error) {
+      toast.error(`Couldn't save template: ${error.message}`);
+    } else {
+      toast.success("Saved as this studio's default");
+    }
+  };
+
   const copy = MODE_COPY[mode];
   const optedOutCount = recipients.filter((r) => r.sms_opted_out).length;
   const phoneCount = recipients.filter((r) => !!r.phone && !r.sms_opted_out).length;
@@ -292,27 +316,41 @@ export default function BulkSmsDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTestSend}
-                    disabled={testing || sending || !ownerPhone || body.trim().length === 0}
-                    className="gap-1.5"
-                  >
-                    <Send className="h-3 w-3" />
-                    {testing ? "Sending…" : "Send test to me"}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {!ownerPhone && (
-                <TooltipContent>Add a phone number to your profile</TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex flex-wrap gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTestSend}
+                      disabled={testing || sending || !ownerPhone || body.trim().length === 0}
+                      className="gap-1.5"
+                    >
+                      <Send className="h-3 w-3" />
+                      {testing ? "Sending…" : "Send test to me"}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!ownerPhone && (
+                  <TooltipContent>Add a phone number to your profile</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveTemplate}
+              disabled={savingTpl || sending || body.trim().length === 0}
+              className="gap-1.5"
+              title="Save this message as the studio's default for this composer"
+            >
+              <Save className="h-3 w-3" />
+              {savingTpl ? "Saving…" : "Save as default"}
+            </Button>
+          </div>
 
           <div className="flex gap-2">
             <Button
