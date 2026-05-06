@@ -512,6 +512,10 @@ function CompareSection() {
 
 /* ─── Page ─── */
 export default function Index() {
+  useDocumentTitle(
+    "Kinspace Studio — The OS for Modern Wellness Studios",
+    "Scheduling, payments, SMS commerce, and AI-powered revenue tools for boutique wellness studios — all in one platform."
+  );
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Nav */}
