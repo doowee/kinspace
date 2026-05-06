@@ -214,6 +214,8 @@ export default function Students() {
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
   const [bulkSmsMode, setBulkSmsMode] = useState<BulkSmsMode>("reengage");
   const [campaignRefreshKey, setCampaignRefreshKey] = useState(0);
+  // Lapsed win-back: exclude STOP-replied (opted-out) recipients
+  const [excludeOptedOut, setExcludeOptedOut] = useState(true);
 
   // Track 2 — persist view state (debounced)
   useEffect(() => {
