@@ -90,6 +90,7 @@ const App = () => {
   }, []);
 
   return (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -103,6 +104,8 @@ const App = () => {
             <Route path="/switch" element={<Switch />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route
               path="/onboarding"
               element={
