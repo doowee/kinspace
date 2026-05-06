@@ -516,6 +516,7 @@ export type Database = {
           sms_opted_out: boolean
           sms_opted_out_at: string | null
           staff_notes: string | null
+          staff_ui_prefs: Json
           stripe_customer_id: string | null
           updated_at: string
         }
@@ -536,6 +537,7 @@ export type Database = {
           sms_opted_out?: boolean
           sms_opted_out_at?: string | null
           staff_notes?: string | null
+          staff_ui_prefs?: Json
           stripe_customer_id?: string | null
           updated_at?: string
         }
@@ -556,6 +558,7 @@ export type Database = {
           sms_opted_out?: boolean
           sms_opted_out_at?: string | null
           staff_notes?: string | null
+          staff_ui_prefs?: Json
           stripe_customer_id?: string | null
           updated_at?: string
         }
