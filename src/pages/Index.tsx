@@ -10,6 +10,7 @@ import {
   fadeUp, fadeLeft, fadeRight, stagger, EASE, VP,
 } from "@/components/landing/shared";
 import { SiteFooter } from "@/components/landing/SiteFooter";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 /* ─── Social Proof Marquee ─── */
 
