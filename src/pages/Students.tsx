@@ -320,6 +320,7 @@ export default function Students() {
         first_name: p.first_name,
         last_name: p.last_name,
         phone: p.phone ?? null,
+        sms_opted_out: !!p.sms_opted_out,
         class_points: p.class_points ?? 0,
         subscription_name: subMap[p.id]?.name ?? null,
         subscription_status: subMap[p.id]?.status ?? null,
