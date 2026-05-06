@@ -101,7 +101,10 @@ serve(async (req) => {
       return twimlResponse("Unauthorized.");
     }
 
-    console.log(`Incoming SMS from ${from}: "${body.substring(0, 50)}"`);
+    // Mask phone (keep last 4) and strip non-alphanumerics from body before logging.
+    const maskedFrom = from.replace(/.(?=.{4})/g, "*");
+    const safeBody = body.substring(0, 50).replace(/[^\w\s]/g, "");
+    console.log(`Incoming SMS from ${maskedFrom}: "${safeBody}"`);
 
     // 2.5 Handle SMS opt-out / opt-in keywords (carrier-standard)
     const trimmed = body.trim().toUpperCase();
