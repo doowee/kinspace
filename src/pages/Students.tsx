@@ -518,22 +518,26 @@ export default function Students() {
   };
 
   /* ─── Bulk SMS recipients (shared composer) ─── */
-  const bulkRecipients = useMemo(() => {
-    let rows: StudentRow[] = [];
-    if (bulkSmsMode === "reengage" && tierFilter === "inactive") rows = filtered;
-    else if (bulkSmsMode === "renew" && tierFilter === "expiring") rows = filtered;
-    else if (bulkSmsMode === "winback" && tierFilter === "lapsed") rows = filtered;
-    if (excludeOptedOut) rows = rows.filter((s) => !s.sms_opted_out);
-    return rows.map((s) => ({
-      user_id: s.user_id,
-      first_name: s.first_name,
-      last_name: s.last_name,
-      email: s.email,
-      phone: s.phone,
-      sms_opted_out: s.sms_opted_out,
-      subscription_period_end: s.subscription_period_end,
-    }));
-  }, [bulkSmsMode, tierFilter, filtered, excludeOptedOut]);
+  const toFilterable = (s: StudentRow) => ({
+    user_id: s.user_id,
+    first_name: s.first_name,
+    last_name: s.last_name,
+    email: s.email,
+    phone: s.phone,
+    sms_opted_out: s.sms_opted_out,
+    subscription_period_end: s.subscription_period_end,
+  });
+
+  const bulkRecipients = useMemo(
+    () =>
+      getBulkRecipients(
+        filtered.map(toFilterable),
+        bulkSmsMode,
+        tierFilter as TierFilter,
+        excludeOptedOut,
+      ),
+    [bulkSmsMode, tierFilter, filtered, excludeOptedOut],
+  );
 
   // Count of opted-out students in the currently filtered view (for any tier)
   const filteredOptedOutCount = useMemo(
@@ -544,30 +548,19 @@ export default function Students() {
   const lapsedOptedOutCount = tierFilter === "lapsed" ? filteredOptedOutCount : 0;
 
   // Recipients excluded by the toggle (for the dialog's "excluded" preview drawer)
-  const bulkExcludedOptedOut = useMemo(() => {
-    if (!excludeOptedOut) return [];
-    const matchesMode =
-      (bulkSmsMode === "reengage" && tierFilter === "inactive") ||
-      (bulkSmsMode === "renew" && tierFilter === "expiring") ||
-      (bulkSmsMode === "winback" && tierFilter === "lapsed");
-    if (!matchesMode) return [];
-    return filtered
-      .filter((s) => s.sms_opted_out)
-      .map((s) => ({
-        user_id: s.user_id,
-        first_name: s.first_name,
-        last_name: s.last_name,
-        email: s.email,
-        phone: s.phone,
-        sms_opted_out: s.sms_opted_out,
-        subscription_period_end: s.subscription_period_end,
-      }));
-  }, [excludeOptedOut, bulkSmsMode, tierFilter, filtered]);
+  const bulkExcludedOptedOut = useMemo(
+    () =>
+      getExcludedOptedOut(
+        filtered.map(toFilterable),
+        bulkSmsMode,
+        tierFilter as TierFilter,
+        excludeOptedOut,
+      ),
+    [excludeOptedOut, bulkSmsMode, tierFilter, filtered],
+  );
 
   // Effective recipient count for the current bulk SMS button
-  const effectiveBulkCount = excludeOptedOut
-    ? Math.max(0, filtered.length - filteredOptedOutCount)
-    : filtered.length;
+  const effectiveBulkCount = getEffectiveBulkCount(filtered.map(toFilterable), excludeOptedOut);
 
   const studioBookingUrl = useMemo(() => {
     const slug = activeStudio?.slug;
