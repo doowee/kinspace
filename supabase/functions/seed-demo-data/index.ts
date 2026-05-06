@@ -565,7 +565,7 @@ Deno.serve(async (req) => {
           ec.kind === "expiring"
             ? addDays(now, ec.daysAhead).toISOString()
             : addDays(now, -ec.daysAgo).toISOString();
-        const status = ec.kind === "expiring" ? "active" : "expired";
+        const status = ec.kind === "expiring" ? "active" : "canceled";
 
         await supabaseAdmin.from("user_subscriptions").insert({
           user_id: userId,
