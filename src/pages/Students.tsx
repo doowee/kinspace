@@ -538,7 +538,7 @@ export default function Students() {
       getBulkRecipients(
         filtered.map(toFilterable),
         bulkSmsMode,
-        tierFilter as TierFilter,
+        tierFilter,
         excludeOptedOut,
       ),
     [bulkSmsMode, tierFilter, filtered, excludeOptedOut],
@@ -558,7 +558,7 @@ export default function Students() {
       getExcludedOptedOut(
         filtered.map(toFilterable),
         bulkSmsMode,
-        tierFilter as TierFilter,
+        tierFilter,
         excludeOptedOut,
       ),
     [excludeOptedOut, bulkSmsMode, tierFilter, filtered],
