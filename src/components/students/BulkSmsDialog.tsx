@@ -28,6 +28,7 @@ export interface BulkSmsRecipient {
   last_name: string | null;
   email: string;
   phone: string | null;
+  sms_opted_out?: boolean | null;
   subscription_period_end?: string | null;
 }
 
