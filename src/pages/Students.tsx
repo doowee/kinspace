@@ -298,6 +298,15 @@ export default function Students() {
       const profiles = profilesRes.data ?? [];
       const bookings = bookingsRes.data ?? [];
       const subs = subsRes.data ?? [];
+      const lapsedSubs = (lapsedRes as any)?.data ?? [];
+
+      // Most recent lapsed-sub timestamp per user (last 30 days)
+      const lapsedMap: Record<string, string> = {};
+      lapsedSubs.forEach((s: any) => {
+        if (!lapsedMap[s.user_id] || s.updated_at > lapsedMap[s.user_id]) {
+          lapsedMap[s.user_id] = s.updated_at;
+        }
+      });
 
       // Home studio names
       const homeStudioIds = [...new Set(profiles.map((p: any) => p.home_studio_id).filter(Boolean))];
